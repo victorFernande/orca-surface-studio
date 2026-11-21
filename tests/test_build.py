@@ -1,0 +1,54 @@
+import base64
+import csv
+import hashlib
+import importlib.util
+import io
+import json
+from pathlib import Path
+import tempfile
+import unittest
+import zipfile
+
+ROOT=Path(__file__).resolve().parents[1]
+spec=importlib.util.spec_from_file_location("wave_build",ROOT/"scripts"/"build_and_install.py")
+build_module=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(build_module)
+
+
+class BuildTests(unittest.TestCase):
+    def test_install_preserves_hidden_page_and_grants_byte_for_byte(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            bundle=root/"bundle.py"
+            bundle.write_text("# fixture\n")
+            target=root/"plugins"/"orca_wave_studio"
+            target.mkdir(parents=True)
+            content=b'{"enabled":true,"capabilities":[{"Estudio":false}],"permissions":{"keep":"exact"}}\n'
+            (target/".install_state.json").write_bytes(content)
+            build_module.install(bundle,root/"plugins",enable_new=True)
+            self.assertEqual((target/".install_state.json").read_bytes(),content)
+            self.assertEqual((target/"orca_wave_generator.py").read_bytes(),bundle.read_bytes())
+
+    def test_new_persistent_install_has_no_permission_grants(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            bundle=root/"bundle.py"
+            bundle.write_text("# fixture\n")
+            target=build_module.install(bundle,root/"plugins",enable_new=True)
+            state=json.loads((target/".install_state.json").read_text(encoding="utf-8"))
+            self.assertTrue(state["enabled"])
+            self.assertNotIn("permissions",state)
+
+    def test_wheel_records_match_files_and_universal_bundle(self):
+        bundle,wheel=build_module.build()
+        self.assertEqual(bundle.read_bytes(),(ROOT/"dist"/"orca_wave_generator_any.py").read_bytes())
+        with zipfile.ZipFile(wheel) as archive:
+            records=[name for name in archive.namelist() if name.endswith(".dist-info/RECORD")]
+            self.assertEqual(len(records),1)
+            for name,value,size in csv.reader(io.StringIO(archive.read(records[0]).decode())):
+                if not value:
+                    continue
+                content=archive.read(name)
+                expected=base64.urlsafe_b64encode(hashlib.sha256(content).digest()).rstrip(b"=").decode()
+                self.assertEqual(value,"sha256="+expected)
+                self.assertEqual(int(size),len(content))

@@ -1,0 +1,25 @@
+name: Publish validated Orca Wave release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: vars.ORCA_WAVE_PUBLICATION_APPROVED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Test and build universal artifacts
+        run: python scripts/build_and_install.py --test
+      - name: Publish using GitHub OIDC
+        run: python scripts/publish_orcacloud.py
