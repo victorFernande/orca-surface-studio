@@ -274,7 +274,7 @@ def _join_short_edges(parsed, selected, warp, step, minimum, tolerance):
     return skipped, plans
 
 
-def _feed(start, end, requested):
+def _feed(start, end, requested, z_speed=MAX_Z_SPEED, z_accel=MAX_Z_ACCEL):
     length = math.dist(start, end)
     dz = abs(end[2] - start[2])
     if requested <= 0 or not math.isfinite(requested):
@@ -283,8 +283,8 @@ def _feed(start, end, requested):
         return requested, 0.0, 0.0
     # Conservative per-segment rest-to-Z-speed bound. This also bounds the
     # centered finite difference across a reversal between consecutive segments.
-    feed = min(requested, 60 * MAX_Z_SPEED * length / dz,
-               60 * length * math.sqrt(MAX_Z_ACCEL / (2 * dz)))
+    feed = min(requested, 60 * z_speed * length / dz,
+               60 * length * math.sqrt(z_accel / (2 * dz)))
     feed = math.floor(feed * 1000) / 1000
     if not feed:
         raise WaveError("Avanço de Z abaixo da resolução de saída.")
@@ -320,7 +320,7 @@ def _top_layer_audit(warp, original, mapped):
 
 
 def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str],
-                            selected_object_id: str) -> ProcessedResult:
+                            selected_object_id: str, *, printer_profile=None) -> ProcessedResult:
     """Map one labelled model from its flattened slice. No printer interface is used."""
     if not selected_object_id or selected_object_id not in print_object_map.values():
         raise WaveError("Peça conforme sem correspondência no G-code.")
@@ -330,10 +330,10 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
         raise WaveError("Use a fatia da malha achatada ainda sem pós-processamento.")
     if re.search(rb'(?mi)^;\s*zaa_enabled\s*=\s*1\s*$',source):
         raise WaveError('O Z Contouring nativo já modifica Z e extrusão. Use uma captura planar para o motor regional.')
-    parsed = read(source, {selected_object_id}, print_object_map)
+    parsed = read(source, {selected_object_id}, print_object_map, profile_macros=printer_profile is not None)
     if len([label for label in parsed.seen if print_object_map[label[0]] == selected_object_id]) != 1:
         raise WaveError("O campo de coordenadas exige uma única instância da peça selecionada.")
-    if any(re.match(r"^\s*G91\b", line, re.I) for line in parsed.lines):
+    if any(not move.xyz_abs and move.obj==selected_object_id for move in parsed.moves.values()):
         raise WaveError("O estudo conforme exige posicionamento XYZ absoluto (G90).")
     if any(i > min(parsed.moves, default=-1) and re.match(r"^\s*G92\b[^;]*[XYZ]", parsed.lines[i], re.I)
            for i in parsed.barrier):
@@ -370,6 +370,7 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
         "z_dynamics": "Comandos emitidos na trajetória mapeada, com limite conservador por segmento. "
                       "Sem simulação do planejador de movimento ou de colisões.",
     }
+    report['native_retraction_rounding']=parsed.retraction_rounding
     original, mapped, layers = report["original_points"], report["deformed_points"], report["layer_ids"]
     source_roles, emitted_roles = Counter(), Counter()
     # Orca writes support-layer metadata with more digits than its XYZ words.
@@ -409,6 +410,7 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
             continue
         spatial = any(k in m.fields for k in "XYZ") and m.start != m.end
         dep = m.deposits and m.obj == selected_object_id
+        if i in parsed.retraction_rounding:retract_debt=0.
         if dep:
             if (retract_debt > 1e-7 or not m.w or m.w <= 0 or not m.h or m.h <= 0
                     or m.z is None or None in m.start or None in m.end or m.f <= 0
@@ -512,7 +514,16 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
                     row['up' if q[2]>p[2] else 'down']+=1
                     row['z_min_mm']=min(row['z_min_mm'],p[2],q[2])
                     row['z_max_mm']=max(row['z_max_mm'],p[2],q[2])
-            feed, speed, accel = _feed(p, q, m.f)
+            requested=m.f
+            if printer_profile:
+                if not printer_profile.contains(p) or not printer_profile.contains(q):
+                    raise WaveError(f'PROFILE_BOUNDS: linha {i+1} fora do volume da impressora selecionada.')
+                if dep and extrusion>0 and printer_profile.max_volumetric_mm3_s:
+                    volume=extrusion*math.pi*(printer_profile.filament_mm/2)**2
+                    requested=min(requested,60*math.dist(p,q)*printer_profile.max_volumetric_mm3_s/volume)
+            feed, speed, accel = _feed(p, q, requested,
+                printer_profile.z_speed_mm_s if printer_profile else MAX_Z_SPEED,
+                printer_profile.z_acceleration_mm_s2 if printer_profile else MAX_Z_ACCEL)
             report["max_z_speed_mm_s"] = max(report["max_z_speed_mm_s"], speed)
             report["max_z_acceleration_mm_s2"] = max(report["max_z_acceleration_mm_s2"], accel)
             if dep:
@@ -574,4 +585,7 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
                   normal_spacing_mm=[hmin, hmax], cell_volume_scale_range=[smin, smax],
                   max_deposition_z_mm=max_part_z, processed_sha256=digest(result))
     report["top_layer_roof_audit"] = _top_layer_audit(warp, original, mapped)
+    if printer_profile:
+        report['printer_profile']=printer_profile.public_summary()
+        report['profile_preserved']=True
     return ProcessedResult(result, report)

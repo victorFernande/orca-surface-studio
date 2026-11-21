@@ -129,6 +129,20 @@ class NativeHost:
     def open_preview(self,path: Path):
         open_in_current_orca(path)
 
+    def slicer_executable(self):
+        # Resolve the running host, not a hardcoded installation or printer.
+        import sys
+        if sys.platform=='win32':
+            import ctypes
+            path=ctypes.create_unicode_buffer(32768)
+            if not ctypes.windll.kernel32.GetModuleFileNameW(None,path,len(path)):
+                raise WaveError('Não foi possível localizar este OrcaSlicer.')
+            return path.value
+        return sys.executable
+
+    def slicer_workspace(self):
+        return _storage()/'native-slicer'
+
     def open_model(self,path: Path):
         open_in_current_orca(path,sliced_only=False)
 
@@ -177,11 +191,21 @@ class WavePage(_PageBase):
 
     def get_ui(self):
         controller=get_controller()
+        controller.event('page_ui_requested')
         try:
             controller.refresh()
         except Exception as exc:
             controller.event("initial_refresh_deferred",reason=str(exc))
-        return get_studio_html(controller.state())
+        try:
+            initial=controller.state()
+            # Geometry arrives over the bridge after the document is ready.
+            initial={**initial,'model_preview':None,'objects':[], 'result':None}
+            html=get_studio_html(initial)
+            controller.event('page_ui_built',bytes=len(html.encode()))
+            return html
+        except Exception as exc:
+            controller.event('page_ui_failed',error=str(exc))
+            return get_studio_html({'native':True,'status':'error','message':str(exc)})
 
     def on_message(self,data):
         self.post_message(get_controller().handle(data))
@@ -277,13 +301,18 @@ class WaveCapturePipeline(_PipelineBase):
                     controller.event("project_mutation",lifecycle=name,
                                      ctx={k:str(getattr(ctx,k,"") or "")[:512] for k in ("id","name","msg","source")})
                     controller.invalidate("O projeto mudou. Atualize a análise e fatie novamente.")
+                    # Coalesce bursts while Orca is still applying a project or
+                    # preset. Poll refreshes once on the GUI thread when focused.
+                    controller._refresh_pending=True
+                    controller._objects=[]
+                    controller._model_preview=None
             elif name=="SlicingJobComplete":
                 if controller._opening_preview:
                     controller.preview_completed(str(ctx.id),ctx.code==orca.LifecycleEvtCode.Ok)
                 else:
                     controller.slicing_completed(str(ctx.id),ctx.code==orca.LifecycleEvtCode.Ok)
         except Exception as exc:
-            controller.event("lifecycle_error",name=name,error=str(exc))
+            controller.event("lifecycle_error",lifecycle=name,error=str(exc))
 
 
 if orca is not None:
@@ -292,7 +321,14 @@ if orca is not None:
     @orca.plugin
     class OrcaWaveStudioPlugin(orca.base):
         def register_capabilities(self):
-            orca.request_permissions(threading=True,network=["http://127.0.0.1","http://[::1]"])
+            # Orca grants exact process commands only, during discovery. Keep
+            # the executable/arguments stable and move job data under its own
+            # private workspace; do not request a shell or arbitrary commands.
+            import subprocess
+            from .surface_workflow import slice_command
+            command=slice_command(NativeHost().slicer_executable())
+            orca.request_permissions(threading=True,network=["http://127.0.0.1","http://[::1]"],
+                                     process=[subprocess.list2cmdline(command)])
             configure_native_agent(lambda:get_controller().agent_context())
             for capability in (WavePage,WaveDock,WaveCapturePipeline,WaveOctoPrintAgent):
                 orca.register_capability(capability)

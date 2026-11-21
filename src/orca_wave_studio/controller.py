@@ -59,6 +59,11 @@ class StudioController:
         self._effective_revision=None
         self._conformal_session=None
         self._surface_rejection=None
+        self._model_preview=None
+        self._profile_summary=None
+        self._refresh_pending=False
+        self._state_revision_snapshot=None
+        self._state_revision_value=None
 
     def event(self, name: str, **details: Any) -> None:
         with self.lock:
@@ -80,17 +85,21 @@ class StudioController:
 
     def state(self) -> dict:
         with self.lock:
+            if self.snapshot is not self._state_revision_snapshot:
+                self._state_revision_snapshot=self.snapshot
+                self._state_revision_value=self.snapshot.revision if self.snapshot else None
             self._sequence+=1
             session=self._conformal_session
             conformal={k:session[k] for k in ("phase","original_id","native_id","settings","origin_backup","prepared_path","region_catalog") if k in session} if session else None
             return {"status":self._status,"message":self._message,"objects":self._objects,
-                    "revision":self.snapshot.revision if self.snapshot else None,
+                    "revision":self._state_revision_value,
                     "capture":self.captures.captured.to_dict() if self.captures.captured else None,
                     "result":self._result,"presets":self._presets(),"bench_only":True,
                     "capture_setup_required":bool(self.host and not self.host.capture_ready()),
                     "native":bool(self.host),"events":self._events[-8:],"sequence":self._sequence,
                     "parameters_by_object":self._parameters,"conformal":conformal,
-                    "surface_rejection":self._surface_rejection}
+                    "surface_rejection":self._surface_rejection,
+                    "model_preview":self._model_preview,"printer_profile":self._profile_summary}
 
     def invalidate(self, reason: str, *, preserve_conformal: bool=False) -> None:
         with self.lock:
@@ -122,10 +131,11 @@ class StudioController:
             self.prepared_project_opened("")
             return
         snapshot=self.host.snapshot()
+        self._refresh_pending=False
         if (self.storage/"study_connection.json").is_file():
             atomic_write(self.storage/"last-live-snapshot.json",json.dumps(snapshot.to_dict(),ensure_ascii=False,indent=2).encode())
         with self.lock:
-            if self.snapshot and self.snapshot.revision==snapshot.revision and self._objects:
+            if self.snapshot and self.snapshot.revision==snapshot.revision and (self._objects or self._analysis_job):
                 self._gui_armed=True
                 return
             if self.snapshot and self.snapshot.revision!=snapshot.revision:
@@ -136,6 +146,13 @@ class StudioController:
                            session_equal=self.snapshot.session_id==snapshot.session_id,plate_equal=self.snapshot.plate_index==snapshot.plate_index)
                 self.invalidate("As peças ou configurações mudaram. Fatie novamente.")
             self.snapshot=snapshot
+            self._model_preview=None
+            try:
+                from .printer_profile import PrinterProfile
+                self._profile_summary=PrinterProfile.from_settings(snapshot.settings).public_summary()
+            except WaveError as exc:
+                self._profile_summary={'name':str(snapshot.settings.get('printer_settings_id','Perfil ativo')),
+                                       'issue':str(exc),'revision':snapshot.revision}
             self._gui_armed=bool(snapshot.objects)
             self._objects=[]
             if not snapshot.objects:
@@ -146,6 +163,11 @@ class StudioController:
             self._message="Analisando as peças em segundo plano…"
         def work():
             try:
+                from .model_preview import model_preview
+                preview=model_preview(snapshot)
+                with self.lock:
+                    if self._analysis_job!=job:return
+                    self._model_preview=preview
                 objects=analyze_snapshot(snapshot)
                 from .roof_regions import roof_region_catalog
                 for obj in objects:
@@ -379,6 +401,42 @@ class StudioController:
                 self._conformal_failed(ctx,exc)
         threading.Thread(target=work,name="OrcaWave-PrepareModel",daemon=True).start()
 
+    def build_surface(self,selected,settings):
+        if not self.host:raise WaveError('Gere a superfície dentro do OrcaSlicer.')
+        self.refresh()
+        with self.lock:
+            original=self.snapshot
+            if not original or len(original.objects)!=1 or selected!=[str(original.objects[0]['id'])]:
+                raise WaveError('Deixe a peça escolhida na placa para gerar esta superfície.')
+            if self._job:raise WaveError('Aguarde ou cancele o cálculo atual.')
+            executable=self.host.slicer_executable()
+            workspace=self.host.slicer_workspace()
+            job=uuid.uuid4().hex;folder=self.storage/'surface-jobs'/job;backup=folder/'original.3mf'
+            self.host.export_project(backup)
+            self.invalidate('Preparando a peça com o perfil selecionado…')
+            self._job=job;self._status='processing'
+        def cancelled():
+            with self.lock:return self._job!=job
+        def progress(message):
+            with self.lock:
+                if self._job==job:self._message=message
+        def work():
+            try:
+                from .surface_workflow import build_surface
+                result=build_surface(original,selected[0],backup,folder,executable,settings,
+                                     progress=progress,cancelled=cancelled,workspace=workspace)
+                with self.lock:
+                    if cancelled() or not self.snapshot or self.snapshot.revision!=original.revision:return
+                    self._result=result;self._status='ready';self._job=None;self._pending_open=True
+                    self._message='Superfície gerada com o perfil ativo. Abrindo o Preview para conferência.'
+                    self.event('integrated_surface_generated',sha256=result['sha256'],printer_contacted=False)
+            except Exception as exc:
+                with self.lock:
+                    if not cancelled():
+                        self._job=None;self._status='error';self._message=str(exc)
+                        self.event('integrated_surface_failed',reason=str(exc))
+        threading.Thread(target=work,name='OrcaSurface-Build',daemon=True).start()
+
     def _conformal_failed(self, ctx: dict, error: Exception) -> None:
         with self.lock:
             if self._conformal_session is ctx:
@@ -563,6 +621,10 @@ class StudioController:
                     result=process_conformal_gcode(source,ctx["warp"],mapped,ctx["original_id"])
                 else:
                     result=process_gcode(source,params,capture.print_object_map)
+                    if self.host:
+                        from .printer_profile import PrinterProfile
+                        from .profile_limits import limit_result
+                        result=limit_result(result,PrinterProfile.from_settings(snapshot.settings),capture.print_object_map)
                 # A unique job owns its output, including stale workers. Keep paths
                 # short enough for Orca's Windows build without long-path support.
                 output=self.storage/"results"/job
@@ -878,6 +940,10 @@ class StudioController:
                 self.generate(selected,payload.get("parameters",{}),payload.get("parameters_by_object"))
             elif action=="prepare_conformal":
                 self.prepare_conformal(selected,payload.get("settings",{}))
+            elif action=='build_surface':
+                self.build_surface(selected,payload.get('settings',{}))
+            elif action=='cancel_build':
+                self.invalidate('Cálculo cancelado. A peça original foi preservada.')
             elif action=="generate_conformal":
                 self.generate(selected,{},conformal=True)
             elif action=="surface_study":
@@ -892,7 +958,9 @@ class StudioController:
                     raise WaveError("O painel só está disponível dentro do Orca.")
                 getattr(self.host,action)()
             elif action=="poll":
-                if self._capture_access_pending:
+                if self._refresh_pending and payload.get('ui_focused') is True:
+                    self.refresh()
+                elif self._capture_access_pending:
                     self.poll_capture_access(ui_focused=payload.get("ui_focused") is True)
                 elif self._pending_open:
                     self.open_preview()

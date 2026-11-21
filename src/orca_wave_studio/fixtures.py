@@ -34,7 +34,11 @@ def cylinder_snapshot(*, plate_index: int = 0, two_objects: bool = False) -> Pro
                                      "manifold": True}]})
     return ProjectSnapshot("bench-cylinder", plate_index, tuple(objects),
                            {"layer_height": "0.2", "nozzle_diameter": "0.4", "wall_loops": "1",
-                            "gcode_flavor": "marlin", "gcode_label_objects": "1", "filament_type": "PETG"})
+                            "gcode_flavor": "marlin", "gcode_label_objects": "1", "filament_type": "PETG",
+                            'printer_settings_id':'Generic Cartesian fixture','filament_diameter':['1.75'],
+                            'initial_layer_print_height':'.2','machine_max_speed_z':['10'],
+                            'machine_max_acceleration_z':['100'],'filament_max_volumetric_speed':['12'],
+                            'printable_area':['0x0','220x0','220x220','0x220'],'printable_height':'250'})
 
 
 def cylinder_gcode(*, layers: int = 40, two_objects: bool = False) -> bytes:

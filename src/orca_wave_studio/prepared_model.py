@@ -14,7 +14,7 @@ from .contracts import ProjectSnapshot, WaveError
 from .geometry import transform_point
 
 
-def exported_settings(path: Path, *, regional: bool=False) -> dict:
+def exported_settings(path: Path, *, regional: bool=False, active_profile: bool=False) -> dict:
     with ZipFile(path) as archive:
         entry = archive.getinfo("Metadata/project_settings.config")
         if entry.file_size > 20 * 1024 * 1024:
@@ -22,6 +22,15 @@ def exported_settings(path: Path, *, regional: bool=False) -> dict:
         settings = json.loads(archive.read(entry).decode("utf-8-sig"))
     if not isinstance(settings, dict) or not settings.get("printer_settings_id"):
         raise WaveError("A cópia original não contém o perfil completo da impressora.")
+    if active_profile:
+        if settings.get('post_process') not in (None,[],[''],''):
+            raise WaveError('PROFILE_POST_PROCESS: desative os pós-processadores externos para gerar uma trajetória verificável.')
+        # Preserve the resolved machine, material, heating, start/end macros,
+        # retractions and native transport. Only remove competing geometry
+        # transforms and recursive plugin invocation in this private copy.
+        settings.update({'gcode_label_objects':'1','gcode_comments':'1','slicing_pipeline_plugin':[],
+                         'post_process':[],'enable_arc_fitting':'disabled','zaa_enabled':'0'})
+        return settings
     # Orca embeds a separate machine preset for this preview project. The source
     # ZIP stays untouched, including the printer's homing/levelling/parking macros.
     base = re.sub(r"\s*\([^()]*\.3mf\)$", "", str(settings["printer_settings_id"]), flags=re.I)

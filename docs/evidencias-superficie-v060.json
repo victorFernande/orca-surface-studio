@@ -1,0 +1,89 @@
+{
+  "version": "0.6.0",
+  "date": "2026-11-21",
+  "environment": "Windows / OrcaSlicer 2.5.1",
+  "observed_workflow": "Native Studio generate button -> native Preview -> cache hash verified",
+  "profile_label": "Sovol SV06 0.4 nozzle -3DPrinter",
+  "material_label": "Sovol Generic PLA - Voolt3D",
+  "process_label": "0.20mm Standard @Sovol SV06",
+  "sha256": "28f487b743c5ca777060cd79f6ca5893528539e808aa47e9cd9a55355320d616",
+  "package_payload_equal": true,
+  "native_preview_receipt": {
+    "event": "preview_package_verified",
+    "sha256": "28f487b743c5ca777060cd79f6ca5893528539e808aa47e9cd9a55355320d616",
+    "valid": true
+  },
+  "profile_fields_matched": true,
+  "profile_fields_checked": 22,
+  "metrics": {
+    "segment_count": 380274,
+    "max_geometric_error_mm": 0.014229203170463825,
+    "max_z_speed_mm_s": 4.472133333333333,
+    "max_z_acceleration_mm_s2": 99.9999999999996,
+    "min_subdivided_segment_mm": 0.2000006249990263,
+    "preserved_short_source_segments": 16119,
+    "nonplanar_extrusion_segments_by_role": {
+      "inner wall": 71473,
+      "outer wall": 46809,
+      "internal solid infill": 19713,
+      "sparse infill": 7035,
+      "internal bridge": 2460,
+      "overhang wall": 612,
+      "top surface": 3104,
+      "bridge": 846
+    }
+  },
+  "warp": {
+    "slope_deg": 5.499163152619811,
+    "reference_roof_faces": 1593,
+    "reference_fit_max_residual_mm": 0.06737513112356908,
+    "mesh_roundtrip_error_bound_mm": 0.009993188483879879,
+    "base_unchanged": true,
+    "holes_preserved": true,
+    "planar_collar_mm": 0.0
+  },
+  "native_layer_comparison": {
+    "layer": 202,
+    "role": "Top surface",
+    "observed_z_mm": [
+      39.967,
+      39.84
+    ]
+  },
+  "printer_contacted": false,
+  "physical_print_started": false,
+  "print_button_exercised": false,
+  "physical_gate": "HEAD_AND_DEPOSITION_VALIDATION_REQUIRED",
+  "print_allowed": false,
+  "tests_passed": 192,
+  "screenshots": [
+    {
+      "path": "docs/images/surface-v060/01-modelo-e-perfil-no-studio.jpg",
+      "sha256": "025fe32d1f59b1bbdace9943e24f1ee844e0415835a316192d5398ac9a65902e"
+    },
+    {
+      "path": "docs/images/surface-v060/02-calculo-iniciado-no-plugin.jpg",
+      "sha256": "c44ead97cfe4b15ab449d85ab3a31d0e7e6765bf88fd71b3f71e172fe44dc90f"
+    },
+    {
+      "path": "docs/images/surface-v060/03-preview-confirmado-no-studio.jpg",
+      "sha256": "300c522dea5b0795e8d5b320863f80fa9f23def939b83b068fbd877614956cbd"
+    },
+    {
+      "path": "docs/images/surface-v060/04-camada-isolada-z-e-extrusao.jpg",
+      "sha256": "a4b7e5b8c8a9dc7c1ad253128532f0454c0066f61008e6ef57d043e2f1f1d5c8"
+    },
+    {
+      "path": "docs/images/surface-v060/05-top-surface-z-variavel.jpg",
+      "sha256": "6cd80ad6e5596697a7fc32694f02c025d7465c0863b0fb644b61994c2c7bee1d"
+    },
+    {
+      "path": "docs/images/surface-v060/06-bico-na-camada-inclinada.jpg",
+      "sha256": "abe2aea79ecd1fa7e5a95373840ce225d07faca018d579471a507be0c65a089b"
+    },
+    {
+      "path": "docs/images/surface-v060/07-mesma-camada-outro-z.jpg",
+      "sha256": "28809a72c8c2de41cc266fb5ac3c13b3d605cc854206a82a41e8d7f6231cc472"
+    }
+  ]
+}
