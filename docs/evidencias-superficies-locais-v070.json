@@ -130,12 +130,75 @@
     }
   },
   "headless_ui": "PASS WebGL and software, real candidate result rendered, no JS errors",
-  "native_ui_validation": "PENDING_USER_CONTROL_AUTHORIZATION",
-  "installed_head_measurements": "REQUESTED_PENDING",
+  "native_ui_validation": "GENERATION_AND_PREVIEW_OPEN_OBSERVED_PENDING_CACHE_PERMISSION_AND_VISUAL_COMPARISON",
+  "installed_head_measurements": {
+    "silicone_sock_present": false,
+    "reported_distance_mm": 8,
+    "approximate": true,
+    "component_identified": false,
+    "duct_and_probe_inclusion": "PENDING_USER_CLARIFICATION"
+  },
   "bundle_built": true,
-  "installed": false,
+  "installed": true,
   "tests_passed": 199,
   "print_allowed": false,
   "printer_contacted": false,
-  "physical_print_started": false
+  "physical_print_started": false,
+  "native_gui": {
+    "body_audit": {
+      "status": "PASS_NOMINAL_BODY_BOUND",
+      "gcode_sha256": "0e3a6d9e5ed0b7f387a8658343732ca6caf9bd6dba6f1b34fd28544e0e42bbfe",
+      "minimum_body_z_mm": 1.799999900001694,
+      "minimum_nominal_body_gap_mm": 1.239999900001693,
+      "maximum_material_above_tcp_mm": 0.56,
+      "motions_checked": 128855,
+      "growing_bead_body_checks": 114563,
+      "incomplete_lines": [],
+      "coverage": "All parsed linear motions in labelled print body; startup/homing/footer not certified",
+      "material_model": "Earlier and current finite beads enclosed below maximum trace Z; uncalibrated",
+      "installed_head_registration_verified": false,
+      "worst_bound": {
+        "line_1based": 66,
+        "role": "custom",
+        "motion": "travel",
+        "tcp_segment_z_range_mm": [
+          0.24,
+          1.04
+        ],
+        "material_upper_z_mm": 0.8,
+        "nominal_lower_bound_mm": 1.239999900001693
+      },
+      "nozzle_contact": "UNASSESSED",
+      "manufacturing_uncertainty_included": false,
+      "physical_validation": false,
+      "print_allowed": false,
+      "printer_contacted": false,
+      "nominal_component_count": 56,
+      "nominal_axis": "printer Z = negative CAD Y",
+      "nominal_tcp_cad_mm": [
+        267.2581786613353,
+        341.03574634892607,
+        425.20267174528084
+      ],
+      "cad_metadata_sha256": "22537cd44cef0261c94a50b75903391279fa48480366b30830944d00179f5662",
+      "cad_source_revision": "75f8a0da6ff822c67b6aff62cfa85c7a441e2271",
+      "source_mode": "native_local_surfaces",
+      "package_payload_equal": true,
+      "effective_profile_fields_verified": 26,
+      "native_xyz_e_identity": {
+        "before": {
+          "sha256": "bd62f107cf088c382117e08fa1be265b85580781d3d87a579965b69029f47557",
+          "moves": 131359
+        },
+        "after": {
+          "sha256": "bd62f107cf088c382117e08fa1be265b85580781d3d87a579965b69029f47557",
+          "moves": 131359
+        },
+        "equal": true
+      }
+    },
+    "part_segments": 114311,
+    "nonplanar_segments": 9933,
+    "cache_verified": false
+  }
 }

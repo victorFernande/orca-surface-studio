@@ -112,12 +112,46 @@ nenhuma altura não positiva. Os maiores espaçamentos, até 0,36944 mm, pertenc
 modelo geométrico, sem calibração física da deposição. A versão local delega
 essas transições ao fatiador e preserva seu XYZ/E; não reutiliza aquela âncora.
 
+## Atualização do teste nativo e informação do cabeçote
+
+O usuário autorizou o controle da máquina e informou que a capa de silicone
+está ausente. Relatou aproximadamente **8 mm** da ponta até a parte que poderia
+encostar. Essa observação foi registrada como aproximação de componente ainda
+não identificado, sem substituir todos os afastamentos por 8 mm. Foi solicitada
+apenas a confirmação de que o menor afastamento inclui o duto e o sensor.
+O limite CAD anterior, que ainda inclui a capa, foi mantido como referência
+nominal conservadora; não representa a medição do conjunto instalado.
+
+A 0.7.0 foi instalada preservando o estado de ativação e os presets. A cópia do
+projeto original e o pacote do Preview anterior foram salvos antes do reinício.
+O teste pelo botão **Gerar superfície e abrir Preview** concluiu o fatiamento
+local e abriu o pacote na aba Preview, sem enviar nada à impressora.
+
+No ensaio nativo foram produzidos **114.311 segmentos da peça**, com **9.933
+trechos de Z variável**. Os 26 campos críticos coincidiram. A limitação de avanço
+preservou XYZ/E em **131.359 movimentos**, e o pacote contém o mesmo G-code.
+O limite nominal do corpo continua em aproximadamente **+1,24 mm**, em 128.855
+movimentos verificados. O arquivo nativo difere do ensaio isolado por pequenas
+diferenças da malha serializada pela API; não se devem intercambiar seus hashes.
+
+SHA-256 do resultado nativo:
+`0e3a6d9e5ed0b7f387a8658343732ca6caf9bd6dba6f1b34fd28544e0e42bbfe`.
+
+![Referência anterior no Preview, antes da atualização](images/surface-v070/01-referencia-anterior-v060.jpg)
+
+![Método local selecionado no Studio nativo](images/surface-v070/02-metodo-local-no-studio.jpg)
+
+O Orca solicitou a leitura do cache temporário do novo Preview. A aprovação
+direta pelo usuário está pendente; a comparação final das bordas e do cache
+será registrada depois dela. As imagens acima não comprovam essa etapa final.
+
 ## Estado da entrega
 
 O candidato é de **validação**, não um arquivo liberado para imprimir. A
-conferência dos três afastamentos no cabeçote frio foi solicitada ao usuário;
-a comparação visual do método local exige autorização antes de assumir o
-mouse/teclado. Nenhum arquivo foi enviado à SV06 nem iniciado pelo plugin.
+confirmação do menor afastamento do cabeçote frio continua pendente. O controle
+foi autorizado e a geração/abertura pelo plugin foi observada; a leitura do cache
+e a comparação visual final aguardam a resposta ao pedido do Orca. Nenhum
+arquivo foi enviado à SV06 nem iniciado pelo plugin.
 
 Resultados numéricos resumidos:
 [evidencias-superficies-locais-v070.json](evidencias-superficies-locais-v070.json).
