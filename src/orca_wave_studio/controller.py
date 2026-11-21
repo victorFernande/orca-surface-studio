@@ -64,6 +64,7 @@ class StudioController:
         self._refresh_pending=False
         self._state_revision_snapshot=None
         self._state_revision_value=None
+        self._send_preview_available=False
 
     def event(self, name: str, **details: Any) -> None:
         with self.lock:
@@ -99,7 +100,8 @@ class StudioController:
                     "native":bool(self.host),"events":self._events[-8:],"sequence":self._sequence,
                     "parameters_by_object":self._parameters,"conformal":conformal,
                     "surface_rejection":self._surface_rejection,
-                    "model_preview":self._model_preview,"printer_profile":self._profile_summary}
+                    "model_preview":self._model_preview,"printer_profile":self._profile_summary,
+                    "send_preview_available":self._send_preview_available}
 
     def invalidate(self, reason: str, *, preserve_conformal: bool=False) -> None:
         with self.lock:
@@ -131,6 +133,7 @@ class StudioController:
             self.prepared_project_opened("")
             return
         snapshot=self.host.snapshot()
+        self._send_preview_available=str(getattr(self.host,'project_path',lambda:'')()).lower().endswith('.gcode.3mf')
         self._refresh_pending=False
         if (self.storage/"study_connection.json").is_file():
             atomic_write(self.storage/"last-live-snapshot.json",json.dumps(snapshot.to_dict(),ensure_ascii=False,indent=2).encode())
@@ -761,6 +764,28 @@ class StudioController:
             with self.lock:
                 self._importing_preview=False
 
+    def open_send_dialog(self):
+        if self.host is None:
+            raise WaveError('Confira o envio dentro do OrcaSlicer.')
+        from .send_dialog import preview_identity,review
+        current=Path(self.host.project_path()).resolve()
+        result=self._result
+        matched=bool(result and result.get('package_path') and Path(result['package_path']).resolve()==current)
+        identity=preview_identity(current,result['sha256'] if matched else None,result['plate_index'] if matched else 0)
+        connection=self.host.selected_printer_connection()
+        report=result.get('report',{}) if matched else {}
+        generated_profile=report.get('printer_profile',{}).get('name')
+        same_profile=not generated_profile or generated_profile==connection.profile
+        state=review(identity,connection,report,verified=matched and self._preview_verified,same_profile=same_profile)
+        def validate():
+            return (self._result is result and matched and self._preview_verified
+                    and Path(self.host.project_path()).resolve()==current
+                    and review(identity,connection,result.get('report',{}),verified=True,
+                               same_profile=same_profile)['send_allowed'])
+        self.host.open_send_dialog(current,identity,connection,state,validate)
+        self.event('send_dialog_opened',sha256=identity['sha256'],connection_configured=connection.configured,
+                   send_allowed=state['send_allowed'],printer_contacted=False)
+
     def preview_transition(self, name: str, ctx) -> bool:
         """Only recognize reset of the known origin or a preset named by this import."""
         with self.lock:
@@ -961,6 +986,10 @@ class StudioController:
                     raise WaveError('O estudo mudou. Confira o resultado atual antes de mandar para a bandeja.')
                 if not self._opening_preview:
                     self.open_preview()
+            elif action=='open_send_dialog':
+                if payload.get('sha256') and (not self._result or payload['sha256']!=self._result['sha256']):
+                    raise WaveError('O resultado mudou. Confira o Preview atual antes do envio.')
+                self.open_send_dialog()
             elif action in {"open_panel","hide_panel"}:
                 if self.host is None:
                     raise WaveError("O painel só está disponível dentro do Orca.")

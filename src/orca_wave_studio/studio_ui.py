@@ -886,6 +886,9 @@ const guideStepButtons=guideLabels.map((label,i)=>{
   b.onclick=()=>{if(i+1<=guideStep&&!controlsBusy()){guideStep=i+1;guideAwaitStudy=false;render()}};
   guideSteps.append(b);return b;
 });document.querySelector('header').after(guideSteps);
+const sendReviewButton=node('button','outline','Enviar para impressora…');sendReviewButton.id='send-review';$('theme').before(sendReviewButton);
+sendReviewButton.setAttribute('aria-label','Conferir envio para impressora');sendReviewButton.title='Abrir a conferência de envio sem iniciar impressão';
+sendReviewButton.onclick=()=>send('open_send_dialog',state.result?.sha256?{sha256:state.result.sha256}:{});
 const guideToggle=node('button','outline','Mais opções');guideToggle.id='guide-toggle';$('theme').before(guideToggle);
 guideToggle.onclick=()=>{
   guidedMode=!guidedMode;
@@ -917,6 +920,9 @@ guideNext.onclick=()=>{
   else if(presentResult())send('open_preview',{sha256:state.result.sha256});
 };
 function renderGuide(active,current,busy){
+  sendReviewButton.hidden=!(state.native&&(state.send_preview_available||current));
+  sendReviewButton.disabled=busy;
+  sendReviewButton.textContent=window.innerWidth<=840?'Enviar…':'Enviar para impressora…';
   const on=guidedMode&&surfaceMode;document.body.classList.toggle('guided',on);
   guideSteps.hidden=guideControls.hidden=guideHelp.hidden=guideSummary.hidden=!on;
   $('model-section').querySelector('h3').textContent=on?'Modelos na bandeja':'Objetos da mesa';
@@ -967,7 +973,7 @@ function applyState(next){
   const stamp=JSON.stringify([next.native,next.demo,next.status,next.message,next.revision,
     next.capture?.capture_id,next.capture?.sha256,next.capture_setup_required,next.objects,
     next.presets,next.parameters,next.parameters_by_object,next.selected_object_ids,next.conformal,next.model_preview?.id,
-    next.result?.sha256,next.result?.study_kind,next.result?.object_id,next.result?.settings,next.result?.package_path]);
+    next.result?.sha256,next.result?.study_kind,next.result?.object_id,next.result?.settings,next.result?.package_path,next.send_preview_available]);
   if(!pending&&stamp===stateStamp){state=next;schedulePoll();return}
   stateStamp=stamp;
   const first=!Object.keys(state).length,priorRev=state.revision;

@@ -57,6 +57,42 @@ def _config_settings(bundle: Any) -> dict:
 
 
 class NativeHost:
+    def selected_printer_connection(self):
+        from .send_dialog import selected_connection
+        connection=selected_connection(orca.host.preset_bundle(),getattr(self,'_printer_connection',None))
+        self._printer_connection=connection
+        return connection
+
+    def open_send_dialog(self,path,identity,connection,review_state,validate):
+        from .send_dialog import dialog_html,send_reviewed_file
+        # One window and one explicit attempt. Never contact a host on open.
+        previous=getattr(self,'_send_window',None)
+        if previous is not None and previous.is_open():
+            raise WaveError('A conferência de envio já está aberta. Feche essa janela para conferir novamente.')
+        attempted=threading.Event();closed=threading.Event()
+        def receive(message):
+            payload=json.loads(message) if isinstance(message,str) else message
+            if not isinstance(payload,dict) or payload.get('action')!='send_file' or attempted.is_set():return
+            attempted.set()
+            try:
+                fresh=self.selected_printer_connection()
+                # Runs on the UI thread, so this rechecks the actual selection,
+                # current Preview and physical gates before any worker starts.
+                if not validate():raise WaveError('O estudo ou o Preview mudou. Confira o envio novamente.')
+                if not review_state['send_allowed']:raise WaveError('Envio bloqueado: este estudo continua somente para Preview.')
+            except WaveError as exc:
+                self._send_window.post({'message':str(exc)});return
+            def work():
+                try:
+                    send_reviewed_file(path,identity,connection,fresh,review_state,cancelled=closed.is_set)
+                    text='Arquivo enviado sem iniciar impressão.'
+                except Exception:
+                    text='Não foi possível confirmar o envio. Confira o receptor antes de tentar novamente; não há repetição automática.'
+                if not closed.is_set():self._send_window.post({'message':text})
+            threading.Thread(target=work,name='SurfaceStudio-Upload',daemon=True).start()
+        self._send_window=orca.host.ui.create_window(dialog_html(review_state),title='Surface Studio — Enviar para impressora',
+            width=660,height=650,on_message=receive,on_close=closed.set)
+
     def allowed_source_roots(self):
         # gettempdir() probes candidate folders by creating/deleting a random
         # file on its first call. In Orca that unrelated probe asks the user
@@ -141,6 +177,7 @@ class NativeHost:
         transaction.commit()
 
     def open_preview(self,path: Path):
+        self.selected_printer_connection()
         open_in_current_orca(path)
 
     def slicer_executable(self):

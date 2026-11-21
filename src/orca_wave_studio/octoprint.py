@@ -90,13 +90,20 @@ class OctoPrintTransport:
 
     def send(self, gcode: bytes, filename: str, expected_sha256: str, *,
              cancelled: Callable[[], bool] | None = None) -> dict:
+        return self._send_file(gcode, filename, expected_sha256, start_print=True, cancelled=cancelled)
+
+    def upload_only(self, gcode: bytes, filename: str, expected_sha256: str, *, cancelled=None) -> dict:
+        """Store a reviewed file without selecting it or starting a print."""
+        return self._send_file(gcode, filename, expected_sha256, start_print=False, cancelled=cancelled)
+
+    def _send_file(self, gcode, filename, expected_sha256, *, start_print, cancelled):
         if not isinstance(gcode, bytes) or not gcode or digest(gcode) != expected_sha256:
             raise WaveError("G-code vazio ou SHA-256 divergente antes do envio.")
         if (not filename or len(filename.encode("utf-8")) > 255 or any(c in filename for c in '/\\:*?"<>|')
                 or any(ord(c) < 32 or ord(c) == 127 for c in filename)
                 or not filename.lower().endswith(".gcode")):
             raise WaveError("Nome de G-code inválido.")
-        return self._upload(gcode, filename, expected_sha256, start_print=True, cancelled=cancelled)
+        return self._upload(gcode, filename, expected_sha256, start_print=start_print, cancelled=cancelled)
 
     def verify_storage(self, *, cancelled=None):
         """The Orca LAN preflight uploads its fixed, inert probe without selecting or printing it."""
