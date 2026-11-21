@@ -147,20 +147,25 @@ dimensional ou uma calibração do contato do bico. A ausência da capa permanec
 registrada; não foi alterado o perfil nominal de fábrica para fingir que ele
 representa exatamente o cabeçote instalado.
 
-O Orca solicitou a leitura do cache temporário do novo Preview. A aprovação
-direta pelo usuário está pendente; a comparação final das bordas e do cache
-será registrada depois dela. As imagens acima não comprovam essa etapa final.
+Na 0.7.0, o Orca solicitou leitura individual do cache e o ciclo foi encerrado
+antes da conferência final. A 0.7.1 substituiu esse pedido repetido por um escopo
+de pasta aprovado pessoalmente pelo usuário. O novo teste gerou o Benchy, abriu
+o Preview e confirmou seu hash em caches distintos, sem novos pedidos por
+arquivo. A camada 95 mostrou Z variável durante extrusão da parede externa da
+proa. Ainda existem degraus residuais no modelo completo; esse ensaio não
+comprova acabamento conformal completo de todas as áreas marcadas pelo usuário.
+Veja [a sequência e as capturas da 0.7.1](VALIDACAO_NATIVA_V071.md).
 
 ## Estado da entrega
 
-O candidato é de **validação**, não um arquivo liberado para imprimir. A
+O candidato é de **validação**, não um arquivo liberado para imprimir. O
 menor afastamento do cabeçote frio foi relatado como aproximadamente 8 mm,
 incluindo duto e sensor. O controle foi autorizado e a geração/abertura pelo
-plugin foi observada; a leitura do cache
-e a comparação visual final aguardam a resposta ao pedido do Orca. Nenhum
+plugin foi observada; a leitura do cache foi confirmada na 0.7.1 e a inspeção
+visual encontrou melhoria local com degraus residuais. Nenhum
 arquivo foi enviado à SV06 nem iniciado pelo plugin.
 
-Para reduzir os pedidos repetidos, a 0.7.1 prepara o
+Para reduzir os pedidos repetidos, a 0.7.1 usa o
 [escopo de leitura persistente do cache](PERMISSOES_PREVIEW.md). A decisão inicial
 continua sendo feita pessoalmente pelo usuário no Orca.
 

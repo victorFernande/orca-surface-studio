@@ -202,5 +202,6 @@
     "part_segments": 114311,
     "nonplanar_segments": 9933,
     "cache_verified": false
-  }
+  },
+  "follow_up_v071": "evidencias-validacao-nativa-v071.json"
 }

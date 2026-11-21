@@ -42,7 +42,20 @@ texto claro sobre fundo branco observado no WebView nativo do Windows.
 
 ## Estado
 
-Implementação e testes preparados. A instalação e a autorização única na janela
-do Orca ainda precisam ser concluídas pelo fluxo acompanhado. A janela antiga
-de acesso a um arquivo específico não é aprovada por essa alteração de código;
-ela precisa ser respondida diretamente pelo usuário.
+Validado no OrcaSlicer 2.5.1 para Windows em 21/11/2026. A 0.7.1 foi instalada,
+o usuário aprovou pessoalmente o escopo na janela de segurança e o Benchy foi
+gerado pelo botão do Studio. Foram observadas três aberturas do resultado sem
+novo pedido individual. Duas delas tiveram recibos guardados: caminhos de cache
+distintos, com o mesmo SHA-256 do G-code gerado e do pacote.
+
+O Studio mostrou **“Preview do Orca confirmado com o mesmo G-code”**. Os
+diálogos normais de abertura de projeto e de alterações temporárias de processo
+continuaram aparecendo; não são pedidos de segurança. O teste não marcou
+“Remember my choice” nem salvou as alterações temporárias no preset do usuário.
+
+O seletor escuro também foi observado legível na interface nativa. Os 202 testes
+automatizados passaram antes da instalação. A persistência após outro reinício,
+posterior à aprovação, ainda não foi exercitada neste ciclo; não se deve
+confundi-la com as várias aberturas verificadas na mesma sessão.
+
+Veja o [registro com capturas e limites do Benchy](VALIDACAO_NATIVA_V071.md).

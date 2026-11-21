@@ -1,0 +1,100 @@
+{
+  "version": "0.7.1",
+  "date": "2026-11-21",
+  "environment": "Windows / OrcaSlicer 2.5.1",
+  "mode": "native_local",
+  "profile_label": "Sovol SV06 0.4 nozzle -3DPrinter",
+  "material_label": "Sovol Generic PLA - Voolt3D",
+  "processed_sha256": "74beedcb06a601aa653987416bdebb2086bbbe585b4b8358a6068cb0facb6219",
+  "part_segments": 114311,
+  "nonplanar_segments": 9933,
+  "effective_profile_fields_verified": 26,
+  "preview": {
+    "openings_observed": 3,
+    "retained_receipts": 2,
+    "distinct_cache_paths": true,
+    "receipt_path_fingerprints_sha256": [
+      "351872bcb911f884c481cd15d38cb6de126eba19534cb37bdd3db79c4c92b08d",
+      "0983627b2b0e19764ba817f40b006a792578dc9d0c00ba3ab736b07c66c3d696"
+    ],
+    "all_retained_receipts_match_generated": true,
+    "current_cache_bytes_match": true,
+    "package_payload_equal": true,
+    "individual_permission_prompts_after_scope_approval": 0,
+    "scope_approved_by": "user in native Orca dialog",
+    "restart_after_approval_tested": false
+  },
+  "native_preview_layer95": {
+    "nominal_z_mm": 19.04,
+    "role": "outer wall",
+    "nonplanar_extrusion_segments": 144,
+    "z_range_mm": [
+      18.89,
+      19.04
+    ],
+    "gcode_window_positive_extrusion_and_varying_z_observed": true
+  },
+  "body_audit": {
+    "status": "PASS_NOMINAL_BODY_BOUND",
+    "gcode_sha256": "74beedcb06a601aa653987416bdebb2086bbbe585b4b8358a6068cb0facb6219",
+    "minimum_body_z_mm": 1.799999900001694,
+    "minimum_nominal_body_gap_mm": 1.239999900001693,
+    "maximum_material_above_tcp_mm": 0.56,
+    "motions_checked": 128855,
+    "growing_bead_body_checks": 114563,
+    "incomplete_lines": [],
+    "coverage": "All parsed linear motions in labelled print body; startup/homing/footer not certified",
+    "material_model": "Earlier and current finite beads enclosed below maximum trace Z; uncalibrated",
+    "installed_head_registration_verified": false,
+    "worst_bound": {
+      "line_1based": 66,
+      "role": "custom",
+      "motion": "travel",
+      "tcp_segment_z_range_mm": [
+        0.24,
+        1.04
+      ],
+      "material_upper_z_mm": 0.8,
+      "nominal_lower_bound_mm": 1.239999900001693
+    },
+    "nozzle_contact": "UNASSESSED",
+    "manufacturing_uncertainty_included": false,
+    "physical_validation": false,
+    "print_allowed": false,
+    "printer_contacted": false,
+    "nominal_component_count": 56,
+    "nominal_axis": "printer Z = negative CAD Y",
+    "nominal_tcp_cad_mm": [
+      267.2581786613353,
+      341.03574634892607,
+      425.20267174528084
+    ],
+    "cad_metadata_sha256": "22537cd44cef0261c94a50b75903391279fa48480366b30830944d00179f5662",
+    "cad_source_revision": "75f8a0da6ff822c67b6aff62cfa85c7a441e2271",
+    "source_mode": "native_local_surfaces",
+    "package_payload_equal": true,
+    "effective_profile_fields_verified": 26,
+    "native_xyz_e_identity": {
+      "before": {
+        "sha256": "bd62f107cf088c382117e08fa1be265b85580781d3d87a579965b69029f47557",
+        "moves": 131359
+      },
+      "after": {
+        "sha256": "bd62f107cf088c382117e08fa1be265b85580781d3d87a579965b69029f47557",
+        "moves": 131359
+      },
+      "equal": true
+    }
+  },
+  "residual_steps_observed": true,
+  "complete_conformal_finish_all_marked_regions": false,
+  "tests_passed": 202,
+  "print_allowed": false,
+  "printer_contacted": false,
+  "physical_print_started": false,
+  "screenshots": [
+    "images/surface-v071/01-modelo-e-perfil.jpg",
+    "images/surface-v071/02-preview-completo.jpg",
+    "images/surface-v071/03-camada-95-extrusao-z.jpg"
+  ]
+}

@@ -1,6 +1,6 @@
 # ADR-0010 — Persisted, user-approved read-only Preview cache scope
 
-Status: Implemented in 0.7.1; first native approval remains user-owned.
+Status: Implemented in 0.7.1; native user approval and same-session cache reuse verified.
 
 Fresh Orca model caches receive different per-file paths and therefore produce
 repeated exact-file permission prompts. The Orca host API supports persisted
@@ -22,3 +22,11 @@ permission wait. Resume on a focused Studio and retain all integrity checks.
 Ordinary processing still times out, and denial or mutation does not produce
 an infinite retry loop. This avoids counting a user's time in a native security
 dialog as a failed parsing operation.
+
+On 2026-11-21 the user approved the scope in OrcaSlicer 2.5.1 on Windows.
+Three native Preview openings required no individual file prompt. Retained
+receipts from two different cache paths matched the generated/package SHA-256.
+The Studio visibly confirmed the match. A subsequent application restart after
+the approval was not exercised in this cycle; persistence across that boundary
+remains a separate observation. No security prompt was answered by automation,
+no grant file was edited, and no print was sent.
