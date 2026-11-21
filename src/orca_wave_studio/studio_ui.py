@@ -30,7 +30,7 @@ header{height:60px;flex:none;display:flex;align-items:center;justify-content:spa
 .state{display:flex;align-items:center;gap:8px;font-weight:600}.state .dot{background:var(--text-dim)}.state.ready .dot{background:var(--orca-accent-hover)}.state.error .dot{background:var(--status-crit)}.state.processing .dot,.state.analyzing .dot,.state.slicing_required .dot{background:var(--status-warn)}.message{margin:7px 0;font-size:12px;overflow-wrap:anywhere}.data{margin:8px 0 0;font-size:12px}.data>div{padding:6px 0;border-top:1px solid var(--border-subtle);display:flex;justify-content:space-between;gap:8px}.data dt{color:var(--text-muted)}.data dd{margin:0;text-align:right;overflow-wrap:anywhere}.flow{display:grid;gap:8px}.foot{padding:14px 16px;border-top:1px solid var(--border-subtle);background:var(--bg-panel)}.foot small{display:block;text-align:center;margin-top:6px}.positive{background:var(--orca-accent);color:white;border-color:var(--orca-accent);font-weight:650;padding:10px}.positive:hover:not(:disabled){background:var(--orca-accent-hover);border-color:var(--orca-accent-hover)}.foot .wide+.wide{margin-top:6px}.notice{padding:8px 12px;background:var(--bg-input);color:var(--status-warn);overflow-wrap:anywhere;font-size:12px}.docktabs{display:none}.path{display:block;overflow-wrap:anywhere;user-select:all;color:var(--text-muted);font:10px/1.5 var(--font-mono);margin-top:7px}.docktabs button[aria-selected=true]{border-color:var(--orca-accent-border);color:var(--orca-accent-hover);background:var(--orca-accent-soft)}
 body.compact{height:auto;min-height:100vh}body.compact header{padding:0 10px;height:46px}body.compact .connection{font-size:10px}body.compact .brand{gap:6px}body.compact h1{font-size:15px}body.compact .brandmark{width:27px;height:27px}body.compact .work{display:flex;flex-direction:column}body.compact .viewport{order:-1}body.compact .stage{height:clamp(230px,33vh,360px);flex:auto}body.compact .side{border:0}body.compact .side:not(.shown){display:none}body.compact .docktabs{display:flex;gap:5px;padding:6px 10px;background:var(--bg-panel);border-bottom:1px solid var(--border-subtle)}body.compact .docktabs button{flex:1}body.compact .scroll{overflow:visible}body.compact .section{padding:13px 15px}body.compact .vhead{padding:8px 10px;flex-wrap:wrap}body.compact .vhead h2{font-size:14px}body.compact .transport{padding:8px 10px}body.compact .foot{position:sticky;bottom:0}body.compact .layerrow small{display:none}@media(max-width:580px){.connection{max-width:137px;line-height:1.15}.transport .readout{gap:6px}.vhead{flex-wrap:wrap}.viewtabs{max-width:100%}}@media(max-height:660px) and (min-width:841px){.section{padding:11px 14px}.field{margin-top:8px}header{height:48px}}
 .object{align-items:center}.object .pick-object{display:block;flex:1;min-width:0;text-align:left;padding:2px 4px;background:transparent;border:1px solid transparent}.object .pick-object[aria-pressed=true]{border-left:2px solid var(--orca-accent-hover);border-radius:0;padding-left:7px}.edit-target{display:block;color:var(--orca-accent-hover);font-size:12px;margin:-4px 0 10px;overflow-wrap:anywhere}
-.guide-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:12px 18px;border-bottom:1px solid var(--border-subtle);background:var(--bg-panel)}.guide-steps button{justify-content:flex-start;text-align:left;padding:10px 12px;color:var(--text-muted);background:transparent}.guide-steps b{display:inline-grid;place-items:center;width:25px;height:25px;border:1px solid var(--border-strong);border-radius:50%;flex:none}.guide-steps [aria-current=step]{border-color:var(--orca-accent-border);background:var(--orca-accent-soft);color:var(--text-main)}.guide-steps [aria-current=step] b{background:var(--orca-accent);border-color:var(--orca-accent);color:white}.guide-controls{display:grid;gap:8px}.guide-controls small{text-align:left}.guide-help h2{margin-bottom:9px}.guide-help p{line-height:1.65}.guide-summary strong{display:block;margin-top:7px;overflow-wrap:anywhere}.guide-warning{padding:10px;border-left:3px solid var(--status-warn);background:var(--bg-input);color:var(--text-muted);margin-top:15px}.guided .object small:first-of-type{display:none}.guided .study-modes,.guided .edit-target,.guided .surface-info,.guided #suggest,.guided #analyze,.guided .viewtabs,.guided #generate,.guided #preview,.guided #bench-note,.guided .panel-help,.guided #metadata,.guided #result-path{display:none!important}.guided #wall-selection>h3,.guided #wall-selection>.segments{display:none}.guided #wall-selection{margin-top:0}.guided[data-guide-step="1"] #area-section,.guided[data-guide-step="1"] #guide-summary,.guided[data-guide-step="2"] #model-section,.guided[data-guide-step="2"] #guide-summary{display:none}.guided[data-guide-step="3"] #model-section,.guided[data-guide-step="3"] #area-section,.guided[data-guide-step="4"] #model-section,.guided[data-guide-step="4"] #area-section{display:none}.guided #guide-back{background:transparent}.guided #guide-next{min-height:42px}.guided #guide-details{margin:0 16px 16px}.guided #guide-details>summary{padding:8px 0}.guided .vhead h2{font-size:16px}.guided[data-study-ready="false"] .transport{display:none}.guided.compact .connection{display:none}.guided.compact .side:not(.shown){display:flex}.guided .docktabs{display:none!important}.guided.compact header{gap:5px}.guided.compact .brand h1{font-size:13px}.guided.compact #guide-toggle{font-size:11px;padding:5px}.guided #profile-card{padding-top:13px;padding-bottom:13px}.guided #guide-help{min-height:180px}@media(max-width:840px){.guide-steps{grid-template-columns:repeat(2,minmax(0,1fr));padding:8px;gap:5px}.guide-steps button{font-size:12px;padding:7px}.guide-steps b{width:22px;height:22px}.guided #guide-help{min-height:0}}
+.guide-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:12px 18px;border-bottom:1px solid var(--border-subtle);background:var(--bg-panel)}.guide-steps button{justify-content:flex-start;text-align:left;padding:10px 12px;color:var(--text-muted);background:transparent}.guide-steps b{display:inline-grid;place-items:center;width:25px;height:25px;border:1px solid var(--border-strong);border-radius:50%;flex:none}.guide-steps [aria-current=step]{border-color:var(--orca-accent-border);background:var(--orca-accent-soft);color:var(--text-main)}.guide-steps [aria-current=step] b{background:var(--orca-accent);border-color:var(--orca-accent);color:white}.guide-controls{display:grid;gap:8px}.guide-controls small{text-align:left}.guide-help h2{margin-bottom:9px}.guide-help p{line-height:1.65}.guide-summary strong{display:block;margin-top:7px;overflow-wrap:anywhere}.guide-warning{padding:10px;border-left:3px solid var(--status-warn);background:var(--bg-input);color:var(--text-muted);margin-top:15px}.guided .object small:first-of-type{display:none}.guided .study-modes,.guided .edit-target,.guided .surface-info,.guided #suggest,.guided #analyze,.guided .viewtabs,.guided #generate,.guided #preview,.guided #bench-note,.guided .panel-help,.guided #metadata,.guided #result-path{display:none!important}.guided #wall-selection>h3{display:none}.guided #wall-selection{margin-top:0}.guided[data-guide-step="1"] #area-section,.guided[data-guide-step="1"] #guide-summary,.guided[data-guide-step="2"] #model-section,.guided[data-guide-step="2"] #guide-summary{display:none}.guided[data-guide-step="3"] #model-section,.guided[data-guide-step="3"] #area-section,.guided[data-guide-step="4"] #model-section,.guided[data-guide-step="4"] #area-section{display:none}.guided #guide-back{background:transparent}.guided #guide-next{min-height:42px}.guided #guide-details{margin:0 16px 16px}.guided #guide-details>summary{padding:8px 0}.guided .vhead h2{font-size:16px}.guided[data-study-ready="false"] .transport{display:none}.guided.compact .connection{display:none}.guided.compact .side:not(.shown){display:flex}.guided .docktabs{display:none!important}.guided.compact header{gap:5px}.guided.compact .brand h1{font-size:13px}.guided.compact #guide-toggle{font-size:11px;padding:5px}.guided #profile-card{padding-top:13px;padding-bottom:13px}.guided #guide-help{min-height:180px}@media(max-width:840px){.guide-steps{grid-template-columns:repeat(2,minmax(0,1fr));padding:8px;gap:5px}.guide-steps button{font-size:12px;padding:7px}.guide-steps b{width:22px;height:22px}.guided #guide-help{min-height:0}}
 /* Orca also injects element defaults, including a native foreground for headings. */
 html[data-theme=dark]{--orca-accent:#00a896;color-scheme:dark}html[data-theme=light]{--orca-accent:#00897b;color-scheme:light}
 body[data-mode]{background:var(--bg-app);color:var(--text-main);font-family:var(--font-sans)}
@@ -303,7 +303,7 @@ const surfaceInfo=node('p','surface-info','O estudo segue a superfície superior
 primary.before(surfaceInfo);
 const wallBox=node('div','field');wallBox.id='wall-selection';
 wallBox.append(node('h3','','Paredes a suavizar'));
-const wallModes=node('div','segments'),wallPaint=node('button','','Escolher na peça'),wallAll=node('button','','Todas compatíveis');
+const wallModes=node('div','segments'),wallPaint=node('button','','Escolher na peça'),wallAll=node('button','','Peça inteira');
 wallPaint.id='wall-paint';wallAll.id='wall-all';wallModes.append(wallPaint,wallAll);wallBox.append(wallModes);
 const brushRow=node('label','fieldtop','Raio da área'),brushInput=node('input');
 brushInput.type='number';brushInput.min='1';brushInput.max='15';brushInput.step='1';brushInput.value='6';brushInput.id='wall-radius';
@@ -313,7 +313,7 @@ brushInput.onchange=()=>{if(!brushInput.checkValidity()||!Number.isFinite(brushI
 const wallHint=node('small','','Clique para acrescentar áreas; arraste para girar. A área inclui a espessura e pode alcançar paredes próximas. Velocidade nas áreas: 80% do perfil.'),wallList=node('div');
 wallList.id='wall-areas';wallList.setAttribute('aria-live','polite');
 const wallClear=node('button','outline','Limpar seleção');wallClear.id='wall-clear';
-wallBox.append(wallHint,wallList,wallClear);primary.append(wallBox);
+const wallAllHint=node('small','','Inclui teto e bordas em toda a peça. O contorno acompanha as superfícies compatíveis; paredes verticais e faces inferiores podem continuar em camadas.');wallBox.append(wallHint,wallAllHint,wallList,wallClear);primary.append(wallBox);
 wallPaint.onclick=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),selection_mode:'paint'});render()};
 wallAll.onclick=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),selection_mode:'all',wall_selection:[],selection_revision:null});wallMarks.delete(activeId);render()};
 wallClear.onclick=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),wall_selection:[],selection_revision:null});wallMarks.delete(activeId);render()};
@@ -407,9 +407,18 @@ function diagnostics(current){
     if(rep.wall_selection?.mode==='paint'){
       record(metrics,'Áreas escolhidas',rep.wall_selection.areas.length);
       record(metrics,'Velocidade nas áreas','80% do perfil');
-      const angle=rep.wall_selection_audit?.maximum_motion_slope_deg;
+      const angle=rep.motion_slope_review?.maximum_deg??rep.wall_selection_audit?.maximum_motion_slope_deg;
       if(Number.isFinite(angle))record(metrics,'Maior inclinação do percurso',numberFormat(angle,1)+'°');
       if(angle>r.settings.max_slope_deg)$('result-note').textContent='Somente Preview: há movimentos mais inclinados que o limite do estudo. O arquivo não está liberado para imprimir.';
+    }
+    if(rep.wall_selection?.mode==='all'){
+      record(metrics,'Abrangência','Peça inteira · superfícies compatíveis');
+      record(metrics,'Maior inclinação do percurso',numberFormat(rep.motion_slope_review?.maximum_deg,1)+'°');
+    }
+    if(rep.contour_coverage){
+      record(metrics,'Deposições ajustadas em Z',rep.contour_coverage.adjusted_deposition_segments);
+      record(metrics,'Camadas com ajuste em Z',rep.contour_coverage.affected_layer_count);
+      record(metrics,'Acabamento sem degraus','Não certificado');
     }
     if(rep.finishing){
       record(metrics,'Camadas de acabamento',numberFormat(rep.finishing.finishing_layer_mm,3)+' mm');
@@ -732,7 +741,7 @@ function render(){
   $('canvas').style.cursor=localSurface&&painting&&!busy&&(!guidedMode||guideStep===2)?'crosshair':'grab';
   wallPaint.setAttribute('aria-pressed',String(painting));wallAll.setAttribute('aria-pressed',String(!painting));
   wallPaint.disabled=wallAll.disabled=brushInput.disabled=busy;brushRow.hidden=wallHint.hidden=wallList.hidden=wallClear.hidden=!painting;
-  wallClear.disabled=busy||!wallOptions.wall_selection?.length;
+  wallAllHint.hidden=painting;wallClear.disabled=busy||!wallOptions.wall_selection?.length;
   wallList.replaceChildren();
   (wallOptions.wall_selection||[]).forEach((area,i)=>{
     const remove=node('button','outline','Área '+(i+1)+' · '+numberFormat(area.radius_mm)+' mm ×');
@@ -882,7 +891,7 @@ guideToggle.onclick=()=>{
   if(guidedMode){
     surfaceMode=true;guideStep=1;guideModelId=null;guideAwaitStudy=false;
     const settings=surfaceSettings();
-    if(settings.backend!=='native_local'||settings.selection_mode!=='paint'){
+    if(settings.backend!=='native_local'){
       surfaceByObject.set(activeId,{...settings,backend:'native_local',selection_mode:'paint',wall_selection:[],selection_revision:null});wallMarks.delete(activeId);
     }
   }
@@ -890,7 +899,7 @@ guideToggle.onclick=()=>{
 };
 $('objects').closest('section').id='model-section';$('params').closest('section').id='area-section';profileBox.id='profile-card';
 const guideSummary=node('section','section guide-summary');guideSummary.id='guide-summary';
-guideSummary.append(node('h3','','Seu estudo'));const guideModelName=node('strong'),guideAreaCount=node('p','message'),guideFinish=node('p','message');guideSummary.append(guideModelName,guideAreaCount,guideFinish,node('small','','Velocidade nas áreas: 80% do perfil.'));profileBox.after(guideSummary);
+guideSummary.append(node('h3','','Seu estudo'));const guideModelName=node('strong'),guideAreaCount=node('p','message'),guideFinish=node('p','message'),guideSpeed=node('small');guideSummary.append(guideModelName,guideAreaCount,guideFinish,guideSpeed);profileBox.after(guideSummary);
 const guideHelp=node('section','section guide-help');guideHelp.id='guide-help';
 const guideHeading=node('h2'),guideText=node('p'),guideWarning=node('p','guide-warning');guideWarning.id='guide-warning';guideHelp.append(guideHeading,guideText,guideWarning);
 const reviewScroll=document.querySelector('#review>.scroll');reviewScroll.prepend(guideHelp);
@@ -924,12 +933,12 @@ function renderGuide(active,current,busy){
   guideStepButtons.forEach((button,i)=>{button.disabled=busy||i+1>guideStep;button.toggleAttribute('aria-current',i+1===guideStep);if(i+1===guideStep)button.setAttribute('aria-current','step')});
   guideHeading.textContent=guideLabels[guideStep-1];
   const choices=surfaceSettings(),areaCount=choices.wall_selection?.length||0,
-    count=choices.selection_mode==='all'?'Todas as áreas compatíveis':areaCount+(areaCount===1?' área selecionada':' áreas selecionadas');
-  guideModelName.textContent=active?.name||'Escolha um modelo';guideAreaCount.textContent=count;
+    count=choices.selection_mode==='all'?'Peça inteira · superfícies compatíveis':areaCount+(areaCount===1?' área selecionada':' áreas selecionadas');
+  guideModelName.textContent=active?.name||'Escolha um modelo';guideAreaCount.textContent=count;guideSpeed.textContent=choices.selection_mode==='all'?'Velocidades do perfil selecionado.':'Velocidade nas áreas: 80% do perfil.';
   const finish=current?state.result?.report?.finishing:null;
   guideFinish.textContent=finish?'Acabamento: camadas de '+numberFormat(finish.finishing_layer_mm,3)+' mm nas faixas escolhidas.':'Acabamento ajustado automaticamente ao perfil.';
   guideText.textContent=guideStep===1?(active?'Escolha o modelo na lista e avance.':'Adicione um modelo à placa do Orca e atualize a lista.'):
-    guideStep===2?'Clique nas áreas da peça que deseja suavizar. Arraste para girar.':
+    guideStep===2?(choices.selection_mode==='all'?'A peça inteira será estudada, incluindo teto e bordas compatíveis. Clique em Continuar.':'Clique nas áreas da peça ou escolha Peça inteira. Arraste para girar.'):
     guideStep===3?(busy?'Estudando o movimento…':state.status==='error'?state.message:'Clique em Estudar movimento. O resultado aparece aqui no Studio.'):
     state.result?.native_preview?'Resultado conferido e aberto no Preview do Orca.':'Use ▶ para conferir o movimento. Depois mande o resultado para a bandeja do Orca.';
   guideWarning.hidden=guideStep!==4||Boolean(state.result?.report?.print_allowed);
@@ -937,7 +946,7 @@ function renderGuide(active,current,busy){
   guideNext.textContent=guideStep===1?'Selecionar áreas':guideStep===2?'Continuar':guideStep===3?(busy?'Estudando movimento…':'Estudar movimento'):'Mandar para a bandeja';
   guideNext.disabled=!linked||busy||!active||(guideStep===2&&Boolean(surfaceError()))||(guideStep===3&&Boolean(surfaceError()))||(guideStep===4&&!current);
   guideBack.hidden=guideStep===1;guideBack.disabled=busy;
-  guideFootNote.textContent=guideStep===2?'Selecione pelo menos uma área para continuar.':guideStep===3?'O estudo fica no plugin até você mandar para a bandeja.':guideStep===4?'Abre no Preview do Orca. Não inicia impressão.':'';
+  guideFootNote.textContent=guideStep===2?(choices.selection_mode==='all'?'Peça inteira selecionada.':'Selecione uma área ou escolha Peça inteira.'):guideStep===3?'O estudo fica no plugin até você mandar para a bandeja.':guideStep===4?'Abre no Preview do Orca. Não inicia impressão.':'';
   $('action-note').hidden=!$('action-note').textContent;
   $('validation').hidden=true;surfaceAdvanced.hidden=true;
   document.querySelector('.vhead h2').textContent=guideStep<3?'Seu modelo':'Movimento da peça';
