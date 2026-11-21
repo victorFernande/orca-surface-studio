@@ -8,7 +8,7 @@ from unittest.mock import patch
 from orca_wave_studio.contracts import WaveError
 from orca_wave_studio.engine_parser import read
 from orca_wave_studio.fixtures import cylinder_gcode,cylinder_snapshot
-from orca_wave_studio.native_surfaces import contour_result,local_settings
+from orca_wave_studio.native_surfaces import contour_result,local_settings,verify_whole_model
 from orca_wave_studio.printer_profile import PrinterProfile
 from orca_wave_studio.project_io import write_model_project
 from orca_wave_studio.package import build_sliced_package,extract_plate_gcode
@@ -64,7 +64,10 @@ class NativeSurfaceTests(unittest.TestCase):
             self.assertFalse(result['report']['print_allowed'])
 
     def test_local_workflow_uses_original_mesh_and_never_calls_roof_inverse_map(self):
-        snapshot=cylinder_snapshot();before=snapshot.to_dict()
+        snapshot=cylinder_snapshot()
+        snapshot.objects[0]['config']['zaa_enabled']='0'
+        snapshot.objects[0]['volumes'][0]['config']={'zaa_enabled':'0'}
+        before=snapshot.to_dict()
         with tempfile.TemporaryDirectory() as root:
             root=Path(root);backup=root/'original.3mf';write_model_project(snapshot,backup,snapshot.settings)
             def slicer(executable,model,folder,cancelled,*,workspace):
@@ -76,6 +79,8 @@ class NativeSurfaceTests(unittest.TestCase):
                 result=build_surface(snapshot,'100',backup,root/'job','unused',{'backend':'native_local'},slicer=slicer)
             self.assertEqual(result['settings']['backend'],'native_local')
             self.assertEqual(result['settings']['step_mm'],.4)
+            self.assertEqual(result['report']['wall_selection']['mode'],'all')
+            self.assertIn('all eligible',result['report']['wall_selection']['scope'])
             self.assertEqual(before,snapshot.to_dict())
             self.assertEqual(extract_plate_gcode(result['package_path'],0),Path(result['gcode_path']).read_bytes())
             self.assertEqual(len(result['report']['effective_profile_verification']['verified_fields']),26)
@@ -105,6 +110,27 @@ class NativeSurfaceTests(unittest.TestCase):
         profile=PrinterProfile.from_settings(cylinder_snapshot().settings)
         for data in (cylinder_gcode(layers=1),b'; OrcaWaveStudio BENCH ONLY\n'+self.source()):
             with self.subTest(data=data[:25]),self.assertRaises(WaveError):contour_result(data,profile,{0:'100'})
+
+    def test_constant_z_offset_is_counted_without_claiming_a_continuous_surface(self):
+        data=cylinder_gcode(layers=2).replace(b'Z0.40000',b'Z0.39800')
+        result=contour_result(b'; zaa_enabled = 1\n'+data,PrinterProfile.from_settings(cylinder_snapshot().settings),{0:'100'})
+        coverage=result.report['contour_coverage']
+        self.assertGreater(coverage['adjusted_deposition_segments'],0)
+        self.assertEqual(coverage['affected_layer_count'],1)
+        self.assertFalse(coverage['continuous_surface_certified'])
+        self.assertFalse(result.report['nonplanar_extrusion_detected'])
+
+    def test_whole_model_rejects_a_native_part_that_disabled_contouring(self):
+        snapshot=cylinder_snapshot()
+        settings={'zaa_enabled':'1','zaa_min_z':'0.035','zaa_minimize_perimeter_height':'0'}
+        snapshot.objects[0]['config'].update(settings)
+        snapshot.objects[0]['volumes'][0]['config']=dict(settings)
+        with tempfile.TemporaryDirectory() as folder:
+            p=Path(folder)/'whole.3mf';write_model_project(snapshot,p,snapshot.settings)
+            verify_whole_model(p,.035)
+            snapshot.objects[0]['volumes'][0]['config']['zaa_enabled']='0'
+            write_model_project(snapshot,p,snapshot.settings)
+            with self.assertRaisesRegex(WaveError,'WALL_NATIVE'):verify_whole_model(p,.035)
 
     def test_local_copy_preserves_heating_and_transport_and_does_not_modify_source(self):
         settings={**cylinder_snapshot().settings,'machine_start_gcode':'M109 S210',

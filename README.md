@@ -2,6 +2,13 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A **0.10.1** deixa **Peça inteira** disponível no passo Selecionar áreas,
+incluindo o teto e as bordas compatíveis sem marcar cada região. O teste nativo
+passou de 166 para 2.260 movimentos com Z variável, com máximo de 25,79° e a
+malha original preservada. **Ainda há degraus residuais**: o pedido de eliminar
+todos eles continua pendente. Veja o [teste, as capturas e o limite encontrado
+no motor atual](docs/PECA_INTEIRA_V0101.md).
+
 A **0.10.0** reduz os degraus com acabamento automático nas faixas selecionadas,
 sem deformar a malha. No novo teste pelo plugin, a maior transição de extrusão
 do Benchy caiu de **63,36° para 26,12°**, com camadas locais de **0,07 mm**.

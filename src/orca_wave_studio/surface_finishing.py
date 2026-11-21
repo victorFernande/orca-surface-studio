@@ -46,7 +46,8 @@ def finishing_plan(settings, obj, areas):
             'ranges':[{'min_z':lo,'max_z':hi,'layer_height':fine} for lo,hi in merged],
             'sampling_reduction_percent':100*(1-fine/nominal),
             'mesh_vertices_moved':0,'xyz_e_rewritten':False,
-            'scope':'whole cross-sections in selected height bands; Z contouring only in selected areas'}
+            'scope':('whole cross-sections in selected height bands; Z contouring only in selected areas'
+                     if areas else 'whole object above the preserved first layer; all eligible surfaces')}
 
 
 def verify_finishing_ranges(package, plan):

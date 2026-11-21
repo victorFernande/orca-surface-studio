@@ -38,12 +38,14 @@ def contour_result(data,profile,mapping):
     limited=limit_result(ProcessedResult(content,{}),profile,mapping)
     parsed=read(limited.gcode,set(),mapping,profile_macros=True,require_planar=False)
     points=[];layers=[];breaks=[];counts=Counter();roles=Counter();nonplanar_layers=Counter();previous=None
-    source_segments=0
+    source_segments=0;adjusted=Counter();affected_layers=set();adjusted_z=[]
     for m in parsed.moves.values():
         if not m.deposits or m.obj not in mapping.values():previous=None;continue
         if None in m.start+m.end:raise WaveError('LOCAL_POSITION: deposição com posição incompleta.')
         source_segments+=1
         roles[m.role]+=1
+        if m.z is not None and max(abs(p[2]-m.z) for p in (m.start,m.end))>2e-5:
+            adjusted[m.role]+=1;affected_layers.add(m.layer);adjusted_z.append(m.z)
         if abs(m.end[2]-m.start[2])>2e-6:counts[m.role]+=1;nonplanar_layers[m.layer]+=1
         if previous!=m.start:
             breaks.append(len(points));points.append(m.start);layers.append(m.layer)
@@ -55,6 +57,11 @@ def contour_result(data,profile,mapping):
         'output_segments_by_role':dict(roles),'nonplanar_extrusion_segments_by_role':dict(counts),
         'nonplanar_extrusion_detected':bool(counts),'xy_e_preserved_from_native':True,
         'local_nonplanar_layers':dict(nonplanar_layers),
+        'contour_coverage':{'adjusted_deposition_segments':sum(adjusted.values()),
+            'adjusted_segments_by_role':dict(adjusted),'affected_layer_count':len(affected_layers),
+            'nominal_z_range_mm':[min(adjusted_z),max(adjusted_z)] if adjusted_z else None,
+            'scope':'measured deposition adjustment, not percentage of smooth surface',
+            'continuous_surface_certified':False},
         'original_points':points,'deformed_points':points,'layer_ids':layers,'break_indices':breaks,
         'comparison_scope':'native path only; no separate planar baseline',
         'max_z_speed_mm_s':limited.report['profile_limits']['max_z_speed_mm_s'],
@@ -96,9 +103,9 @@ def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,worksp
     from dataclasses import replace
     copied=obj
     if not areas:
-        copied={**obj,'config':{**obj.get('config',{}),'zaa_min_z':str(finishing['minimum_z_mm']),
+        copied={**obj,'config':{**obj.get('config',{}),'zaa_enabled':'1','zaa_min_z':str(finishing['minimum_z_mm']),
                                'zaa_minimize_perimeter_height':'0'},
-                'volumes':[{**v,'config':{**v.get('config',{}),'zaa_min_z':str(finishing['minimum_z_mm']),
+                'volumes':[{**v,'config':{**v.get('config',{}),'zaa_enabled':'1','zaa_min_z':str(finishing['minimum_z_mm']),
                                          'zaa_minimize_perimeter_height':'0'}} for v in obj['volumes']]}
     model=folder/'prepared.3mf'
     write_model_project(replace(snapshot,objects=(copied,)),model,settings,modifiers=modifiers,
@@ -109,6 +116,8 @@ def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,worksp
     finishing_receipt=verify_finishing_ranges(package,finishing)
     if areas:
         verify_area_modifiers(package,modifiers)
+    else:
+        verify_whole_model(package,finishing['minimum_z_mm'])
     data=source.read_bytes();labels={int(m) for m in re.findall(rb'(?mi)^;\s*printing object\s+.*?\bid:(\d+)\s+copy\s+0\s*$',data)}
     if len(labels)!=1:raise WaveError('LOCAL_LABELS: a fatia precisa identificar uma única peça.')
     mapping={next(iter(labels)):object_id}
@@ -129,7 +138,7 @@ def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,worksp
         'native_transport_preserved':True,'effective_profile_verification':receipt,
         'physical_gate':'HEAD_AND_LOCAL_DEPOSITION_VALIDATION_REQUIRED',
         'wall_selection':{'mode':'paint' if areas else 'all','areas':areas,
-            'scope':'closed native modifier spheres including wall thickness',
+            'scope':'closed native modifier spheres including wall thickness' if areas else 'all eligible surfaces of the selected object',
             'native_modifiers_verified':bool(areas),'wall_speed_factor':.8 if areas else 1},
         'wall_selection_audit':selection_audit,
         'perimeter_minimization_angle_deg':0,
@@ -137,6 +146,20 @@ def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,worksp
         'motion_slope_review':{'limit_deg':slope_limit,'maximum_deg':finishing_audit['maximum_motion_slope_deg'],
                              'within_study_limit':True,'head_clearance_certified':False}}
     return report,output,native
+
+
+def verify_whole_model(package,minimum_z):
+    from xml.etree import ElementTree as ET
+    from zipfile import ZipFile
+    with ZipFile(package) as archive:root=ET.fromstring(archive.read('Metadata/model_settings.config'))
+    objects=root.findall('object')
+    if len(objects)!=1 or len(objects[0].findall('part'))!=1:
+        raise WaveError('WALL_NATIVE: a peça inteira perdeu a identificação no fatiador.')
+    for node in (objects[0],objects[0].find('part')):
+        values={m.get('key'):m.get('value') for m in node.findall('metadata')}
+        if (values.get('zaa_enabled')!='1' or values.get('zaa_minimize_perimeter_height')!='0'
+                or not math.isclose(float(values.get('zaa_min_z','nan')),minimum_z,abs_tol=1e-8)):
+            raise WaveError('WALL_NATIVE: o fatiador não ativou o acabamento na peça inteira.')
 
 
 def verify_area_modifiers(package,expected):

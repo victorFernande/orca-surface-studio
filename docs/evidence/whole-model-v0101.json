@@ -1,0 +1,122 @@
+{
+  "version": "0.10.1",
+  "date": "2026-11-21",
+  "validation": "native Orca GUI flow followed by read-only audit",
+  "orca": "2.5.1 Windows",
+  "printer_profile": "Sovol SV06 0.4 nozzle -3DPrinter",
+  "filament": "Sovol Generic PLA - Voolt3D",
+  "selection_mode": "all",
+  "native_preview_observed": true,
+  "native_layer_count_observed": 683,
+  "print_started": false,
+  "printer_contacted": false,
+  "previous_selection": {
+    "version": "0.10.0",
+    "areas": 2,
+    "varying_z_deposition_segments": 166,
+    "maximum_slope_deg": 26.123317515925052
+  },
+  "varying_z_deposition_segments_by_role": {
+    "top surface": 1123,
+    "outer wall": 969,
+    "inner wall": 168
+  },
+  "contour_coverage": {
+    "adjusted_deposition_segments": 3313,
+    "adjusted_segments_by_role": {
+      "top surface": 1287,
+      "outer wall": 1833,
+      "inner wall": 193
+    },
+    "affected_layer_count": 71,
+    "nominal_z_range_mm": [
+      0.59,
+      40.28
+    ],
+    "scope": "measured deposition adjustment, not percentage of smooth surface",
+    "continuous_surface_certified": false
+  },
+  "motion_slope_review": {
+    "limit_deg": 30,
+    "maximum_deg": 25.793367169726412,
+    "within_study_limit": true,
+    "head_clearance_certified": false
+  },
+  "finishing": {
+    "nominal_layer_mm": 0.2,
+    "finishing_layer_mm": 0.07,
+    "profile_minimum_layer_mm": 0.07,
+    "profile_maximum_layer_mm": 0.28,
+    "minimum_z_mm": 0.035,
+    "first_layer_mm": 0.24,
+    "ranges": [
+      {
+        "min_z": 0.24,
+        "max_z": 48.0,
+        "layer_height": 0.07
+      }
+    ],
+    "sampling_reduction_percent": 64.99999999999999,
+    "mesh_vertices_moved": 0,
+    "xyz_e_rewritten": false,
+    "scope": "whole object above the preserved first layer; all eligible surfaces",
+    "native_verification": {
+      "matched": true,
+      "ranges": [
+        {
+          "min_z": 0.24,
+          "max_z": 48.0,
+          "layer_height": 0.07
+        }
+      ]
+    },
+    "path_audit": {
+      "maximum_motion_slope_deg": 25.793367169726412,
+      "limit_deg": 30,
+      "within_study_limit": true,
+      "worst_line": 381432,
+      "finishing_deposition_segments": 255788,
+      "first_layer_preserved": true,
+      "minimum_layer_step_mm": 0.06999999999999318,
+      "maximum_layer_step_mm": 0.07000000000000384,
+      "maximum_feature_height_mm": 0.368782,
+      "physical_qualification": false
+    }
+  },
+  "geometry": {
+    "world_mesh_equal_to_previous_original_copy": true,
+    "vertices": 112569,
+    "triangles": 225154,
+    "vertices_moved": 0
+  },
+  "native_xyz_e_identity": {
+    "before": {
+      "sha256": "9708a1a389caffce98091e314627a486f4ec37b815c00bc230009e6ac92f86cd",
+      "moves": 302490
+    },
+    "after": {
+      "sha256": "9708a1a389caffce98091e314627a486f4ec37b815c00bc230009e6ac92f86cd",
+      "moves": 302490
+    },
+    "equal": true
+  },
+  "sha256": {
+    "generated": "a6c424a0d619d90e478e20f7bb67989a2d62cde16fd682d9e8e520dd91c9491e",
+    "package": "a6c424a0d619d90e478e20f7bb67989a2d62cde16fd682d9e8e520dd91c9491e",
+    "native_preview_cache": "a6c424a0d619d90e478e20f7bb67989a2d62cde16fd682d9e8e520dd91c9491e",
+    "receipt": "a6c424a0d619d90e478e20f7bb67989a2d62cde16fd682d9e8e520dd91c9491e",
+    "report": "a6c424a0d619d90e478e20f7bb67989a2d62cde16fd682d9e8e520dd91c9491e"
+  },
+  "profile_fields_verified": 26,
+  "nominal_body_bound": {
+    "status": "PASS_NOMINAL_BODY_BOUND",
+    "minimum_nominal_body_gap_mm": 1.239999900001693,
+    "installed_head_registration_verified": false,
+    "nozzle_contact": "UNASSESSED",
+    "physical_validation": false,
+    "print_allowed": false
+  },
+  "request_fully_achieved": false,
+  "remaining_limitation": "Residual stairs remain visible. Native contouring is limited by the logical layer window; no general continuous-layer planner was implemented.",
+  "automated_tests": 220
+}

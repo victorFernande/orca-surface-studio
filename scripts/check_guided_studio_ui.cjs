@@ -67,12 +67,32 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       assert.equal(await step(),'2');await page.getByRole('button',{name:'Remover área 1',exact:true}).click();
       assert.equal(await page.locator('#guide-next').isDisabled(),true);
       assert.equal(await page.locator('#guide-step-4').isDisabled(),true);
+      // Whole-model coverage must be reachable without opening advanced options.
+      assert.equal(await page.locator('#wall-all').isVisible(),true);
+      await page.locator('#wall-all').click();
+      assert.equal(await page.locator('#guide-next').isEnabled(),true);
+      assert.equal(await page.locator('#wall-radius').isVisible(),false);
+      await page.locator('#guide-toggle').click();await page.locator('#guide-toggle').click();
+      await page.locator('#guide-next').click();assert.equal(await step(),'2');
+      assert.equal(await page.locator('#wall-all').getAttribute('aria-pressed'),'true');
+      await page.locator('#guide-next').click();await page.locator('#guide-next').click();
+      const whole=await page.evaluate(()=>window.commands.findLast(m=>m.action==='build_surface'));
+      assert.equal(whole.open_preview,false);assert.equal(whole.settings.selection_mode,'all');
+      assert.deepEqual(whole.settings.wall_selection,[]);
+      const wholeResult=structuredClone(result);wholeResult.settings=whole.settings;
+      wholeResult.report.wall_selection={mode:'all',areas:[],wall_speed_factor:1};
+      await page.evaluate(({state,result})=>window.orcaWaveReceive({type:'state',state:{...state,
+        sequence:35,status:'ready',result,message:'Estudo da peça inteira concluído.'}}),{state,result:wholeResult});
+      assert.equal(await step(),'4');
+      assert.match(await page.locator('#guide-summary').innerText(),/Peça inteira/);
+      assert.match(await page.locator('#guide-summary').innerText(),/Velocidades do perfil selecionado/);
       await page.evaluate(state=>window.orcaWaveReceive({type:'state',state:{...state,sequence:40,
         revision:'changed-project',result:null}}),state);
       assert.equal(await step(),'1');
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no horizontal overflow');
       assert.deepEqual(errors,[]);outcomes.push({fallback,width,height,errors,four_steps:true,
-        study_does_not_open_orca:true,explicit_transfer_only:true,stale_selection_invalidated:true});
+        study_does_not_open_orca:true,explicit_transfer_only:true,stale_selection_invalidated:true,
+        whole_model_in_guided_step:true,scope_survives_advanced_toggle:true});
       await page.close();
     }
   }finally{await browser.close()}
