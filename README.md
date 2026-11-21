@@ -2,6 +2,11 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+O [teste de uso completo com o Benchy na 0.9.1](docs/TESTE_USUARIO_BENCHY_V091.md)
+registra seleção das bordas, estudo, reprodução e conferência de Z durante
+extrusão no Preview, com capturas nativas. Nenhuma impressão foi iniciada;
+o resultado mantém as limitações físicas e os degraus residuais.
+
 A **0.9.1** renomeia a aba para **Surface Studio** e usa um ícone de trajetória
 subindo a **30°**, com seta e bico, também no cabeçalho. Veja a
 [captura nativa e os detalhes da atualização](docs/IDENTIDADE_V091.md).
