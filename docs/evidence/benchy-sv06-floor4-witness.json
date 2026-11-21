@@ -1,0 +1,51 @@
+{
+  "status": "FAIL_NOMINAL_ESTIMATED_BODY_INTERFERENCE",
+  "source_sha256": "15889cc23c002c9af889d6e6f9f381e659137f6cc352baa248a1e8c4d746b3be",
+  "nominal_cad_revision": "75f8a0da6ff822c67b6aff62cfa85c7a441e2271",
+  "installed_head_registration_verified": false,
+  "hypothetical_tcp_y_shift_mm": 1.8270194070527737,
+  "cad_frame_assumed": "CAD delta = (-printer X,-printer Z,-printer Y), nominal registration from prior stock assembly study",
+  "silicone_excluded_per_user": true,
+  "user_body_floor_hypothesis_mm": 4,
+  "nominal_geometry_adjusted_to_hypothesis": false,
+  "tcp_registration_adjusted_to_hypothesis": true,
+  "sampled_motion_count": 700,
+  "bead_sample_count": 1965507,
+  "material_model": "Prior complete logical-layer bead centerline/endpoints, depth=min(0.02,0.2*emitted height), uncalibrated",
+  "classifications": 18,
+  "witness": {
+    "component": "JXHSV06-08026-f Proximity switch LJ12A3-4-Z-AX (5VNPN normally closed)",
+    "component_nominal_floor_mm": 4.0,
+    "component_brep_sha256": "c49452b61834a3cd9ea3e50c70dfe466fcc8157dedea8a6b23acd351a0d9d2ea",
+    "current_line_1based": 700627,
+    "current_layer": 141,
+    "current_role": "inner wall",
+    "current_move_fraction": 0.0,
+    "current_nozzle_xyz": [
+      92.512,
+      113.347095,
+      11.863003
+    ],
+    "prior_line_1based": 695180,
+    "prior_layer": 140,
+    "prior_role": "outer wall",
+    "prior_material_point_xyz": [
+      119.217,
+      97.318,
+      15.8875136
+    ],
+    "point_in_cad_frame": [
+      240.55317866133532,
+      338.83825515597886,
+      441.2317667452808
+    ],
+    "cad_point_classification": "IN",
+    "prior_trace_fraction": 0.0,
+    "prior_point_depth_model": "min(0.02 mm, 0.2 * emitted HEIGHT of the prior move)"
+  },
+  "nozzle_contact": "UNQUALIFIED",
+  "print_allowed": false,
+  "printer_contacted": false,
+  "component_results": [],
+  "status_scope": "Conditional nominal CAD plus estimated bead interference; not a measurement of the installed head"
+}

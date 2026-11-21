@@ -2,6 +2,12 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+**Auditoria do Benchy na SV06, com hipótese de 4 mm:** o arquivo atual foi
+reprovado para liberação. Foi reproduzida uma interferência condicional com
+o CAD do sensor, e 52 camadas contêm trechos abaixo da altura mínima do perfil.
+O envio continua bloqueado. Veja a
+[verificação, suas hipóteses e a reprodução](docs/VERIFICACAO_BENCHY_SV06_4MM.md).
+
 A **0.12.1 experimental** acrescenta **Enviar para impressora…** no próprio
 Studio. O diálogo usa a conexão do perfil selecionado, identifica o arquivo e
 abre mesmo para um Preview sem modelo na bandeja. O Benchy foi conferido até
