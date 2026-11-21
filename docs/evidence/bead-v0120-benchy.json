@@ -1,0 +1,105 @@
+{
+  "version": "0.12.0",
+  "date": "2026-11-21",
+  "status": "PREVIEW_SPACING_IMPROVED_BLOCKED_MINIMUM_HEIGHT",
+  "native_application": "OrcaSlicer 2.5.1 Windows",
+  "profile_label": "Sovol SV06 0.4 nozzle -3DPrinter",
+  "local_tests_passed": 250,
+  "guided_component_scenarios_passed": 3,
+  "native_four_step_run_this_round": false,
+  "test_generation": "Resumed matching certified 0.11.1 intermediate mesh; original reference quantiles recomputed; exact affine regrid; new native CLI slice; single inverse transform; manual native Preview inspection.",
+  "effective_profile_matched": true,
+  "effective_profile_fields_checked": 23,
+  "native_contouring_disabled": true,
+  "bead_deposition": {
+    "model": "logical_pitch_finite_bead_v1",
+    "profile_minimum_mm": 0.07,
+    "profile_maximum_mm": 0.28,
+    "minimum_supported_height_mm": 0.03304384107393316,
+    "maximum_supported_height_mm": 0.24,
+    "below_profile_minimum_occurrences": 66032,
+    "above_profile_maximum_occurrences": 0,
+    "native_section_contributions": 15147,
+    "height_metadata": "physical normal gap for supported beads; native section for bridges and ironing",
+    "extrusion_model": "finite stadium section integrated on mapped half-chords, with native flow factor",
+    "physical_qualification": false
+  },
+  "bead_height_is_geometric_approximation_not_physical_measurement": true,
+  "old_bridge_based_spacing_counter_not_directly_comparable": true,
+  "spacing_passes": [
+    {
+      "source_layers": 399,
+      "extra_slice_intervals": 21,
+      "maximum_cell_vertical_bound_mm": 0.44476176279654195
+    },
+    {
+      "source_layers": 420,
+      "extra_slice_intervals": 0,
+      "maximum_cell_vertical_bound_mm": 0.24000001200000012
+    }
+  ],
+  "motion_audit": {
+    "maximum_motion_slope_deg": 17.614279687430493,
+    "limit_deg": 30,
+    "within_study_limit": true,
+    "worst_line": 832047,
+    "finishing_deposition_segments": 651543,
+    "first_layer_preserved": true,
+    "minimum_layer_step_mm": 0.11999999999999744,
+    "maximum_layer_step_mm": 0.12000000000000455,
+    "maximum_feature_height_mm": 0.368782,
+    "physical_qualification": false
+  },
+  "shape": {
+    "original_unchanged": true,
+    "base_unchanged": true,
+    "holes_preserved": true,
+    "inherited_base_faces": 1758790,
+    "final_copy_faces": 1820356,
+    "matching_base_certificate": {
+      "inherited_matching_mesh": true,
+      "prepared_sha256": "8f8281373849623335930063c2bf7f6d526df5cba5d86cb37b9c2295697f508b",
+      "source_fields_sha256": "1845916f6c951140bb92a3d5ed206857cb3338507f283e4bc15c8de2c61a6ee5",
+      "base_faces": 1758790,
+      "base_shape_bound_mm": 0.009999987165016334,
+      "reference_quantiles_recomputed_from_original": true,
+      "method": "Every added grid cell is affine and restores its preceding certified triangle exactly."
+    },
+    "coordinate_error_budget_mm": {
+      "total": 0.02,
+      "mesh": 0.009999987165016334,
+      "path_chords": 0.009999912834983667
+    },
+    "measured_chord_error_mm": 0.009995608863401636,
+    "minimum_new_subdivided_segment_mm": 0.19941492647241926
+  },
+  "hashes": {
+    "original_backup_sha256": "4814b1ba1d71c14e168c37d14d3abb4558d0198ffcd86ae695e75db17ea48091",
+    "final_planar_slice_sha256": "e084db9eba98f6ae6931b64b3fc5c5035006f86c6b6de6624f70e3cfd4d69aef",
+    "generated_sha256": "c28812e01ae752cf394d0bcda61ba453f14036b5dbc74f037c05c6132edbc8fa",
+    "integrated_package_extracted_sha256": "c28812e01ae752cf394d0bcda61ba453f14036b5dbc74f037c05c6132edbc8fa",
+    "held_sha256": "15889cc23c002c9af889d6e6f9f381e659137f6cc352baa248a1e8c4d746b3be",
+    "held_package_extracted_sha256": "15889cc23c002c9af889d6e6f9f381e659137f6cc352baa248a1e8c4d746b3be",
+    "print_allowed": false,
+    "native_preview_cache_sha256": "15889cc23c002c9af889d6e6f9f381e659137f6cc352baa248a1e8c4d746b3be",
+    "native_preview_matches_held_package": true,
+    "installed_bundle_sha256": "df6cd9e3000ddaf926762cf21b79b3669f19aec5114d9768f0b710a17a326c77"
+  },
+  "native_preview_observations": [
+    "Opened sliced-only package, without reslicing",
+    "Previously open hull band appeared filled in inspected perspective and lateral views",
+    "All 420 layers displayed; physical height 48 mm",
+    "Layer lines, seams and transition details remain; no claim of every gap eliminated"
+  ],
+  "installation_state_preserved": true,
+  "physical_validation": false,
+  "print_allowed": false,
+  "print_started": false,
+  "printer_transport_exercised_this_round": false,
+  "pending": [
+    "Minimum supported bead height below profile minimum",
+    "Physical deposition and bonding",
+    "Curved bridge support",
+    "Installed head envelope qualification for this file"
+  ]
+}

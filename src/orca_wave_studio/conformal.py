@@ -228,10 +228,12 @@ def _joined_geometry(first, second, warp, step, minimum, tolerance, extra=()):
     return (list(reversed(points)), max(bounds), min(sizes), max(sizes)), list(reversed(portions))
 
 
-def _join_short_edges(parsed, selected, warp, step, minimum, tolerance):
+def _join_short_edges(parsed, selected, warp, step, minimum, tolerance,*,progress=lambda message:None,cancelled=lambda:False):
     moves = list(parsed.moves.values())
     skipped, plans = set(), {}
     for index, m in enumerate(moves):
+        if index%1000==0 and cancelled():raise WaveError('Geração cancelada.')
+        if index%10000==0:progress(f'Conferindo quinas e movimentos curtos: {100*index/max(1,len(moves)):.0f}%…')
         if (not m.deposits or m.obj != selected or m.i in skipped or m.i in plans
                 or None in m.start or None in m.end or m.end[2] <= warp.anchor_z):
             continue
@@ -320,7 +322,8 @@ def _top_layer_audit(warp, original, mapped):
 
 
 def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str],
-                            selected_object_id: str, *, printer_profile=None) -> ProcessedResult:
+                            selected_object_id: str, *, printer_profile=None,
+                            progress=lambda message:None,cancelled=lambda:False) -> ProcessedResult:
     """Map one labelled model from its flattened slice. No printer interface is used."""
     if not selected_object_id or selected_object_id not in print_object_map.values():
         raise WaveError("Peça conforme sem correspondência no G-code.")
@@ -343,7 +346,11 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
     if not (0.15 <= minimum <= step <= 2 and 0 < tolerance <= 0.02):
         raise WaveError("Parâmetros de amostragem conforme fora do intervalo.")
     owners = _ownership(parsed, selected_object_id, warp)
-    skipped, joins = _join_short_edges(parsed, selected_object_id, warp, step, minimum, tolerance)
+    skipped, joins = _join_short_edges(parsed, selected_object_id, warp, step, minimum, tolerance,progress=progress,cancelled=cancelled)
+    bead_policy=getattr(warp,'deposition_model',None)
+    if bead_policy:
+        from .bead_deposition import layer_pitches,bead_portion,section_area
+        pitches=layer_pitches(parsed,selected_object_id)
     report = {
         "study_type": "conformal_full_part", "bench_only": True, "print_allowed": False,
         "physical_validation": False, "native_preview_validated": False,
@@ -370,6 +377,12 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
         "z_dynamics": "Comandos emitidos na trajetória mapeada, com limite conservador por segmento. "
                       "Sem simulação do planejador de movimento ou de colisões.",
     }
+    if bead_policy:report['bead_deposition']={**bead_policy,'minimum_supported_height_mm':None,'maximum_supported_height_mm':0.,
+        'below_profile_minimum_occurrences':0,'above_profile_maximum_occurrences':0,'native_section_contributions':0,
+        'height_metadata':'physical normal gap for supported beads; native section for bridges and ironing',
+        'extrusion_model':'finite stadium section integrated on mapped half-chords, with native flow factor',
+        'physical_qualification':False}
+    if bead_policy:report['extrusion_model']='Finite stadium section from actual logical-pitch normal gap; native flow factor retained. Bridges retain native section.'
     report['native_retraction_rounding']=parsed.retraction_rounding
     original, mapped, layers = report["original_points"], report["deformed_points"], report["layer_ids"]
     source_roles, emitted_roles = Counter(), Counter()
@@ -385,12 +398,21 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
     actual_pos = None
     last_trace = None
     output = []
+    displayed_section=[None,None]
     metadata_locations = {}
     newline = "\r\n" if b"\r\n" in source else "\n"
     def emit(text):
         output.append(text + newline)
 
+    def ensure_section(h,w):
+        if not bead_policy or h is None or w is None:return
+        for k,(tag,value) in enumerate((('HEIGHT',h),('WIDTH',w))):
+            rounded=round(value,6)
+            if displayed_section[k]!=rounded:emit(';'+tag+':'+_num(rounded,6));displayed_section[k]=rounded
+
     for i, line in enumerate(parsed.lines):
+        if i%1000==0 and cancelled():raise WaveError('Geração cancelada.')
+        if i%20000==0:progress(f'Restaurando cordões e extrusão: {100*i/max(1,len(parsed.lines)):.0f}%…')
         if i in skipped:
             if retract_debt > 1e-7:
                 raise WaveError(f"Linha {i+1}: união de arestas após retração não recuperada.")
@@ -402,6 +424,9 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
         if plan:
             m = plan[0]
         if m is None:
+            if bead_policy:
+                match=re.fullmatch(r'\s*;\s*(HEIGHT|LAYER_HEIGHT|WIDTH|LINE_WIDTH)\s*:\s*([-+0-9.eE]+)\s*',line)
+                if match:displayed_section[0 if match[1] in {'HEIGHT','LAYER_HEIGHT'} else 1]=round(float(match[2]),6)
             if STALE.match(line) or re.match(r"^\s*;\s*(estimated first layer printing time|max_z_height\s*:)", line, re.I):
                 metadata_locations[i] = len(output)
                 output.append("")
@@ -428,6 +453,7 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
             if None in m.end or math.dist(_point(warp, m.end, own[1]), m.end) > 1e-7:
                 raise WaveError(f"Linha {i+1}: início de viagem conforme em posição desconhecida.")
         if not needs_mapping:
+            if m.deposits:ensure_section(m.h,m.w)
             if spatial:
                 if complete and actual_pos is not None and math.dist(actual_pos, m.start) > 2e-5:
                     raise WaveError(f"Linha {i+1}: viagem de transição ausente antes de outra peça.")
@@ -493,14 +519,37 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
             extrusion = 0 if plan else m.de * math.dist(u, v) / flat_length
             if dep:
                 portions = plan[1][1][j] if plan else [(u, v, m, extrusion)]
-                extrusion = 0.0
+                extrusion = 0.0;display_height=display_area=display_length=0.
                 for left, right, native, base_e in portions:
                     mid = _lerp(left, right, 0.5)
-                    gaps, scales = zip(*(_gap_and_scale(_role_warp(warp, native), at, native.h) for at in (left, mid, right)))
+                    field=_role_warp(warp,native)
+                    if bead_policy:
+                        amount,h,w,gaps_range=bead_portion(field,left,right,native,base_e,pitches[native.layer])
+                        extrusion+=amount
+                        length=math.dist(field.map_point(left),field.map_point(right))
+                        display_length+=length;display_height+=h*length;display_area+=section_area(w,h)*length
+                        bead_report=report['bead_deposition']
+                        if gaps_range is None:
+                            bead_report['native_section_contributions']+=1
+                            continue
+                        gaps=(gaps_range[0],gaps_range[1])
+                        scales=tuple(_gap_and_scale(field,at,pitches[native.layer])[1] for at in (left,mid,right))
+                        bead_report['minimum_supported_height_mm']=min(bead_report['minimum_supported_height_mm'] or math.inf,*gaps)
+                        bead_report['maximum_supported_height_mm']=max(bead_report['maximum_supported_height_mm'],*gaps)
+                        bead_report['below_profile_minimum_occurrences']+=min(gaps)<bead_policy['profile_minimum_mm']-2e-5
+                        bead_report['above_profile_maximum_occurrences']+=max(gaps)>bead_policy['profile_maximum_mm']+2e-5
+                        if max(gaps)>bead_policy['profile_maximum_mm']+2e-5:
+                            raise WaveError('BEAD_HEIGHT: cordão apoiado acima da altura máxima do perfil; replaneje o espaçamento.')
+                    else:
+                        gaps, scales = zip(*(_gap_and_scale(field, at, native.h) for at in (left, mid, right)))
+                        extrusion += base_e * (scales[0] + 4 * scales[1] + scales[2]) / 6
                     hmin, hmax = min(hmin, *gaps), max(hmax, *gaps)
                     smin, smax = min(smin, *scales), max(smax, *scales)
                     report["gaps_above_nominal_width"] += max(gaps) > native.w + 2e-5
-                    extrusion += base_e * (scales[0] + 4 * scales[1] + scales[2]) / 6
+                if bead_policy and display_length:
+                    h=display_height/display_length
+                    w=display_area/display_length/h+(1-math.pi/4)*h
+                    ensure_section(h,w)
                 original.append(v)
                 mapped.append(q)
                 layers.append(m.layer)

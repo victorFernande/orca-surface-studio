@@ -84,13 +84,17 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       assert.deepEqual(whole.settings.wall_selection,[]);
       const wholeResult=structuredClone(result);wholeResult.settings=whole.settings;
       wholeResult.report.wall_selection={mode:'all',areas:[],wall_speed_factor:1};
-      wholeResult.report.warp={...wholeResult.report.warp,transition_kernel:'hermite_c1_xyz_v3'};
+      wholeResult.report.warp={...wholeResult.report.warp,transition_kernel:'hermite_c1_xyz_v4'};
+      wholeResult.report.bead_deposition={model:'logical_pitch_finite_bead_v1',minimum_supported_height_mm:.04,
+        maximum_supported_height_mm:.25,below_profile_minimum_occurrences:1};
       await page.evaluate(({state,result})=>window.orcaWaveReceive({type:'state',state:{...state,
         sequence:35,status:'ready',result,message:'Estudo da peça inteira concluído.'}}),{state,result:wholeResult});
       assert.equal(await step(),'4');
       assert.match(await page.locator('#guide-summary').innerText(),/Peça inteira/);
       assert.match(await page.locator('#guide-summary').innerText(),/Velocidades do perfil selecionado/);
-      const oldKernel=structuredClone(wholeResult);oldKernel.report.warp.transition_kernel='hermite_c1_xyz_v2';
+      assert.match(await page.locator('#guide-summary').innerText(),/Altura efetiva do cordão/);
+      assert.match(await page.locator('#guide-warning').innerText(),/abaixo da altura mínima/);
+      const oldKernel=structuredClone(wholeResult);oldKernel.report.warp.transition_kernel='hermite_c1_xyz_v3';
       await page.evaluate(({state,result})=>window.orcaWaveReceive({type:'state',state:{...state,
         sequence:36,status:'ready',result}}),{state,result:oldKernel});
       assert.equal(await page.evaluate(()=>presentResult()),false,'an older transition kernel is stale');

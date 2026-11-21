@@ -2,6 +2,13 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A **0.12.0 experimental** ajusta o espaçamento, a seção do cordão e a extrusão
+localmente. O Benchy recebeu 21 intervalos adicionais e a faixa aberta do casco
+apareceu preenchida na conferência lateral do Preview. O fluxo permanece em
+quatro passos. **A impressão continua bloqueada:** há alturas modeladas de
+0,033 mm, abaixo dos 0,07 mm mínimos do perfil. Veja o
+[teste, as capturas e os limites](docs/ESPACAMENTO_CORDOES_V0120.md).
+
 A **0.11.1 experimental** reduz a amplificação das transições no casco do
 Benchy: a maior inclinação emitida caiu de **52,7° para 17,6°**, confirmada no
 Preview com o perfil da SV06. O fluxo continua em quatro passos. **Ainda há
