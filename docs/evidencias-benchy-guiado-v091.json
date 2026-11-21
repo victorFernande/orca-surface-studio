@@ -1,0 +1,197 @@
+{
+  "test_date": "2026-11-21",
+  "version": "0.9.1",
+  "source_commit": "9e6cbfcd6615459b929eced334e20189c9c097c6",
+  "validation": "native GUI user flow; read-only file audit after generation",
+  "native_orca_controlled": true,
+  "printer_contacted": false,
+  "print_started": false,
+  "model": {
+    "name": "3DBenchy-original.stl",
+    "size_mm": [
+      60,
+      31,
+      48
+    ]
+  },
+  "profile": {
+    "printer": "Sovol SV06 0.4 nozzle -3DPrinter",
+    "filament": "Sovol Generic PLA - Voolt3D",
+    "process": "0.20mm Standard @Sovol SV06"
+  },
+  "workflow": {
+    "chosen_model": true,
+    "selected_areas": [
+      "bow",
+      "stern"
+    ],
+    "radius_mm": 8,
+    "study_in_studio": true,
+    "playback_percent": [
+      0,
+      100
+    ],
+    "explicit_transfer": true,
+    "native_dialog": "Open as project -> OK",
+    "native_preview_layers": 240,
+    "native_slice_disabled": true,
+    "inspection_layer_1_based": 95,
+    "nominal_layer_z_mm": 19.04
+  },
+  "scope_audit": {
+    "affected_segments": 2397,
+    "nonplanar_segments": 1752,
+    "affected_segments_per_area": [
+      1740,
+      657
+    ],
+    "outside_scope_segments": 0,
+    "scope_margin": "half bead width plus 0.05 mm, at least 0.3 mm",
+    "maximum_motion_slope_deg": 63.363199075824,
+    "print_allowed": false
+  },
+  "motion_slope_review": {
+    "limit_deg": 30,
+    "maximum_deg": 63.363199075824,
+    "within_study_limit": false,
+    "head_clearance_certified": false
+  },
+  "integrity": {
+    "generated_sha256": "386c5faedefa8c58bc8ce9b7c40215e78741f75a96dd29c10c0bf84e5eb006d7",
+    "package_payload_sha256": "386c5faedefa8c58bc8ce9b7c40215e78741f75a96dd29c10c0bf84e5eb006d7",
+    "preview_cache_sha256": "386c5faedefa8c58bc8ce9b7c40215e78741f75a96dd29c10c0bf84e5eb006d7",
+    "host_receipt_sha256": "386c5faedefa8c58bc8ce9b7c40215e78741f75a96dd29c10c0bf84e5eb006d7",
+    "host_verified": true
+  },
+  "extrusion_samples": [
+    {
+      "line": 102904,
+      "start_xyz_mm": [
+        132.651,
+        115.363,
+        19.04
+      ],
+      "end_xyz_mm": [
+        132.713,
+        115.298,
+        19.002
+      ],
+      "extruded_e_mm": 0.0024000000000001798,
+      "command": "G1 X132.713 Y115.298 Z19.002 E.0024 ; perimeter\n"
+    },
+    {
+      "line": 102906,
+      "start_xyz_mm": [
+        132.713,
+        115.298,
+        19.002
+      ],
+      "end_xyz_mm": [
+        132.775,
+        115.234,
+        18.974
+      ],
+      "extruded_e_mm": 0.0019200000000001438,
+      "command": "G1 X132.775 Y115.234 Z18.974 E.00192 ; perimeter\n"
+    },
+    {
+      "line": 102908,
+      "start_xyz_mm": [
+        132.775,
+        115.234,
+        18.974
+      ],
+      "end_xyz_mm": [
+        132.838,
+        115.169,
+        18.934
+      ],
+      "extruded_e_mm": 0.0014099999999999113,
+      "command": "G1 X132.838 Y115.169 Z18.934 E.00141 ; perimeter\n"
+    },
+    {
+      "line": 102910,
+      "start_xyz_mm": [
+        132.838,
+        115.169,
+        18.934
+      ],
+      "end_xyz_mm": [
+        132.9,
+        115.105,
+        18.909
+      ],
+      "extruded_e_mm": 0.0009700000000001374,
+      "command": "G1 X132.9 Y115.105 Z18.909 E.00097 ; perimeter\n"
+    },
+    {
+      "line": 102912,
+      "start_xyz_mm": [
+        132.9,
+        115.105,
+        18.909
+      ],
+      "end_xyz_mm": [
+        132.962,
+        115.041,
+        18.89
+      ],
+      "extruded_e_mm": 0.000700000000000145,
+      "command": "G1 X132.962 Y115.041 Z18.89 E.0007 ; perimeter\n"
+    },
+    {
+      "line": 102916,
+      "start_xyz_mm": [
+        133.035,
+        115.21,
+        18.89
+      ],
+      "end_xyz_mm": [
+        133.071,
+        115.295,
+        18.896
+      ],
+      "extruded_e_mm": 0.0007799999999997809,
+      "command": "G1 X133.071 Y115.295 Z18.896 E.00078 ; perimeter\n"
+    },
+    {
+      "line": 102918,
+      "start_xyz_mm": [
+        133.071,
+        115.295,
+        18.896
+      ],
+      "end_xyz_mm": [
+        133.108,
+        115.38,
+        18.89
+      ],
+      "extruded_e_mm": 0.000700000000000145,
+      "command": "G1 X133.108 Y115.38 Z18.89 E.0007 ; perimeter\n"
+    },
+    {
+      "line": 102922,
+      "start_xyz_mm": [
+        133.144,
+        115.465,
+        18.89
+      ],
+      "end_xyz_mm": [
+        133.181,
+        115.55,
+        18.896
+      ],
+      "extruded_e_mm": 0.0007799999999997809,
+      "command": "G1 X133.181 Y115.55 Z18.896 E.00078 ; perimeter\n"
+    }
+  ],
+  "physical_qualification": false,
+  "usability_observations": [
+    "Already sliced Preview packages do not provide an editable model; open the original project.",
+    "The native Drop project file dialog defaults to Import geometry only; choose Open as project."
+  ],
+  "limitations": [
+    "Native regional contouring leaves residual steps.",
+    "Endpoint scope audit includes a bead-width margin; it is not a full head collision or deposition certification."
+  ]
+}
