@@ -89,7 +89,7 @@ let activeId=null,baseParameters={...defaults};
 const objectParameters=new Map(),objectPresets=new Map();
 let surfaceMode=false;
 const surfaceByObject=new Map();
-const surfaceSettings=()=>({step_mm:.4,max_slope_deg:30,retain_native_short_edges:true,backend:'roof_bending',region_id:null,...surfaceByObject.get(activeId)});
+const surfaceSettings=()=>({step_mm:.4,max_slope_deg:30,retain_native_short_edges:true,backend:'native_local',region_id:null,...surfaceByObject.get(activeId)});
 function surfaceError(){
   const {step_mm,max_slope_deg}=surfaceSettings();
   if(!Number.isFinite(step_mm)||step_mm<.15||step_mm>2)return 'Use um passo entre 0,15 e 2 mm.';
@@ -331,6 +331,7 @@ const statuses={idle:'Aguardando análise',analyzing:'Analisando mesa',slicing_r
 function diagnostics(current){
   const s=['generate','surface_study'].includes(pending)?'processing':(pending==='analyze'?'analyzing':state.status||'idle');
   $('status').className='state '+s;$('status-name').textContent=statuses[s]||s;
+  if(surfaceMode&&s==='ready')$('status-name').textContent='Pronto para Preview';
   if(current&&state.result?.report?.regional_audit?.digital_approval===false){
     $('status').className='state slicing_required';$('status-name').textContent='Estudo incompleto';
   }
@@ -353,10 +354,15 @@ function diagnostics(current){
     return;
   }
   const r=state.result,rep=r.report||{};
-  $('result-note').textContent=r.workflow==='integrated'?'Gerado com o perfil selecionado. Confira o Preview e a folga do cabeçote antes de imprimir.':r.study_kind==='conformal'?'Trajetória reconstruída a partir da cópia fatiada no Orca. Impressão indisponível.':surfaceMode?'Percurso da superfície no Studio. Deposição e impressão ainda não validadas.':
+  $('result-note').textContent=r.workflow==='integrated'?'Prévia gerada com o perfil selecionado. Conferência física do cabeçote e da deposição pendente.':r.study_kind==='conformal'?'Trajetória reconstruída a partir da cópia fatiada no Orca. Impressão indisponível.':surfaceMode?'Percurso da superfície no Studio. Deposição e impressão ainda não validadas.':
     (state.demo?'Trajetória do exemplo de bancada.':'Trajetória processada para a seleção atual.');
   record(metrics,'SHA-256',r.sha256.slice(0,12),r.sha256);
-  if(surfaceMode){record(metrics,'Passo do estudo',numberFormat(surfaceSettings().step_mm)+' mm');
+  if(surfaceMode&&r.settings?.backend==='native_local'){
+    record(metrics,'Método','Contorno local do Orca');record(metrics,'Regiões','Superfícies superiores compatíveis');
+    record(metrics,'Folga do cabeçote','Pendente');
+    record(metrics,'Trechos com Z variável',Object.values(rep.nonplanar_extrusion_segments_by_role||{}).reduce((a,b)=>a+b,0));
+  }
+  if(surfaceMode&&r.settings?.backend!=='native_local'){record(metrics,'Passo do estudo',numberFormat(surfaceSettings().step_mm)+' mm');
     record(metrics,'Limite digital escolhido',numberFormat(surfaceSettings().max_slope_deg)+'°');
     record(metrics,'Folga do cabeçote','Não verificada');
     if(rep.regional_audit){
@@ -614,12 +620,16 @@ function render(){
   $('r-amplitude_mm').max=combined?5:1;
   const stepBox=$('step_mm').closest('.field'),stepParent=combined?advanced:primary;
   surfaceAdvanced.hidden=!surfaceMode;
+  const localSurface=surfaceMode&&surfaceSettings().backend==='native_local';
+  surfaceMethod.value=surfaceSettings().backend;surfaceMethod.disabled=busy;
   const targetParent=surfaceMode?surfaceAdvanced:stepParent;
   if(stepBox.parentElement!==targetParent)targetParent.append(stepBox);
-  $('max_slope_deg').closest('.field').hidden=!surfaceMode;surfaceInfo.hidden=!surfaceMode;
+  stepBox.hidden=localSurface;
+  $('max_slope_deg').closest('.field').hidden=!surfaceMode||localSurface;surfaceInfo.hidden=!surfaceMode;
   const stage=state.conformal?.phase,full=state.result?.study_kind==='conformal';
   roofRegions(active,busy||Boolean(stage));
-  nativeCornersBox.hidden=!surfaceMode||!linked;nativeCorners.disabled=busy||Boolean(stage);
+  if(localSurface)roofBox.hidden=true;
+  nativeCornersBox.hidden=!surfaceMode||!linked||localSurface;nativeCorners.disabled=busy||Boolean(stage);
   const conformalLabel={preparing:'Preparando cópia…',needs_open:'Abrindo cópia…',opening:'Abrindo cópia…',
     checking:'Verificando malha…',awaiting_slice:'Aguardando Fatiar no Orca',slicing:'Fatiando no Orca…',
     captured:'Gerar percurso conformal',generating:'Gerando percurso…',ready:'Percurso conformal gerado'};
@@ -629,7 +639,8 @@ function render(){
   surfaceInfo.textContent=state.conformal?(state.conformal.settings?.backend==='regional_paired'?
     'Topo e face inferior são preparados juntos, preservando a base e sem faixa plana na borda. Clique em Fatiar no Orca. Somente estudo digital.':
     'Estudo anterior: somente topo parcial; bordas planas. Não demonstra o beiral completo.'):
-    (linked?'O Studio prepara e fatia uma cópia com o perfil ativo, preservando a peça e suas aberturas. O resultado abre no Preview do Orca.':
+    (linked?(localSurface?'O Orca acompanha as superfícies superiores compatíveis em várias regiões da peça. Paredes verticais e faces inferiores não recebem acabamento conformal completo.':
+      'Alinhamento experimental a um teto de referência. As outras regiões não seguem suas próprias curvas.'):
       'O percurso geométrico isolado é apenas uma visualização do topo; não comprova deposição.');
   $('surface-only').hidden=!surfaceMode||!linked||Boolean(stage);$('surface-only').disabled=!active||busy||Boolean(error);
   $('bench-note').textContent=combined?'Vaso senoidal · somente Preview · sem envio à impressora':surfaceMode?((full||stage)?'Estudo conformal · impressão indisponível':'Estudo geométrico · impressão indisponível'):'Estudo de bancada · impressão pelo OrcaSlicer';
@@ -667,6 +678,7 @@ function render(){
     b.setAttribute('aria-pressed',String(view===b.dataset.view));
     const counts=['original','deformed'].map(k=>viewer.streams[k]?.indices.length||0);
     b.disabled=!viewer.available||!(b.dataset.view==='compare'?counts.every(Boolean):counts[b.dataset.view==='original'?0:1]);
+    if(localSurface&&b.dataset.view!=='deformed')b.disabled=true;
   }
   const n=viewer.active().length;
   $('legend-original').hidden=!n||view==='deformed';$('legend-modified').hidden=!n||view==='original';
@@ -684,6 +696,12 @@ const profileBox=node('section','section'),profileCard=node('strong'),profileDet
 profileBox.append(node('h3','','Perfil selecionado no Orca'),profileCard,profileDetails);
 document.querySelector('#config .section').after(profileBox);
 const surfaceAdvanced=node('details','field');surfaceAdvanced.append(node('summary','','Ajustes da superfície'));
+const surfaceMethod=node('select');surfaceMethod.id='surface-method';surfaceMethod.setAttribute('aria-label','Método de superfície');
+for(const [id,label] of [['native_local','Acompanhar superfícies locais'],['roof_bending','Alinhar camadas a um teto (experimental)']]){
+  const option=node('option','',label);option.value=id;surfaceMethod.append(option);
+}
+surfaceMethod.onchange=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),backend:surfaceMethod.value});render()};
+surfaceAdvanced.append(surfaceMethod);
 surfaceAdvanced.append($('max_slope_deg').closest('.field'),roofBox,nativeCornersBox);primary.append(surfaceAdvanced);
 const cancelBuild=node('button','wide outline','Cancelar cálculo');cancelBuild.id='cancel-build';cancelBuild.hidden=true;
 $('generate').after(cancelBuild);cancelBuild.onclick=()=>send('cancel_build');

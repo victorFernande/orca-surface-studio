@@ -20,6 +20,9 @@ class SurfaceWorkflowTests(unittest.TestCase):
             self.assertNotIn('--send',command)
             self.assertNotIn('cmd.exe',command)
             self.assertIn('input.3mf',subprocess.list2cmdline(command))
+            local=slice_command(Path(folder)/'OrcaSlicer.exe',native_local=True)
+            self.assertEqual(local[:-1],command)
+            self.assertEqual(local[-1],'--zaa-enabled=1')
 
     def test_changed_material_or_transport_stops_before_generation(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -30,3 +33,5 @@ class SurfaceWorkflowTests(unittest.TestCase):
                 verify_profile(p,{**wanted,'nozzle_temperature':['240']})
             with self.assertRaisesRegex(WaveError,'printer_agent'):
                 verify_profile(p,{**wanted,'printer_agent':'simulator'})
+            with self.assertRaisesRegex(WaveError,'zaa_enabled'):
+                verify_profile(p,{**wanted,'zaa_enabled':'1'},extra_fields=('zaa_enabled',))

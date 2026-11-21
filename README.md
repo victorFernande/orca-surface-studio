@@ -5,6 +5,20 @@ A versão 0.6.0 mantém os identificadores internos e os nomes de capacidades da
 instalação anterior para preservar ativação, permissões e presets. O título do
 estúdio já usa o novo nome.
 
+## Superfícies locais — 0.7.0 em validação
+
+A versão 0.7.0 acrescenta **Acompanhar superfícies locais**, usando o contorno
+em Z nativo do Orca na malha original. Esse é o padrão de **Superfície curva**;
+o alinhamento experimental ao teto continua como método avançado separado.
+O objetivo é reduzir degraus nas bordas superiores curvas de cada novo arquivo,
+sem deformar a peça ou repetir o mapa do teto do Benchy em outras regiões.
+
+O candidato Benchy foi gerado com o perfil real, com XYZ/E nativos preservados
+e conferência de 26 campos. O limite nominal calculado para o corpo do cabeçote
+SV06 foi positivo, mas isso não certifica o bico, o cabeçote instalado ou a
+deposição. **O arquivo continua sem liberação física**; o Preview da nova versão
+aguarda conferência autorizada. Veja [resultados e limites](docs/SUPERFICIES_LOCAIS_V070.md).
+
 ## Superfície com o perfil selecionado — 0.6.0
 
 Coloque a peça na placa, confira impressora e filamento no Orca, abra o Studio,

@@ -33,7 +33,17 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       await page.screenshot({path:path.join(output,fallback?'mesh-software.png':'mesh-webgl.png')});
       await page.getByRole('button',{name:'Gerar superfície e abrir Preview',exact:true}).click();
       const command=await page.evaluate(()=>window.commands.findLast(c=>c.action==='build_surface'));
-      assert.equal(command.settings.backend,'roof_bending');assert.deepEqual(command.object_ids,['1']);
+      assert.equal(command.settings.backend,'native_local');assert.deepEqual(command.object_ids,['1']);
+      if(process.argv[4]){
+        const result=JSON.parse(fs.readFileSync(process.argv[4],'utf8'));
+        result.object_id='1';result.revision=state.revision;result.settings=command.settings;
+        await page.evaluate(({state,result})=>window.orcaWaveReceive({type:'state',state:{...state,
+          sequence:49,status:'ready',result,message:'Candidato local gerado; impressão pendente.'}}),{state,result});
+        assert.equal(await page.getByText('Contorno local do Orca',{exact:true}).count(),1);
+        assert.equal(await page.getByRole('button',{name:'Comparar',exact:true}).isEnabled(),false);
+        assert.ok(await page.evaluate(()=>viewer.streams.deformed.indices.length>0));
+        await page.screenshot({path:path.join(output,fallback?'local-result-software.png':'local-result-webgl.png')});
+      }
       // A rejected calculation must keep the real model visible and navigable.
       await page.evaluate(state=>window.orcaWaveReceive({type:'state',state:{...state,sequence:50,status:'error',
         message:'Teste: configuração incompatível.'}}),state);

@@ -1,0 +1,141 @@
+{
+  "version": "0.7.0",
+  "date": "2026-11-21",
+  "environment": "Windows / OrcaSlicer 2.5.1",
+  "source": "Original native exported Benchy project, unchanged mesh; isolated CLI generation",
+  "mode": "native_local",
+  "profile_label": "Sovol SV06 0.4 nozzle -3DPrinter",
+  "material_label": "Sovol Generic PLA - Voolt3D",
+  "sha256": "495a3483c3dc315cbe93253dd1c77210b8da4a5966de8567863e3e902abc21f4",
+  "segment_count": 114348,
+  "nonplanar_segments_by_role": {
+    "inner wall": 1058,
+    "outer wall": 5202,
+    "top surface": 3675
+  },
+  "max_z_speed_mm_s": 7.549833333333333,
+  "max_z_acceleration_mm_s2": 99.9999999999962,
+  "profile_fields_checked": 26,
+  "native_candidate_body_audit": {
+    "status": "PASS_NOMINAL_BODY_BOUND",
+    "gcode_sha256": "495a3483c3dc315cbe93253dd1c77210b8da4a5966de8567863e3e902abc21f4",
+    "minimum_body_z_mm": 1.7999999000016942,
+    "minimum_nominal_body_gap_mm": 1.2399999000016941,
+    "maximum_material_above_tcp_mm": 0.56,
+    "motions_checked": 129257,
+    "growing_bead_body_checks": 114599,
+    "incomplete_lines": [],
+    "coverage": "All parsed linear motions in labelled print body; startup/homing/footer not certified",
+    "material_model": "Earlier and current finite beads enclosed below maximum trace Z; uncalibrated",
+    "installed_head_registration_verified": false,
+    "worst_bound": {
+      "line_1based": 66,
+      "role": "custom",
+      "motion": "travel",
+      "tcp_segment_z_range_mm": [
+        0.24,
+        1.04
+      ],
+      "material_upper_z_mm": 0.8,
+      "nominal_lower_bound_mm": 1.2399999000016941
+    },
+    "nozzle_contact": "UNASSESSED",
+    "manufacturing_uncertainty_included": false,
+    "physical_validation": false,
+    "print_allowed": false,
+    "printer_contacted": false,
+    "nominal_component_count": 56,
+    "nominal_axis": "printer Z = negative CAD Y",
+    "nominal_tcp_cad_mm": [
+      267.2581786613353,
+      341.03574634892607,
+      425.20267174528084
+    ],
+    "cad_metadata_sha256": "22537cd44cef0261c94a50b75903391279fa48480366b30830944d00179f5662",
+    "cad_source_revision": "75f8a0da6ff822c67b6aff62cfa85c7a441e2271",
+    "source_mode": "native_local_surfaces",
+    "package_payload_equal": true,
+    "effective_profile_fields_verified": 26,
+    "native_xyz_e_identity": {
+      "before": {
+        "sha256": "8f025e5683a01feef9a8363d934acf89c30c9b508cd0a1b5646b3d60872046e1",
+        "moves": 131782
+      },
+      "after": {
+        "sha256": "8f025e5683a01feef9a8363d934acf89c30c9b508cd0a1b5646b3d60872046e1",
+        "moves": 131782
+      },
+      "equal": true
+    }
+  },
+  "previous_roof_body_audit": {
+    "status": "INCONCLUSIVE",
+    "gcode_sha256": "28f487b743c5ca777060cd79f6ca5893528539e808aa47e9cd9a55355320d616",
+    "minimum_body_z_mm": 1.7999999000016942,
+    "minimum_nominal_body_gap_mm": -0.3398580999983096,
+    "maximum_material_above_tcp_mm": 2.139858000000004,
+    "motions_checked": 474790,
+    "growing_bead_body_checks": 380532,
+    "incomplete_lines": [],
+    "coverage": "All parsed linear motions in labelled print body; startup/homing/footer not certified",
+    "material_model": "Earlier and current finite beads enclosed below maximum trace Z; uncalibrated",
+    "installed_head_registration_verified": false,
+    "worst_bound": {
+      "line_1based": 496509,
+      "role": "outer wall",
+      "motion": "extrusion",
+      "tcp_segment_z_range_mm": [
+        37.99023,
+        37.990231
+      ],
+      "material_upper_z_mm": 40.130088,
+      "nominal_lower_bound_mm": -0.3398580999983096
+    },
+    "nozzle_contact": "UNASSESSED",
+    "manufacturing_uncertainty_included": false,
+    "physical_validation": false,
+    "print_allowed": false,
+    "printer_contacted": false,
+    "nominal_component_count": 56,
+    "nominal_axis": "printer Z = negative CAD Y",
+    "nominal_tcp_cad_mm": [
+      267.2581786613353,
+      341.03574634892607,
+      425.20267174528084
+    ],
+    "cad_metadata_sha256": "22537cd44cef0261c94a50b75903391279fa48480366b30830944d00179f5662",
+    "cad_source_revision": "75f8a0da6ff822c67b6aff62cfa85c7a441e2271",
+    "source_mode": "conformal_full_part",
+    "package_payload_equal": true,
+    "effective_profile_fields_verified": 22
+  },
+  "previous_roof_transition_model": {
+    "regular": {
+      "segments": 357308,
+      "min_normal_gap_mm": 0.1770473521442659,
+      "max_normal_gap_mm": 0.24,
+      "nonpositive_cells": 0
+    },
+    "bridge": {
+      "segments": 13812,
+      "min_normal_gap_mm": 0.18404677958665275,
+      "max_normal_gap_mm": 0.36943627075547103,
+      "nonpositive_cells": 0
+    },
+    "transition": {
+      "segments": 9154,
+      "min_normal_gap_mm": 0.17708384622746093,
+      "max_normal_gap_mm": 0.2085057349620254,
+      "nonpositive_cells": 0
+    }
+  },
+  "headless_ui": "PASS WebGL and software, real candidate result rendered, no JS errors",
+  "native_ui_validation": "PENDING_USER_CONTROL_AUTHORIZATION",
+  "installed_head_measurements": "REQUESTED_PENDING",
+  "bundle_built": true,
+  "installed": false,
+  "tests_passed": 199,
+  "print_allowed": false,
+  "printer_contacted": false,
+  "physical_print_started": false
+}
