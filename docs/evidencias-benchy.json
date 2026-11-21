@@ -1,0 +1,98 @@
+{
+  "date": "2026-11-21",
+  "project": "Orca Surface Studio",
+  "version": "0.5.1",
+  "environment": {
+    "platform": "Windows",
+    "orca_version": "2.5.1",
+    "printer_profile": "Sovol SV06 0.4 nozzle -3DPrinter",
+    "material_profile": "Sovol Generic PLA - Voolt3D"
+  },
+  "input": {
+    "name": "3DBenchy-original.stl",
+    "sha256": "6ab57f1c3f8e86bc3cbd302c6fa6270acf06277c6335454e922419c25d42e97e",
+    "triangles": 225154,
+    "dimensions_mm": [
+      60.001,
+      31.004,
+      48
+    ]
+  },
+  "native_observation": {
+    "preparation": "REJECTED",
+    "message": "Não foi possível preparar toda a região: há furo, recorte ou fronteira interna no teto. O original foi preservado.",
+    "conformal_preview_opened": false,
+    "benchy_uploaded": false,
+    "benchy_print_started": false,
+    "original_preserved": true
+  },
+  "isolated_catalogue_benchmark": {
+    "geometry_triangles": 225154,
+    "elapsed_seconds": 7.052298600086942,
+    "status": "CANDIDATES_ONLY",
+    "returned_regions": 100,
+    "geometry_changed": false,
+    "printer_contacted": false
+  },
+  "automated_tests": {
+    "passed": 176,
+    "elapsed_seconds": 15.795,
+    "native_hardware_validation": false
+  },
+  "bundle": {
+    "name": "orca_wave_generator.py",
+    "sha256": "417a6377c42941e5c4e20a28921d4c61423f91de04756559ac7d1fbf87f073bb"
+  },
+  "screenshots": [
+    {
+      "path": "images/manual-benchy-2026-11-21/01-mesa-inicial.jpg",
+      "sha256": "96aa54acc012f2ee557fc54f521dcda0641b18f5bd2f12b6f525a06c2f40c111",
+      "bytes": 168745
+    },
+    {
+      "path": "images/manual-benchy-2026-11-21/02-benchy-importado.jpg",
+      "sha256": "acddff39c78f7db13c1fcff3a4ccadb7c6f321a27661b902202761d7c75e9e8a",
+      "bytes": 182507
+    },
+    {
+      "path": "images/manual-benchy-2026-11-21/03-studio-antes-atualizar.jpg",
+      "sha256": "e28f2b45f7ebd7cc3d9e54224405b47c27a60c7df656f4a1c609360f40e92d43",
+      "bytes": 128066
+    },
+    {
+      "path": "images/manual-benchy-2026-11-21/04-atualizar-mesa.jpg",
+      "sha256": "f8c962812374a1f1fd8801125e9597c9c91eae4634b11d6b4d31ea7aa09c80b8",
+      "bytes": 117816
+    },
+    {
+      "path": "images/manual-benchy-2026-11-21/05-analise-do-benchy.jpg",
+      "sha256": "f8c962812374a1f1fd8801125e9597c9c91eae4634b11d6b4d31ea7aa09c80b8",
+      "bytes": 117816
+    },
+    {
+      "path": "images/manual-benchy-2026-11-21/06-studio-corrigido.jpg",
+      "sha256": "82fa388f9b3d9e023c2c0775eda855c56e4ad314584aee249698104feb1fa97f",
+      "bytes": 129668
+    },
+    {
+      "path": "images/manual-benchy-2026-11-21/07-superficie-curva-e-regioes.jpg",
+      "sha256": "6dede8b57749ea8a26c4e0f30a304ac28bf1343f0d8091f5f672c8115a434737",
+      "bytes": 132356
+    },
+    {
+      "path": "images/manual-benchy-2026-11-21/08-permissao-do-orca.jpg",
+      "sha256": "6d869489d190cbb7b3a432cd612a8349545c6225b86db7f7cac0c44b9e6cf784",
+      "bytes": 16142
+    },
+    {
+      "path": "images/manual-benchy-2026-11-21/09-benchy-recusa-topologia.jpg",
+      "sha256": "d33fe06db7bda141f359fac4d80b88986a6e62b7aef0b0134102746c3027c66e",
+      "bytes": 133001
+    }
+  ],
+  "limitations": [
+    "No full Benchy conformal G-code was generated in this native test.",
+    "The isolated benchmark does not measure native UI latency.",
+    "The previous physical coupon result is user-reported qualitative evidence of a separate trial."
+  ]
+}

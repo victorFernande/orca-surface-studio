@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orca-wave-studio"
+version = "0.5.1"
+description = "OrcaSlicer wave integration study and offline studio"
+requires-python = ">=3.12"
+dependencies = ["numpy>=1.26"]
+license = {text = "MIT"}
+authors = [{name = "Orca Surface Studio"}]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+orca_wave_studio = ["assets/*"]
