@@ -90,11 +90,21 @@ let activeId=null,baseParameters={...defaults};
 const objectParameters=new Map(),objectPresets=new Map();
 let surfaceMode=false;
 const surfaceByObject=new Map();
-const surfaceSettings=()=>({step_mm:.4,max_slope_deg:30,retain_native_short_edges:true,backend:'native_local',region_id:null,...surfaceByObject.get(activeId)});
+const surfaceSettings=()=>{
+  const value={step_mm:.4,max_slope_deg:30,retain_native_short_edges:true,backend:'native_local',region_id:null,
+    selection_mode:'paint',selection_revision:null,wall_selection:[],...surfaceByObject.get(activeId)};
+  if(value.backend!=='native_local')for(const key of ['selection_mode','selection_revision','wall_selection'])delete value[key];
+  return value;
+};
+const wallMarks=new Map();let brushRadius=6;
 function surfaceError(){
-  const {step_mm,max_slope_deg}=surfaceSettings();
+  const {step_mm,max_slope_deg,backend,selection_mode,wall_selection,selection_revision}=surfaceSettings();
   if(!Number.isFinite(step_mm)||step_mm<.15||step_mm>2)return 'Use um passo entre 0,15 e 2 mm.';
   if(!Number.isFinite(max_slope_deg)||max_slope_deg<5||max_slope_deg>45)return 'Use uma inclinação entre 5° e 45°.';
+  if(backend==='native_local'&&selection_mode==='paint'){
+    if(selection_revision&&selection_revision!==state.revision)return 'A peça ou o perfil mudou. Limpe e selecione as áreas novamente.';
+    if(!wall_selection?.length)return 'Clique na peça para escolher as áreas a suavizar. Arraste para girar.';
+  }
   return '';
 }
 let generation=null,resultIdentity='',resultConfig='',pollTimer=0,hostSequence=-1,receivedHostState=false;
@@ -104,8 +114,12 @@ const opened=new Set();
 const numberFormat=(v,n=2)=>Number.isFinite(v)?v.toLocaleString('pt-BR',{maximumFractionDigits:n}):'—';
 const effective=id=>objectParameters.get(id)||baseParameters;
 const selectedParameters=()=>Object.fromEntries([...selection].map(id=>[id,{...effective(id)}]));
+// Native JSON bridges may reorder dictionary keys, including nested click rays.
+// Arrays retain their order: changing a ray or its coordinates still invalidates.
+const stableJSON=value=>JSON.stringify(value,(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)
+  ?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);
 const signature=()=>surfaceMode
-  ?JSON.stringify(['surface',state.revision||'',activeId,surfaceSettings()])
+  ?stableJSON(['surface',state.revision||'',activeId,surfaceSettings()])
   :JSON.stringify(['wave',state.revision||'',state.capture?.sha256||'',
     [...selection].sort().map(id=>[id,...Object.keys(defaults).map(k=>effective(id)[k])])]);
 function normalized(p){
@@ -283,6 +297,31 @@ nativeCorners.onchange=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),r
 for(const k of ['amplitude_mm','wavelength_mm'])$(k).closest('.field').classList.add('wave-only');
 const surfaceInfo=node('p','surface-info','O estudo segue a superfície superior da peça. Regiões acima da inclinação máxima ficam fora do percurso.');
 primary.before(surfaceInfo);
+const wallBox=node('div','field');wallBox.id='wall-selection';
+wallBox.append(node('h3','','Paredes a suavizar'));
+const wallModes=node('div','segments'),wallPaint=node('button','','Escolher na peça'),wallAll=node('button','','Todas compatíveis');
+wallPaint.id='wall-paint';wallAll.id='wall-all';wallModes.append(wallPaint,wallAll);wallBox.append(wallModes);
+const brushRow=node('label','fieldtop','Raio da área'),brushInput=node('input');
+brushInput.type='number';brushInput.min='1';brushInput.max='15';brushInput.step='1';brushInput.value='6';brushInput.id='wall-radius';
+brushRow.htmlFor=brushInput.id;brushRow.append(brushInput,node('span','unit','mm'));wallBox.append(brushRow);
+brushInput.oninput=()=>{if(Number.isFinite(brushInput.valueAsNumber)&&brushInput.valueAsNumber>=1&&brushInput.valueAsNumber<=15)brushRadius=brushInput.valueAsNumber};
+brushInput.onchange=()=>{if(!brushInput.checkValidity()||!Number.isFinite(brushInput.valueAsNumber)){brushInput.value=String(brushRadius);notice('Use um raio entre 1 e 15 mm. O último valor válido foi mantido.')}};
+const wallHint=node('small','','Clique para acrescentar áreas; arraste para girar. A área inclui a espessura e pode alcançar paredes próximas. Velocidade nas áreas: 80% do perfil.'),wallList=node('div');
+wallList.id='wall-areas';wallList.setAttribute('aria-live','polite');
+const wallClear=node('button','outline','Limpar seleção');wallClear.id='wall-clear';
+wallBox.append(wallHint,wallList,wallClear);primary.append(wallBox);
+wallPaint.onclick=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),selection_mode:'paint'});render()};
+wallAll.onclick=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),selection_mode:'all',wall_selection:[],selection_revision:null});wallMarks.delete(activeId);render()};
+wallClear.onclick=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),wall_selection:[],selection_revision:null});wallMarks.delete(activeId);render()};
+function pickWall(ray,point){
+  const settings=surfaceSettings();if(controlsBusy()||!surfaceMode||settings.backend!=='native_local'||settings.selection_mode!=='paint')return;
+  if(settings.wall_selection.length>=24){notice('Use até 24 áreas. Remova uma área para acrescentar outra.');return}
+  if(!brushInput.checkValidity()||!Number.isFinite(brushInput.valueAsNumber)){notice('Confira o raio da área antes de selecionar.');return}
+  if(settings.selection_revision&&settings.selection_revision!==state.revision){notice('Limpe a seleção anterior antes de escolher novas áreas.');return}
+  const marks=[...(wallMarks.get(activeId)||[]).slice(0,settings.wall_selection.length),{center:point,radius_mm:brushRadius}];wallMarks.set(activeId,marks);
+  surfaceByObject.set(activeId,{...settings,selection_revision:state.revision,
+    wall_selection:[...settings.wall_selection,{...ray,radius_mm:brushRadius}]});notice('');render();
+}
 field(advanced,'min_segment_mm','Segmento mínimo','mm',.15,2,'any');
 field(advanced,'tolerance_mm','Tolerância','mm',.000001,.02,'any');
 field(advanced,'fade_layers','Transição','cam.',1,null,1);
@@ -360,6 +399,13 @@ function diagnostics(current){
   record(metrics,'SHA-256',r.sha256.slice(0,12),r.sha256);
   if(surfaceMode&&r.settings?.backend==='native_local'){
     record(metrics,'Método','Contorno local do Orca');record(metrics,'Regiões','Superfícies superiores compatíveis');
+    if(rep.wall_selection?.mode==='paint'){
+      record(metrics,'Áreas escolhidas',rep.wall_selection.areas.length);
+      record(metrics,'Velocidade nas áreas','80% do perfil');
+      const angle=rep.wall_selection_audit?.maximum_motion_slope_deg;
+      if(Number.isFinite(angle))record(metrics,'Maior inclinação do percurso',numberFormat(angle,1)+'°');
+      if(angle>r.settings.max_slope_deg)$('result-note').textContent='Somente Preview: há movimentos mais inclinados que o limite do estudo. O arquivo não está liberado para imprimir.';
+    }
     record(metrics,'Folga do cabeçote','Pendente');
     record(metrics,'Trechos com Z variável',Object.values(rep.nonplanar_extrusion_segments_by_role||{}).reduce((a,b)=>a+b,0));
   }
@@ -404,10 +450,14 @@ class PathView {
     canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();this.lost=true;render()});
     canvas.addEventListener('webglcontextrestored',()=>{this.lost=false;this.buffers=[];this.init();sceneTag='';render()});
     new ResizeObserver(()=>this.draw()).observe(canvas);
-    let start=null;
-    canvas.onpointerdown=e=>{start=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId)};
-    canvas.onpointermove=e=>{if(start){this.rotate((e.clientX-start[0])*.009,(e.clientY-start[1])*.008);start=[e.clientX,e.clientY]}};
-    canvas.onpointerup=canvas.onpointercancel=canvas.onlostpointercapture=()=>{start=null};
+    let start=null,down=null,moved=false;
+    canvas.onpointerdown=e=>{if(e.button!==0)return;start=down=[e.clientX,e.clientY];moved=false;canvas.setPointerCapture(e.pointerId)};
+    canvas.onpointermove=e=>{if(start){
+      if(Math.hypot(e.clientX-down[0],e.clientY-down[1])>5)moved=true;
+      if(moved)this.rotate((e.clientX-start[0])*.009,(e.clientY-start[1])*.008);start=[e.clientX,e.clientY];
+    }};
+    canvas.onpointerup=e=>{if(down&&!moved){const hit=this.pick(e.clientX,e.clientY);if(hit)pickWall(hit.ray,hit.point)}start=down=null};
+    canvas.onpointercancel=canvas.onlostpointercapture=()=>{start=down=null};
     canvas.addEventListener('wheel',e=>{e.preventDefault();this.magnify(Math.exp(-Math.sign(e.deltaY)*.12))},{passive:false});
     canvas.onkeydown=e=>{
       const moves={ArrowLeft:[-.1,0],ArrowRight:[.1,0],ArrowUp:[0,.1],ArrowDown:[0,-.1]};
@@ -417,8 +467,8 @@ class PathView {
   }
   init(){
     const g=this.gl,prog=g.createProgram();
-    const vertex='#version 300 es\nin vec3 pos;in float shade;out float lighting;uniform vec3 center;uniform vec2 angle;uniform vec3 scale;uniform float size;void main(){vec3 d=pos-center;float s=sin(angle.x),c=cos(angle.x);float horizontal=c*d.x+s*d.y;float depth=-s*d.x+c*d.y;float sp=sin(angle.y),cp=cos(angle.y);gl_Position=vec4(horizontal*scale.x,(cp*d.z+sp*depth)*scale.y,(cp*depth-sp*d.z)*scale.z,1.0);gl_PointSize=size;lighting=shade;}';
-    const fragment='#version 300 es\nprecision mediump float;in float lighting;uniform vec4 color;uniform bool point;out vec4 pixel;void main(){if(point&&distance(gl_PointCoord,vec2(.5))>.5)discard;pixel=vec4(color.rgb*lighting,color.a);}';
+    const vertex='#version 300 es\nin vec3 pos;in float shade;out float lighting;out vec3 world;uniform vec3 center;uniform vec2 angle;uniform vec3 scale;uniform float size;void main(){vec3 d=pos-center;float s=sin(angle.x),c=cos(angle.x);float horizontal=c*d.x+s*d.y;float depth=-s*d.x+c*d.y;float sp=sin(angle.y),cp=cos(angle.y);gl_Position=vec4(horizontal*scale.x,(cp*d.z+sp*depth)*scale.y,(cp*depth-sp*d.z)*scale.z,1.0);gl_PointSize=size;lighting=shade;world=pos;}';
+    const fragment='#version 300 es\nprecision highp float;in float lighting;in vec3 world;uniform vec4 color;uniform bool point;uniform bool paintMesh;uniform int areaCount;uniform vec4 areas[24];out vec4 pixel;void main(){if(point&&distance(gl_PointCoord,vec2(.5))>.5)discard;vec3 ink=color.rgb;if(paintMesh){for(int i=0;i<24;i++){if(i>=areaCount)break;if(distance(world,areas[i].xyz)<=areas[i].w){ink=vec3(1.,.70,.18);break;}}}pixel=vec4(ink*lighting,color.a);}';
     for(const [type,src] of [[g.VERTEX_SHADER,vertex],[g.FRAGMENT_SHADER,fragment]]){
       const shader=g.createShader(type);g.shaderSource(shader,src);g.compileShader(shader);
       if(!g.getShaderParameter(shader,g.COMPILE_STATUS))throw Error(g.getShaderInfoLog(shader));
@@ -426,11 +476,36 @@ class PathView {
     }
     g.linkProgram(prog);if(!g.getProgramParameter(prog,g.LINK_STATUS))throw Error(g.getProgramInfoLog(prog));
     g.useProgram(prog);this.pos=g.getAttribLocation(prog,'pos');this.shade=g.getAttribLocation(prog,'shade');this.u={};
-    for(const key of ['center','angle','scale','size','color','point'])this.u[key]=g.getUniformLocation(prog,key);
+    for(const key of ['center','angle','scale','size','color','point','paintMesh','areaCount'])this.u[key]=g.getUniformLocation(prog,key);
+    this.u.areas=g.getUniformLocation(prog,'areas[0]');
     g.enableVertexAttribArray(this.pos);g.enable(g.DEPTH_TEST);g.depthFunc(g.LEQUAL);
     g.enable(g.BLEND);g.blendFunc(g.SRC_ALPHA,g.ONE_MINUS_SRC_ALPHA);
   }
   get available(){return (Boolean(this.gl)||Boolean(this.ctx))&&!this.lost}
+  pick(clientX,clientY){
+    if(!this.mesh?.flat.length||this.layer!=='')return null;
+    const rect=this.canvas.getBoundingClientRect(),w=rect.width,h=rect.height;
+    const scale=(this.gl ? .425 : .42)*this.zoom*Math.min(w,h)/this.radius;
+    const x=(clientX-rect.left-w/2)/scale,y=-(clientY-rect.top-h/2)/scale;
+    const s=Math.sin(this.yaw),c=Math.cos(this.yaw),sp=Math.sin(this.pitch),cp=Math.cos(this.pitch);
+    const direction=[-s*cp,c*cp,-sp],H=[c,s,0],V=[-s*sp,c*sp,cp];
+    const origin=this.center.map((v,i)=>v+H[i]*x+V[i]*y-direction[i]*this.radius*4);
+    const sub=(a,b)=>a.map((v,i)=>v-b[i]),dot=(a,b)=>a.reduce((sum,v,i)=>sum+v*b[i],0),
+      cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+    let nearest=Infinity;
+    for(let i=0;i<this.mesh.flat.length;i+=9){
+      const a=this.mesh.flat.slice(i,i+3),b=this.mesh.flat.slice(i+3,i+6),c=this.mesh.flat.slice(i+6,i+9),
+        e1=sub(b,a),e2=sub(c,a),p=cross(direction,e2),det=dot(e1,p);
+      if(Math.abs(det)<1e-12)continue;
+      const t=sub(origin,a),u=dot(t,p)/det,q=cross(t,e1),v=dot(direction,q)/det,d=dot(e2,q)/det;
+      if(u>=0&&v>=0&&u+v<=1&&d>=0)nearest=Math.min(nearest,d);
+    }
+    return Number.isFinite(nearest)?{ray:{origin,direction},point:origin.map((v,i)=>v+nearest*direction[i])}:null;
+  }
+  selectedAreas(){
+    return surfaceMode&&surfaceSettings().backend==='native_local'&&surfaceSettings().selection_mode==='paint'
+      ?(presentResult()?state.result?.report?.wall_selection?.areas:(wallMarks.get(activeId)||[]).slice(0,surfaceSettings().wall_selection.length))||[]:[];
+  }
   makeBuffer(data){
     if(!this.gl||this.lost)return null;
     const g=this.gl,buf=g.createBuffer();g.bindBuffer(g.ARRAY_BUFFER,buf);
@@ -504,6 +579,7 @@ class PathView {
   }
   draw(){
     if(!this.available)return;
+    this.drawAreas=this.selectedAreas();
     if(!this.gl){this.drawCanvas();return}
     const g=this.gl,c=this.canvas,dpr=Math.min(window.devicePixelRatio||1,2),u=this.u;
     const w=Math.max(1,Math.round(c.clientWidth*dpr)),h=Math.max(1,Math.round(c.clientHeight*dpr));
@@ -515,6 +591,8 @@ class PathView {
     g.uniform3f(u.scale,scale*Math.min(1,h/w),scale*Math.min(1,w/h),.16/this.radius);
     const bind=(buf)=>{g.bindBuffer(g.ARRAY_BUFFER,buf);g.vertexAttribPointer(this.pos,3,g.FLOAT,false,0,0)};
     g.disableVertexAttribArray(this.shade);g.vertexAttrib1f(this.shade,1);
+    g.uniform1i(u.paintMesh,true);g.uniform1i(u.areaCount,this.drawAreas.length);
+    if(this.drawAreas.length)g.uniform4fv(u.areas,this.drawAreas.flatMap(a=>[...a.center,a.radius_mm]));
     if(this.mesh?.flat.length&&this.layer===''){
       bind(this.mesh.buffer);g.bindBuffer(g.ARRAY_BUFFER,this.mesh.shadeBuffer);
       g.enableVertexAttribArray(this.shade);g.vertexAttribPointer(this.shade,1,g.FLOAT,false,0,0);
@@ -522,6 +600,7 @@ class PathView {
       g.enable(g.POLYGON_OFFSET_FILL);g.polygonOffset(1,1);g.drawArrays(g.TRIANGLES,0,this.mesh.flat.length/3);
       g.disable(g.POLYGON_OFFSET_FILL);g.disableVertexAttribArray(this.shade);g.vertexAttrib1f(this.shade,1);
     }
+    g.uniform1i(u.paintMesh,false);
     g.uniform1i(u.point,false);g.uniform1f(u.size,1);bind(this.grid.buffer);
     g.uniform4fv(u.color,this.light?[.29,.36,.43,.25]:[.32,.39,.45,.35]);
     g.drawArrays(g.LINES,0,this.grid.count);
@@ -549,10 +628,27 @@ class PathView {
         Math.cos(this.pitch)*depth-Math.sin(this.pitch)*d[2]]};
     if(this.layer===''&&this.mesh?.flat.length){
       const faces=[];for(let i=0;i<this.mesh.flat.length;i+=9){const p=[0,3,6].map(k=>project(this.mesh.flat.slice(i+k,i+k+3)));
-        faces.push({p,depth:p.reduce((sum,q)=>sum+q[2],0)/3,shade:this.mesh.shades[i/3]})}
+        faces.push({p,depth:p.reduce((sum,q)=>sum+q[2],0)/3,shade:this.mesh.shades[i/3],
+          world:[0,3,6].map(k=>this.mesh.flat.slice(i+k,i+k+3))})}
       faces.sort((a,b)=>b.depth-a.depth);for(const f of faces){const t=f.shade;
         g.fillStyle=`rgb(${Math.round(90*t)},${Math.round(145*t)},${Math.round(155*t)})`;
-        g.beginPath();f.p.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.closePath();g.fill()}
+        g.beginPath();f.p.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.closePath();g.fill();
+        if(this.drawAreas.length){
+          const [a,b,c]=f.world,u=b.map((v,i)=>v-a[i]),v=c.map((v,i)=>v-a[i]);
+          const n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],length=Math.hypot(...n);
+          if(length<1e-12)continue;for(let i=0;i<3;i++)n[i]/=length;
+          const ul=Math.hypot(...u),U=u.map(x=>x/ul),V=[n[1]*U[2]-n[2]*U[1],n[2]*U[0]-n[0]*U[2],n[0]*U[1]-n[1]*U[0]];
+          for(const area of this.drawAreas){
+            const d=n.reduce((sum,v,i)=>sum+v*(area.center[i]-a[i]),0);
+            if(Math.abs(d)>=area.radius_mm)continue;
+            const r=Math.sqrt(area.radius_mm**2-d*d),center=area.center.map((v,i)=>v-d*n[i]),P=project(center),
+              A=project(center.map((v,i)=>v+r*U[i])),B=project(center.map((v,i)=>v+r*V[i]));
+            g.save();g.beginPath();f.p.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.closePath();g.clip();
+            g.transform(A[0]-P[0],A[1]-P[1],B[0]-P[0],B[1]-P[1],P[0],P[1]);
+            g.fillStyle='#edb044';g.beginPath();g.arc(0,0,1,0,2*Math.PI);g.fill();g.restore();
+          }
+        }
+      }
     }
     for(const kind of(view==='compare'?['original','deformed']:[view])){
       const s=this.streams[kind];if(!s)continue;g.strokeStyle=kind==='original'?'#509cfb':'#00dfbb';g.lineWidth=1.2;
@@ -622,11 +718,25 @@ function render(){
   const stepBox=$('step_mm').closest('.field'),stepParent=combined?advanced:primary;
   surfaceAdvanced.hidden=!surfaceMode;
   const localSurface=surfaceMode&&surfaceSettings().backend==='native_local';
+  wallBox.hidden=!localSurface;
+  const wallOptions=surfaceSettings(),painting=wallOptions.selection_mode==='paint';
+  $('canvas').style.cursor=localSurface&&painting&&!busy?'crosshair':'grab';
+  wallPaint.setAttribute('aria-pressed',String(painting));wallAll.setAttribute('aria-pressed',String(!painting));
+  wallPaint.disabled=wallAll.disabled=brushInput.disabled=busy;brushRow.hidden=wallHint.hidden=wallList.hidden=wallClear.hidden=!painting;
+  wallClear.disabled=busy||!wallOptions.wall_selection?.length;
+  wallList.replaceChildren();
+  (wallOptions.wall_selection||[]).forEach((area,i)=>{
+    const remove=node('button','outline','Área '+(i+1)+' · '+numberFormat(area.radius_mm)+' mm ×');
+    remove.setAttribute('aria-label','Remover área '+(i+1));remove.disabled=busy;
+    remove.onclick=()=>{const rows=[...wallOptions.wall_selection];rows.splice(i,1);
+      const marks=[...(wallMarks.get(activeId)||[])];marks.splice(i,1);wallMarks.set(activeId,marks);
+      surfaceByObject.set(activeId,{...wallOptions,wall_selection:rows,selection_revision:rows.length?wallOptions.selection_revision:null});render()};wallList.append(remove);
+  });
   surfaceMethod.value=surfaceSettings().backend;surfaceMethod.disabled=busy;
   const targetParent=surfaceMode?surfaceAdvanced:stepParent;
   if(stepBox.parentElement!==targetParent)targetParent.append(stepBox);
   stepBox.hidden=localSurface;
-  $('max_slope_deg').closest('.field').hidden=!surfaceMode||localSurface;surfaceInfo.hidden=!surfaceMode;
+  $('max_slope_deg').closest('.field').hidden=!surfaceMode||(localSurface&&!painting);surfaceInfo.hidden=!surfaceMode;
   const stage=state.conformal?.phase,full=state.result?.study_kind==='conformal';
   roofRegions(active,busy||Boolean(stage));
   if(localSurface)roofBox.hidden=true;
@@ -640,10 +750,10 @@ function render(){
   surfaceInfo.textContent=state.conformal?(state.conformal.settings?.backend==='regional_paired'?
     'Topo e face inferior são preparados juntos, preservando a base e sem faixa plana na borda. Clique em Fatiar no Orca. Somente estudo digital.':
     'Estudo anterior: somente topo parcial; bordas planas. Não demonstra o beiral completo.'):
-    (linked?(localSurface?'O Orca acompanha as superfícies superiores compatíveis em várias regiões da peça. Paredes verticais e faces inferiores não recebem acabamento conformal completo.':
+    (linked?(localSurface?'Clique nas áreas que deseja suavizar. O Orca calcula os contornos compatíveis; paredes verticais e faces inferiores podem continuar com camadas.':
       'Alinhamento experimental a um teto de referência. As outras regiões não seguem suas próprias curvas.'):
       'O percurso geométrico isolado é apenas uma visualização do topo; não comprova deposição.');
-  $('surface-only').hidden=!surfaceMode||!linked||Boolean(stage);$('surface-only').disabled=!active||busy||Boolean(error);
+  $('surface-only').hidden=!surfaceMode||!linked||Boolean(stage)||localSurface;$('surface-only').disabled=!active||busy||Boolean(error);
   $('bench-note').textContent=combined?'Vaso senoidal · somente Preview · sem envio à impressora':surfaceMode?((full||stage)?'Estudo conformal · impressão indisponível':'Estudo geométrico · impressão indisponível'):'Estudo de bancada · impressão pelo OrcaSlicer';
   prep.hidden=surfaceMode||!(combined||state.capture_setup_required);prep.disabled=!linked||busy;
   prep.textContent=combined?'Preparar vaso no Orca':'Preparar captura no Orca';
@@ -674,6 +784,7 @@ function render(){
   cancelBuild.hidden=!(state.status==='processing'&&!stage);cancelBuild.disabled=false;
   const tag=[current?state.result.sha256:'model',state.model_preview?.id,activeId].join('/');
   if(sceneTag!==tag){stop();sceneTag=tag;viewer.load({...current?state.result:{},model:state.model_preview});$('scrub').value=0;setLayers()}
+  else viewer.draw();
   const modes=document.querySelectorAll('[data-view]');
   for(const b of modes){
     b.setAttribute('aria-pressed',String(view===b.dataset.view));
@@ -701,7 +812,7 @@ const surfaceMethod=node('select');surfaceMethod.id='surface-method';surfaceMeth
 for(const [id,label] of [['native_local','Acompanhar superfícies locais'],['roof_bending','Alinhar camadas a um teto (experimental)']]){
   const option=node('option','',label);option.value=id;surfaceMethod.append(option);
 }
-surfaceMethod.onchange=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),backend:surfaceMethod.value});render()};
+surfaceMethod.onchange=()=>{wallMarks.delete(activeId);surfaceByObject.set(activeId,{...surfaceSettings(),backend:surfaceMethod.value});render()};
 surfaceAdvanced.append(surfaceMethod);
 surfaceAdvanced.append($('max_slope_deg').closest('.field'),roofBox,nativeCornersBox);primary.append(surfaceAdvanced);
 const cancelBuild=node('button','wide outline','Cancelar cálculo');cancelBuild.id='cancel-build';cancelBuild.hidden=true;
@@ -775,6 +886,7 @@ function applyState(next){
   if((first||!oldIds.size)&&state.parameters)baseParameters=normalized(state.parameters);
   const idSet=new Set(ids);
   for(const id of surfaceByObject.keys())if(!idSet.has(id))surfaceByObject.delete(id);
+  for(const id of wallMarks.keys())if(!idSet.has(id))wallMarks.delete(id);
   for(const id of objectParameters.keys())if(!idSet.has(id)){objectParameters.delete(id);objectPresets.delete(id)}
   let loadedActive=false;
   for(const id of ids){
@@ -799,9 +911,16 @@ function applyState(next){
     if(surfaceResult&&r.settings&&idSet.has(String(r.object_id))){
       const id=String(r.object_id),settings={step_mm:r.settings.step_mm,max_slope_deg:r.settings.max_slope_deg,
         retain_native_short_edges:Boolean(r.settings.retain_native_short_edges),
-        backend:r.settings.backend||'legacy_top',region_id:r.settings.region_id??null};
-      if(!resultIdentity&&!generation){surfaceMode=true;surfaceByObject.set(id,settings);activate(id)}
-      resultIdentity=identity;resultConfig=JSON.stringify(['surface',state.revision||'',id,settings]);
+        backend:r.settings.backend||'legacy_top',region_id:r.settings.region_id??null,
+        selection_mode:r.settings.selection_mode??'all',selection_revision:r.settings.selection_revision??null,
+        wall_selection:r.settings.wall_selection||[]};
+      if(settings.backend!=='native_local')for(const key of ['selection_mode','selection_revision','wall_selection'])delete settings[key];
+      if(!resultIdentity&&!generation){
+        surfaceMode=true;surfaceByObject.set(id,settings);
+        if(r.report?.wall_selection?.areas)wallMarks.set(id,r.report.wall_selection.areas.map(a=>({center:a.center,radius_mm:a.radius_mm})));
+        activate(id);
+      }
+      resultIdentity=identity;resultConfig=stableJSON(['surface',state.revision||'',id,settings]);
     }
     else if(generation){resultConfig=generation;resultIdentity=identity}
     else if(!resultIdentity||(!priorRev&&first)){resultConfig=signature();resultIdentity=identity}

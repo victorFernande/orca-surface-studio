@@ -2,6 +2,13 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A 0.8.0 acrescenta a [seleção das áreas das paredes por clique em 3D](docs/SELECAO_PAREDES_V080.md).
+É possível acrescentar/remover áreas e gerar o Preview pela mesma tela. O teste
+de linha de comando confirmou contorno nas áreas escolhidas, mas encontrou
+transições de aproximadamente 63°; **este Benchy ainda não está liberado para
+imprimir**. A seleção, a geração e o Preview foram conferidos na interface nativa,
+que também indicou trechos de 62,8° e manteve a advertência de impressão pendente.
+
 A 0.7.1 usa uma [autorização de leitura única para o cache do Preview](docs/PERMISSOES_PREVIEW.md),
 aprovada e salva pelo próprio Orca. Isso reduz pedidos por arquivo; não aprova
 automaticamente janelas de segurança nem libera impressão física.

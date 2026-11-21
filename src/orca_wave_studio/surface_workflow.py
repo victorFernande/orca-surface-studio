@@ -45,7 +45,7 @@ def slice_command(executable,workspace=None,*,native_local=False):
     command=[str(Path(executable).resolve()),'--datadir','profile','input.3mf',
             '--gcode-label-objects','--gcode-comments','--slice','0','--outputdir','output',
             '--export-3mf','source.gcode.3mf']
-    if native_local:command.append('--zaa-enabled=1')
+    if native_local:command.extend(['--zaa-enabled=1','--zaa-minimize-perimeter-height=1'])
     return command
 
 
@@ -99,7 +99,8 @@ def _slice_locked(executable,model,folder,cancelled,workspace):
 def build_surface(snapshot,object_id,backup,folder,executable,settings=None,*,progress=lambda message:None,
                   cancelled=lambda:False,slicer=slice_project,workspace=None):
     folder=Path(folder);folder.mkdir(parents=True,exist_ok=True);options=dict(settings or {})
-    if set(options)-{'step_mm','max_slope_deg','retain_native_short_edges','backend','region_id'}:
+    if set(options)-{'step_mm','max_slope_deg','retain_native_short_edges','backend','region_id',
+                     'selection_mode','selection_revision','wall_selection'}:
         raise WaveError('Parâmetro de superfície desconhecido.')
     backend=options.pop('backend','roof_bending');region_id=options.pop('region_id',None)
     if backend not in ('roof_bending','native_local'):raise WaveError('Método de superfície desconhecido.')
@@ -107,8 +108,10 @@ def build_surface(snapshot,object_id,backup,folder,executable,settings=None,*,pr
     profile=PrinterProfile.from_settings(resolved)
     if backend=='native_local':
         from .native_surfaces import build_local
-        report,gcode,package=build_local(snapshot,backup,folder,executable,resolved,profile,slicer,workspace,cancelled,progress,verify_profile)
+        report,gcode,package=build_local(snapshot,backup,folder,executable,resolved,profile,slicer,workspace,cancelled,progress,verify_profile,options)
         return _result(snapshot,object_id,folder,settings,report,gcode,package,backend)
+    if any(k in options for k in ('selection_mode','selection_revision','wall_selection')):
+        raise WaveError('A seleção por clique é usada no método de superfícies locais.')
     options['nominal_layer_height_mm']=profile.layer_mm
     progress('Preparando a peça completa e preservando suas aberturas…')
     warp=BendingWarp(snapshot,object_id,RegionalShellSettings(**options),

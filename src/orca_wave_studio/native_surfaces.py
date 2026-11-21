@@ -2,6 +2,7 @@
 from __future__ import annotations
 from collections import Counter
 from pathlib import Path
+import math
 import re
 
 from .capture import atomic_write
@@ -11,6 +12,7 @@ from .engine_parser import read
 from .package import build_sliced_package,extract_plate_gcode
 from .profile_limits import limit_result
 from .project_io import write_model_project
+from .wall_selection import resolve_areas,sphere_modifier,audit_selected_paths
 
 LOCAL_FIELDS=('zaa_enabled','zaa_min_z','zaa_minimize_perimeter_height','zaa_dont_alternate_fill_direction')
 
@@ -20,7 +22,7 @@ def local_settings(resolved):
     # These are native deposition controls, not a head-clearance angle.
     layer=float(result['layer_height'])
     result.update(zaa_enabled='1',zaa_min_z=str(min(.05,layer/4)),
-                  zaa_minimize_perimeter_height='35',zaa_dont_alternate_fill_direction='0')
+                  zaa_minimize_perimeter_height='1',zaa_dont_alternate_fill_direction='0')
     return result
 
 
@@ -64,16 +66,36 @@ def contour_result(data,profile,mapping):
     return ProcessedResult(final,report)
 
 
-def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,workspace,cancelled,progress,verify):
+def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,workspace,cancelled,progress,verify,options=None):
     folder=Path(folder);settings=local_settings(resolved)
+    slope_limit=(options or {}).get('max_slope_deg',30)
+    if type(slope_limit) not in (int,float) or not math.isfinite(slope_limit) or not 5<=slope_limit<=45:
+        raise WaveError('WALL_SLOPE: o limite do estudo precisa ficar entre 5 e 45 graus.')
+    areas=resolve_areas(snapshot,str(snapshot.objects[0]['id']),options or {})
+    modifiers=[sphere_modifier(area,i+1) for i,area in enumerate(areas)]
+    obj=snapshot.objects[0]
+    effective={**resolved,**obj.get('config',{}),**obj['volumes'][0].get('config',{})}
+    for modifier in modifiers:
+        for key in ('outer_wall_speed','inner_wall_speed'):
+            value=effective.get(key)
+            values=value if isinstance(value,list) else [value]
+            try:
+                speeds=[float(v)*.8 for v in values]
+                if not all(0<v<10000 for v in speeds):raise ValueError()
+            except (ValueError,TypeError):
+                raise WaveError('WALL_SPEED: o perfil precisa informar velocidades de parede numéricas.')
+            modifier['config'][key]=';'.join(f'{v:.9g}' for v in speeds)
     progress('Fatiando as superfícies locais com o contorno em Z do próprio Orca…')
-    model=folder/'prepared.3mf';write_model_project(snapshot,model,settings)
+    model=folder/'prepared.3mf';write_model_project(snapshot,model,settings,modifiers=modifiers)
     if cancelled():raise WaveError('Geração cancelada.')
     source,package=slicer(executable,model,folder/'slice',cancelled,workspace=workspace)
     receipt=verify(package,settings,extra_fields=LOCAL_FIELDS)
+    if areas:
+        verify_area_modifiers(package,modifiers)
     data=source.read_bytes();labels={int(m) for m in re.findall(rb'(?mi)^;\s*printing object\s+.*?\bid:(\d+)\s+copy\s+0\s*$',data)}
     if len(labels)!=1:raise WaveError('LOCAL_LABELS: a fatia precisa identificar uma única peça.')
     mapping={next(iter(labels)):str(snapshot.objects[0]['id'])}
+    selection_audit=audit_selected_paths(data,mapping,areas) if areas else None
     progress('Conferindo os caminhos locais e os limites da impressora selecionada…')
     result=contour_result(data,profile,mapping)
     if cancelled():raise WaveError('Geração cancelada.')
@@ -85,5 +107,43 @@ def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,worksp
     report={**result.report,'workflow':'integrated','profile_preview_only':False,'profile_preserved':True,
         'original_revision':snapshot.revision,'original_backup_sha256':digest(Path(backup).read_bytes()),
         'native_transport_preserved':True,'effective_profile_verification':receipt,
-        'physical_gate':'HEAD_AND_LOCAL_DEPOSITION_VALIDATION_REQUIRED'}
+        'physical_gate':'HEAD_AND_LOCAL_DEPOSITION_VALIDATION_REQUIRED',
+        'wall_selection':{'mode':'paint' if areas else 'all','areas':areas,
+            'scope':'closed native modifier spheres including wall thickness',
+            'native_modifiers_verified':bool(areas),'wall_speed_factor':.8 if areas else 1},
+        'wall_selection_audit':selection_audit,
+        'perimeter_minimization_angle_deg':1}
+    if selection_audit:
+        report['motion_slope_review']={'limit_deg':slope_limit,
+            'maximum_deg':selection_audit['maximum_motion_slope_deg'],
+            'within_study_limit':selection_audit['maximum_motion_slope_deg']<=slope_limit,
+            'head_clearance_certified':False}
+        if not report['motion_slope_review']['within_study_limit']:
+            report['physical_gate']='MOTION_SLOPE_ABOVE_STUDY_LIMIT'
     return report,output,native
+
+
+def verify_area_modifiers(package,expected):
+    from xml.etree import ElementTree as ET
+    from zipfile import ZipFile
+    with ZipFile(package) as archive:
+        root=ET.fromstring(archive.read('Metadata/model_settings.config'))
+    count=expected if isinstance(expected,int) else len(expected)
+    objects=root.findall('object')
+    if len(objects)!=1:
+        raise WaveError('WALL_NATIVE: a cópia fatiada perdeu a identificação da peça.')
+    obj=objects[0]
+    config={m.get('key'):m.get('value') for m in obj.findall('metadata')}
+    parts=[p for p in obj.findall('part') if p.get('subtype')=='modifier_part']
+    normal=[p for p in obj.findall('part') if p.get('subtype')=='normal_part']
+    if (config.get('zaa_enabled')!='1' or len(parts)!=count or len(normal)!=1 or
+            {m.get('key'):m.get('value') for m in normal[0].findall('metadata')}.get('zaa_enabled')!='0'):
+        raise WaveError('WALL_NATIVE: o Orca não preservou os limites das áreas selecionadas.')
+    for i,part in enumerate(parts,1):
+        values={m.get('key'):m.get('value') for m in part.findall('metadata')}
+        if values.get('zaa_enabled')!='1' or values.get('name')!=f'Surface Studio area {i}':
+            raise WaveError('WALL_NATIVE: a ativação seletiva foi alterada pelo fatiador.')
+        if not isinstance(expected,int):
+            for key,wanted in expected[i-1]['config'].items():
+                if values.get(key)!=wanted:
+                    raise WaveError('WALL_NATIVE: o fatiador alterou '+key+' na área selecionada.')

@@ -10,12 +10,20 @@ from .contracts import ProjectSnapshot, WaveError
 from .geometry import transform_point
 
 
-def write_model_project(snapshot:ProjectSnapshot, path:Path, settings:dict) -> None:
+def write_model_project(snapshot:ProjectSnapshot, path:Path, settings:dict, *, modifiers=()) -> None:
     """Copy printable mesh instances into world coordinates without touching the host."""
     ns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"
     ET.register_namespace("",ns)
     def sub(parent,tag,**attrs):
         return ET.SubElement(parent,"{"+ns+"}"+tag,attrs)
+    def add_mesh(identifier,vertices,triangles):
+        mesh=sub(sub(resources,"object",id=identifier,type="model"),"mesh")
+        vs=sub(mesh,"vertices")
+        for p in vertices:
+            sub(vs,"vertex",**{axis:f"{value:.9f}" for axis,value in zip("xyz",p)})
+        ts=sub(mesh,"triangles")
+        for tri in triangles:
+            sub(ts,"triangle",**{f"v{i+1}":str(v) for i,v in enumerate(tri)})
     model=ET.Element("{"+ns+"}model",unit="millimeter")
     sub(model,"metadata",name="Application").text="OrcaSlicer-2.5.1"
     sub(model,"metadata",name="BambuStudio:3mfVersion").text="1"
@@ -25,6 +33,9 @@ def write_model_project(snapshot:ProjectSnapshot, path:Path, settings:dict) -> N
     plate=ET.SubElement(config,"plate")
     ET.SubElement(plate,"metadata",key="plater_id",value="1")
     count=0
+    if modifiers and (len(snapshot.objects)!=1 or
+            sum(i.get('printable',True) for i in snapshot.objects[0]['instances_data'])!=1):
+        raise WaveError('A seleção por áreas requer uma peça com uma instância.')
     for obj in snapshot.objects:
         for instance in obj["instances_data"]:
             if not instance.get("printable",True):
@@ -40,23 +51,36 @@ def write_model_project(snapshot:ProjectSnapshot, path:Path, settings:dict) -> N
                 triangles.extend(tuple(i+offset for i in tri) for tri in volume["triangles"])
             count+=1
             identifier=str(count)
-            mesh=sub(sub(resources,"object",id=identifier,type="model"),"mesh")
-            vs=sub(mesh,"vertices")
-            for p in vertices:
-                sub(vs,"vertex",**{axis:f"{value:.9f}" for axis,value in zip("xyz",p)})
-            ts=sub(mesh,"triangles")
-            for tri in triangles:
-                sub(ts,"triangle",**{f"v{i+1}":str(v) for i,v in enumerate(tri)})
-            sub(build,"item",objectid=identifier)
-            item=ET.SubElement(config,"object",id=identifier)
+            add_mesh(identifier,vertices,triangles)
+            parent_id=identifier
+            if modifiers:
+                parent_id=str(len(modifiers)+2)
+                for i,modifier in enumerate(modifiers,2):
+                    add_mesh(str(i),modifier['vertices'],modifier['triangles'])
+                components=sub(sub(resources,'object',id=parent_id,type='model'),'components')
+                for i in range(1,len(modifiers)+2):sub(components,'component',objectid=str(i))
+            sub(build,"item",objectid=parent_id)
+            item=ET.SubElement(config,"object",id=parent_id)
             ET.SubElement(item,"metadata",key="name",value=obj["name"])
             for key,value in obj.get("config",{}).items():
-                if key!="name":
+                if key!="name" and not (modifiers and key=='zaa_enabled'):
                     ET.SubElement(item,"metadata",key=str(key),value=str(value))
-            part=ET.SubElement(item,"part",id=identifier,subtype="normal_part")
+            if modifiers:
+                ET.SubElement(item,'metadata',key='zaa_enabled',value='1')
+            part=ET.SubElement(item,"part",subtype="normal_part",id=identifier)
             ET.SubElement(part,"metadata",key="name",value=obj["name"])
+            if len(obj['volumes'])==1:
+                for key,value in obj['volumes'][0].get('config',{}).items():
+                    if key!='name' and not (modifiers and key=='zaa_enabled'):
+                        ET.SubElement(part,'metadata',key=key,value=str(value))
+            if modifiers:ET.SubElement(part,'metadata',key='zaa_enabled',value='0')
+            for i,modifier in enumerate(modifiers,2):
+                part=ET.SubElement(item,'part',id=str(i),subtype='modifier_part')
+                ET.SubElement(part,'metadata',key='name',value=modifier['name'])
+                for key,value in modifier['config'].items():
+                    ET.SubElement(part,'metadata',key=key,value=value)
             link=ET.SubElement(plate,"model_instance")
-            for key,value in (("object_id",identifier),("instance_id","0"),("identify_id",str(count-1))):
+            for key,value in (("object_id",parent_id),("instance_id","0"),("identify_id",str(count-1))):
                 ET.SubElement(link,"metadata",key=key,value=value)
     if not count:
         raise WaveError("A cópia não contém peças imprimíveis.")
