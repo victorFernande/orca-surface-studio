@@ -1,6 +1,6 @@
 # ADR-0017 — Espaçamento e cordão finito nas camadas contínuas
 
-Status: experimental; conferência nativa em andamento, impressão desativada.
+Status: experimental; conferência nativa realizada em 21/11/2026, impressão desativada.
 
 ## Contexto
 
@@ -78,3 +78,19 @@ Se ficam abaixo do mínimo do perfil, a interface avisa e a liberação física
 continua falsa. O resultado permanece somente de Preview até qualificar
 deposição, suporte das pontes e envelope real do cabeçote. `print_allowed`
 não é ativado por essa alteração.
+
+## Evidência observada
+
+O Benchy de referência recebeu 21 intervalos adicionais, passando de 399 para
+420 camadas no Preview. A conferência lateral mostrou preenchimento da faixa
+aberta do casco. O máximo de altura normal modelada dos cordões apoiados foi
+0,24 mm, abaixo do máximo de 0,28 mm do perfil. A inclinação máxima dos
+movimentos permaneceu em 17,6143°. O mínimo de 0,03304 mm ficou abaixo dos
+0,07 mm do perfil; portanto, a melhoria visual não libera a impressão.
+
+Foram aprovados 250 testes locais e três cenários de componente da interface.
+O ensaio retomou a cópia certificada e correspondente da 0.11.1, verificou suas
+referências e aplicou a grade afim antes de novo fatiamento nativo. Não foi
+uma repetição integral dos quatro passos na interface do Orca.
+O [relatório com capturas e hashes](../ESPACAMENTO_CORDOES_V0120.md) registra
+essa distinção e a correspondência do arquivo ao cache nativo do Preview.
