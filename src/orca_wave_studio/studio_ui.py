@@ -94,9 +94,9 @@ const objectParameters=new Map(),objectPresets=new Map();
 let surfaceMode=true,guidedMode=true,guideStep=1,guideModelId=null,guideAwaitStudy=false;
 const surfaceByObject=new Map();
 const surfaceSettings=()=>{
-  const value={step_mm:.4,max_slope_deg:30,retain_native_short_edges:true,backend:'native_local',region_id:null,
-    selection_mode:'paint',selection_revision:null,wall_selection:[],...surfaceByObject.get(activeId)};
-  if(value.backend!=='native_local')for(const key of ['selection_mode','selection_revision','wall_selection'])delete value[key];
+  const value={step_mm:.4,max_slope_deg:30,retain_native_short_edges:true,backend:'continuous_layers',region_id:null,
+    selection_mode:'all',selection_revision:null,wall_selection:[],...surfaceByObject.get(activeId)};
+  if(!['native_local','continuous_layers'].includes(value.backend))for(const key of ['selection_mode','selection_revision','wall_selection'])delete value[key];
   return value;
 };
 const wallMarks=new Map();let brushRadius=6;
@@ -178,6 +178,7 @@ function canCapture(){
 }
 function presentResult(){
   const result=state.result,source=result?.report?.source_sha256;
+  if(result?.settings?.backend==='continuous_layers'&&result.report?.warp?.transition_kernel!=='hermite_c1_xyz_v2')return false;
   return Boolean(result?.sha256)&&state.status==='ready'&&!pending&&
     surfaceMode===(['surface','conformal'].includes(result.study_kind))&&
     (!result.revision||result.revision===state.revision)&&
@@ -313,9 +314,9 @@ brushInput.onchange=()=>{if(!brushInput.checkValidity()||!Number.isFinite(brushI
 const wallHint=node('small','','Clique para acrescentar áreas; arraste para girar. A área inclui a espessura e pode alcançar paredes próximas. Velocidade nas áreas: 80% do perfil.'),wallList=node('div');
 wallList.id='wall-areas';wallList.setAttribute('aria-live','polite');
 const wallClear=node('button','outline','Limpar seleção');wallClear.id='wall-clear';
-const wallAllHint=node('small','','Inclui teto e bordas em toda a peça. O contorno acompanha as superfícies compatíveis; paredes verticais e faces inferiores podem continuar em camadas.');wallBox.append(wallHint,wallAllHint,wallList,wallClear);primary.append(wallBox);
-wallPaint.onclick=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),selection_mode:'paint'});render()};
-wallAll.onclick=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),selection_mode:'all',wall_selection:[],selection_revision:null});wallMarks.delete(activeId);render()};
+const wallAllHint=node('small','','Alinha as camadas ao teto e às bordas compatíveis da peça inteira. O modelo original é preservado.');wallBox.append(wallHint,wallAllHint,wallList,wallClear);primary.append(wallBox);
+wallPaint.onclick=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),backend:'native_local',selection_mode:'paint'});render()};
+wallAll.onclick=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),backend:'continuous_layers',selection_mode:'all',wall_selection:[],selection_revision:null});wallMarks.delete(activeId);render()};
 wallClear.onclick=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),wall_selection:[],selection_revision:null});wallMarks.delete(activeId);render()};
 function pickWall(ray,point){
   if(guidedMode&&guideStep!==2)return;
@@ -402,8 +403,8 @@ function diagnostics(current){
   $('result-note').textContent=r.workflow==='integrated'?'Prévia gerada com o perfil selecionado. Conferência física do cabeçote e da deposição pendente.':r.study_kind==='conformal'?'Trajetória reconstruída a partir da cópia fatiada no Orca. Impressão indisponível.':surfaceMode?'Percurso da superfície no Studio. Deposição e impressão ainda não validadas.':
     (state.demo?'Trajetória do exemplo de bancada.':'Trajetória processada para a seleção atual.');
   record(metrics,'SHA-256',r.sha256.slice(0,12),r.sha256);
-  if(surfaceMode&&r.settings?.backend==='native_local'){
-    record(metrics,'Método','Contorno local do Orca');record(metrics,'Regiões','Superfícies superiores compatíveis');
+  if(surfaceMode&&['native_local','continuous_layers'].includes(r.settings?.backend)){
+    record(metrics,'Método',r.settings?.backend==='continuous_layers'?'Camadas contínuas':'Contorno local do Orca');record(metrics,'Regiões','Superfícies superiores compatíveis');
     if(rep.wall_selection?.mode==='paint'){
       record(metrics,'Áreas escolhidas',rep.wall_selection.areas.length);
       record(metrics,'Velocidade nas áreas','80% do perfil');
@@ -735,7 +736,7 @@ function render(){
   $('r-amplitude_mm').max=combined?5:1;
   const stepBox=$('step_mm').closest('.field'),stepParent=combined?advanced:primary;
   surfaceAdvanced.hidden=!surfaceMode;
-  const localSurface=surfaceMode&&surfaceSettings().backend==='native_local';
+  const localSurface=surfaceMode&&['native_local','continuous_layers'].includes(surfaceSettings().backend);
   wallBox.hidden=!localSurface;
   const wallOptions=surfaceSettings(),painting=wallOptions.selection_mode==='paint';
   $('canvas').style.cursor=localSurface&&painting&&!busy&&(!guidedMode||guideStep===2)?'crosshair':'grab';
@@ -828,10 +829,10 @@ profileBox.append(node('h3','','Perfil selecionado no Orca'),profileCard,profile
 document.querySelector('#config .section').after(profileBox);
 const surfaceAdvanced=node('details','field');surfaceAdvanced.append(node('summary','','Ajustes da superfície'));
 const surfaceMethod=node('select');surfaceMethod.id='surface-method';surfaceMethod.setAttribute('aria-label','Método de superfície');
-for(const [id,label] of [['native_local','Acompanhar superfícies locais'],['roof_bending','Alinhar camadas a um teto (experimental)']]){
+for(const [id,label] of [['continuous_layers','Camadas contínuas'],['native_local','Contorno local do Orca'],['roof_bending','Alinhar camadas a um teto (experimental)']]){
   const option=node('option','',label);option.value=id;surfaceMethod.append(option);
 }
-surfaceMethod.onchange=()=>{wallMarks.delete(activeId);surfaceByObject.set(activeId,{...surfaceSettings(),backend:surfaceMethod.value});render()};
+surfaceMethod.onchange=()=>{wallMarks.delete(activeId);surfaceByObject.set(activeId,{...surfaceSettings(),backend:surfaceMethod.value,...(surfaceMethod.value==='continuous_layers'?{selection_mode:'all',wall_selection:[],selection_revision:null}:{})});render()};
 surfaceAdvanced.append(surfaceMethod);
 surfaceAdvanced.append($('max_slope_deg').closest('.field'),roofBox,nativeCornersBox);primary.append(surfaceAdvanced);
 const cancelBuild=node('button','wide outline','Cancelar cálculo');cancelBuild.id='cancel-build';cancelBuild.hidden=true;
@@ -891,7 +892,7 @@ guideToggle.onclick=()=>{
   if(guidedMode){
     surfaceMode=true;guideStep=1;guideModelId=null;guideAwaitStudy=false;
     const settings=surfaceSettings();
-    if(settings.backend!=='native_local'){
+    if(!['native_local','continuous_layers'].includes(settings.backend)){
       surfaceByObject.set(activeId,{...settings,backend:'native_local',selection_mode:'paint',wall_selection:[],selection_revision:null});wallMarks.delete(activeId);
     }
   }
@@ -936,7 +937,7 @@ function renderGuide(active,current,busy){
     count=choices.selection_mode==='all'?'Peça inteira · superfícies compatíveis':areaCount+(areaCount===1?' área selecionada':' áreas selecionadas');
   guideModelName.textContent=active?.name||'Escolha um modelo';guideAreaCount.textContent=count;guideSpeed.textContent=choices.selection_mode==='all'?'Velocidades do perfil selecionado.':'Velocidade nas áreas: 80% do perfil.';
   const finish=current?state.result?.report?.finishing:null;
-  guideFinish.textContent=finish?'Acabamento: camadas de '+numberFormat(finish.finishing_layer_mm,3)+' mm nas faixas escolhidas.':'Acabamento ajustado automaticamente ao perfil.';
+  guideFinish.textContent=finish&&choices.backend==='continuous_layers'?'Camadas alinhadas às superfícies da peça.':finish?'Acabamento: camadas de '+numberFormat(finish.finishing_layer_mm,3)+' mm nas faixas escolhidas.':'Acabamento ajustado automaticamente ao perfil.';
   guideText.textContent=guideStep===1?(active?'Escolha o modelo na lista e avance.':'Adicione um modelo à placa do Orca e atualize a lista.'):
     guideStep===2?(choices.selection_mode==='all'?'A peça inteira será estudada, incluindo teto e bordas compatíveis. Clique em Continuar.':'Clique nas áreas da peça ou escolha Peça inteira. Arraste para girar.'):
     guideStep===3?(busy?'Estudando o movimento…':state.status==='error'?state.message:'Clique em Estudar movimento. O resultado aparece aqui no Studio.'):
@@ -1010,7 +1011,8 @@ function applyState(next){
         backend:r.settings.backend||'legacy_top',region_id:r.settings.region_id??null,
         selection_mode:r.settings.selection_mode??'all',selection_revision:r.settings.selection_revision??null,
         wall_selection:r.settings.wall_selection||[]};
-      if(settings.backend!=='native_local')for(const key of ['selection_mode','selection_revision','wall_selection'])delete settings[key];
+      if(settings.backend==='native_local'&&settings.selection_mode==='all')settings.backend='continuous_layers';
+      if(!['native_local','continuous_layers'].includes(settings.backend))for(const key of ['selection_mode','selection_revision','wall_selection'])delete settings[key];
       if(!resultIdentity&&!generation){
         surfaceMode=true;surfaceByObject.set(id,settings);
         if(r.report?.wall_selection?.areas)wallMarks.set(id,r.report.wall_selection.areas.map(a=>({center:a.center,radius_mm:a.radius_mm})));
