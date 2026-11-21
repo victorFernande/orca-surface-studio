@@ -31,19 +31,22 @@ PROFILE_FIELDS=('gcode_flavor','nozzle_diameter','filament_diameter','layer_heig
     'use_relative_e_distances','retraction_length','filament_retraction_length','printer_agent','print_host','printhost_apikey','enable_support')
 
 
-def verify_profile(package,requested):
+def verify_profile(package,requested,*,extra_fields=()):
     with ZipFile(package) as archive:actual=json.loads(archive.read('Metadata/project_settings.config'))
-    mismatch=[key for key in PROFILE_FIELDS if requested.get(key)!=actual.get(key)]
+    fields=(*PROFILE_FIELDS,*extra_fields)
+    mismatch=[key for key in fields if requested.get(key)!=actual.get(key)]
     if mismatch:raise WaveError('PROFILE_CHANGED: o fatiamento alterou '+', '.join(mismatch)+'.')
-    return {'verified_fields':list(PROFILE_FIELDS),'matched':True}
+    return {'verified_fields':list(fields),'matched':True}
 
 
-def slice_command(executable,workspace=None):
+def slice_command(executable,workspace=None,*,native_local=False):
     # Relative arguments make the exact grant independent of callback-only
     # plugin.storage(). Popen always receives an explicit private cwd below.
-    return [str(Path(executable).resolve()),'--datadir','profile','input.3mf',
+    command=[str(Path(executable).resolve()),'--datadir','profile','input.3mf',
             '--gcode-label-objects','--gcode-comments','--slice','0','--outputdir','output',
             '--export-3mf','source.gcode.3mf']
+    if native_local:command.append('--zaa-enabled=1')
+    return command
 
 
 def slice_project(executable,model,folder,cancelled=lambda:False,*,workspace=None):
@@ -63,7 +66,9 @@ def _slice_locked(executable,model,folder,cancelled,workspace):
     for directory in (data,temp,output):directory.mkdir(exist_ok=True)
     atomic_write(workspace/'input.3mf',Path(model).read_bytes())
     for name in ('plate_1.gcode','source.gcode.3mf'):(output/name).unlink(missing_ok=True)
-    command=slice_command(executable,workspace)
+    with ZipFile(workspace/'input.3mf') as archive:
+        local=str(json.loads(archive.read('Metadata/project_settings.config')).get('zaa_enabled','0'))=='1'
+    command=slice_command(executable,workspace,native_local=local)
     options={}
     if os.name=='nt':
         startup=subprocess.STARTUPINFO();startup.dwFlags|=subprocess.STARTF_USESHOWWINDOW;startup.wShowWindow=0
@@ -96,9 +101,14 @@ def build_surface(snapshot,object_id,backup,folder,executable,settings=None,*,pr
     folder=Path(folder);folder.mkdir(parents=True,exist_ok=True);options=dict(settings or {})
     if set(options)-{'step_mm','max_slope_deg','retain_native_short_edges','backend','region_id'}:
         raise WaveError('Parâmetro de superfície desconhecido.')
-    options.pop('backend',None);region_id=options.pop('region_id',None)
+    backend=options.pop('backend','roof_bending');region_id=options.pop('region_id',None)
+    if backend not in ('roof_bending','native_local'):raise WaveError('Método de superfície desconhecido.')
     resolved=exported_settings(Path(backup),active_profile=True)
     profile=PrinterProfile.from_settings(resolved)
+    if backend=='native_local':
+        from .native_surfaces import build_local
+        report,gcode,package=build_local(snapshot,backup,folder,executable,resolved,profile,slicer,workspace,cancelled,progress,verify_profile)
+        return _result(snapshot,object_id,folder,settings,report,gcode,package,backend)
     options['nominal_layer_height_mm']=profile.layer_mm
     progress('Preparando a peça completa e preservando suas aberturas…')
     warp=BendingWarp(snapshot,object_id,RegionalShellSettings(**options),
@@ -126,14 +136,24 @@ def build_surface(snapshot,object_id,backup,folder,executable,settings=None,*,pr
             'native_transport_preserved':True,'printer_contacted':False,
             'effective_profile_verification':profile_receipt,
             'physical_gate':'HEAD_AND_DEPOSITION_VALIDATION_REQUIRED','print_allowed':False}
+    return _result(snapshot,object_id,folder,settings,report,gcode,package,backend,
+                   (warp.flat_top_z-profile.initial_layer_mm)/profile.layer_mm)
+
+
+def _result(snapshot,object_id,folder,settings,report,gcode,package,backend,reference_index=None):
     atomic_write(folder/'report.json',json.dumps(report,ensure_ascii=False).encode())
     # Bound the WebView transport. Whole logical layers retain their breaks;
     # the native Preview always receives the complete, unsampled G-code.
     layers=report['layer_ids'];counts={}
     for layer in layers:counts[layer]=counts.get(layer,0)+1
     selected_layers=set();budget=6000
-    reference_index=(warp.flat_top_z-profile.initial_layer_mm)/profile.layer_mm
-    for layer in sorted(counts,key=lambda layer:abs(layer-reference_index)):
+    if reference_index is None:reference_index=max(counts,default=0)
+    preferred=[int(layer) for layer in report.get('local_nonplanar_layers',{})]
+    # Show multiple heights in the Studio, rather than spending the entire
+    # transport budget on a planar chimney cap. Native Preview stays complete.
+    centers=([sorted(preferred)[round(i*(len(preferred)-1)/3)] for i in range(4)] if preferred else [reference_index])
+    order=sorted(counts,key=lambda layer:(min(abs(layer-c) for c in centers),abs(layer-reference_index)))
+    for layer in order:
         if counts[layer]<=budget:selected_layers.add(layer);budget-=counts[layer]
     indices=[i for i,layer in enumerate(layers) if layer in selected_layers]
     original_breaks=set(report['break_indices']);breaks=[];previous=-2
@@ -145,6 +165,7 @@ def build_surface(snapshot,object_id,backup,folder,executable,settings=None,*,pr
     lightweight={k:v for k,v in report.items() if k not in {'original_points','deformed_points','layer_ids','break_indices','point_object_ids'}}
     lightweight['studio_display']={'sampled':len(indices)!=len(layers),'displayed_points':len(indices),'total_points':len(layers),
                                    'native_preview_complete':True,'displayed_layers':sorted(selected_layers)}
-    return {'sha256':result.sha256,'gcode_path':str(gcode),'package_path':str(package),
+    return {'sha256':report['processed_sha256'],'gcode_path':str(gcode),'package_path':str(package),
             'plate_index':0,'revision':snapshot.revision,'object_id':str(object_id),'study_kind':'conformal',
-            'workflow':'integrated','settings':{**(settings or {}),'backend':'roof_bending'},'report':lightweight,**trace}
+            'workflow':'integrated','settings':{'step_mm':.4,'max_slope_deg':30,
+                'retain_native_short_edges':False,'region_id':None,**(settings or {}),'backend':backend},'report':lightweight,**trace}

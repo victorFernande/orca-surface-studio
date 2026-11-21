@@ -326,9 +326,10 @@ if orca is not None:
             # private workspace; do not request a shell or arbitrary commands.
             import subprocess
             from .surface_workflow import slice_command
-            command=slice_command(NativeHost().slicer_executable())
+            executable=NativeHost().slicer_executable()
+            commands=[subprocess.list2cmdline(slice_command(executable,native_local=local)) for local in (False,True)]
             orca.request_permissions(threading=True,network=["http://127.0.0.1","http://[::1]"],
-                                     process=[subprocess.list2cmdline(command)])
+                                       process=commands)
             configure_native_agent(lambda:get_controller().agent_context())
             for capability in (WavePage,WaveDock,WaveCapturePipeline,WaveOctoPrintAgent):
                 orca.register_capability(capability)
