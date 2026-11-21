@@ -8,6 +8,7 @@ import tempfile
 import threading
 from typing import Any
 
+from .branding import PAGE_NAME, ICON_SVG
 from .controller import StudioController
 from .contracts import WaveError
 from .geometry import freeze_model
@@ -21,7 +22,6 @@ except ImportError:
 
 
 CAPTURE_NAME="Orca Wave Studio Capture"
-ICON_SVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#15171b"/><path d="M5 32Q12 8 20 32T35 32T50 32T65 32" stroke="#00bfa5" stroke-width="5" fill="none"/></svg>'
 _controller=None
 _last_settings={}
 
@@ -194,11 +194,11 @@ _PipelineBase=orca.slicing.SlicingPipelineCapabilityBase if orca else object
 
 class WavePage(_PageBase):
     def get_name(self):
-        return "Estúdio de Ondas Senoidais"
+        return PAGE_NAME
 
     def get_icon(self):
-        path=_storage()/"wave-icon.svg"
-        if not path.is_file():
+        path=_storage()/"surface-studio-30deg.svg"
+        if not path.is_file() or path.read_text(encoding="utf-8")!=ICON_SVG:
             path.parent.mkdir(parents=True,exist_ok=True)
             path.write_text(ICON_SVG,encoding="utf-8")
         return str(path)
@@ -248,7 +248,7 @@ class WaveDock(_ScriptBase):
             WaveDock.panel=None
             WaveDock.visible=False
         WaveDock.panel=orca.host.ui.create_dock_panel(get_studio_html(get_controller().state(),dock=True),
-                    title="Orca Wave Studio",width=430,height=800,dock="right",on_message=receive,on_close=close)
+                    title="Surface Studio",width=430,height=800,dock="right",on_message=receive,on_close=close)
         WaveDock.visible=True
         return _status(message="Painel aberto.")
 

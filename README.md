@@ -2,6 +2,10 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A **0.9.1** renomeia a aba para **Surface Studio** e usa um ícone de trajetória
+subindo a **30°**, com seta e bico, também no cabeçalho. Veja a
+[captura nativa e os detalhes da atualização](docs/IDENTIDADE_V091.md).
+
 A **0.9.0** abre em um [passo a passo de quatro etapas](docs/PASSO_A_PASSO_V090.md):
 **selecionar modelo → selecionar áreas → estudar movimento → mandar para a bandeja**.
 O modelo permanece visível durante o processo. O estudo fica no Studio; somente
