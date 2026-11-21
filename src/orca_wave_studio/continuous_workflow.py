@@ -33,41 +33,53 @@ def build_continuous(snapshot,object_id,backup,folder,executable,resolved,profil
         nominal_layer_height_mm=flat_height,tolerance_mm=.01,
         retain_native_short_edges=options.get('retain_native_short_edges',True))
     warp=ContinuousLayerWarp(snapshot,object_id,settings,progress=progress,cancelled=cancelled,initial_layer_mm=profile.initial_layer_mm)
-    atomic_write(folder/'surface-coordinates.json',json.dumps(warp.summary,ensure_ascii=False).encode())
     # Split the 0.02 mm coordinate budget between the slicing-copy surface
     # certificate and the emitted inverse-mapped chords.
     mesh_error=float(warp.summary.get('mesh_normal_and_crease_error_budget_mm',.01))
     if not math.isfinite(mesh_error) or not 0<=mesh_error<=settings.tolerance_mm+1e-9:
         raise WaveError('LAYERS_SHAPE: a cópia ultrapassa seu orçamento de erro geométrico.')
     if cancelled():raise WaveError('Geração cancelada.')
-    flat=copy.deepcopy(warp.flattened_snapshot)
-    for obj in flat.objects:
-        obj.setdefault('config',{})['zaa_enabled']='0'
-        for volume in obj['volumes']:volume.setdefault('config',{})['zaa_enabled']='0'
     native_settings={**resolved,'zaa_enabled':'0'}
-    maximum_z=max(transform_point(p,i['matrix'],v['matrix'])[2]
-                  for o in flat.objects for i in o['instances_data'] if i.get('printable',True)
-                  for v in o['volumes'] for p in v['vertices'])
     plan={'nominal_layer_mm':profile.layer_mm,'finishing_layer_mm':flat_height,
         'profile_minimum_layer_mm':minimum,'profile_maximum_layer_mm':maximum,
         'first_layer_mm':profile.initial_layer_mm,
-        'ranges':[{'min_z':profile.initial_layer_mm,'max_z':maximum_z,'layer_height':flat_height}],
         'sampling_reduction_percent':100*(1-flat_height/profile.layer_mm),
         'source_mesh_unchanged':True,'xyz_e_rewritten':True,
         'scope':'continuous surface coordinates on the copied solid; physical output restored once'}
     model=folder/'prepared.3mf'
-    write_model_project(flat,model,native_settings,layer_ranges=plan['ranges'])
     warp.settings=replace(settings,tolerance_mm=max(.001,.02-mesh_error-1e-7))
-    progress('Fatiando camadas contínuas nas coordenadas das superfícies…')
-    source,package=slicer(executable,model,folder/'slice',cancelled,workspace=workspace)
-    receipt=verify(package,native_settings,extra_fields=('zaa_enabled',))
-    ranges=verify_finishing_ranges(package,plan)
-    data=source.read_bytes()
-    labels={int(m) for m in re.findall(rb'(?mi)^;\s*printing object\s+.*?\bid:(\d+)\s+copy\s+0\s*$',data)}
-    if len(labels)!=1:raise WaveError('LAYERS_LABELS: a fatia precisa identificar uma única peça.')
-    mapping={next(iter(labels)):str(object_id)}
+    spacing_runs=[];spacing_enabled=getattr(warp,'spacing_enabled',False)
+    for attempt in range(3):
+        if cancelled():raise WaveError('Geração cancelada.')
+        atomic_write(folder/'surface-coordinates.json',json.dumps(warp.summary,ensure_ascii=False).encode())
+        flat=copy.deepcopy(warp.flattened_snapshot)
+        for obj in flat.objects:
+            obj.setdefault('config',{})['zaa_enabled']='0'
+            for volume in obj['volumes']:volume.setdefault('config',{})['zaa_enabled']='0'
+        maximum_z=max(transform_point(p,i['matrix'],v['matrix'])[2]
+                      for o in flat.objects for i in o['instances_data'] if i.get('printable',True)
+                      for v in o['volumes'] for p in v['vertices'])
+        plan['ranges']=[{'min_z':profile.initial_layer_mm,'max_z':maximum_z,'layer_height':flat_height}]
+        write_model_project(flat,model,native_settings,layer_ranges=plan['ranges'])
+        progress('Fatiando camadas contínuas nas coordenadas das superfícies…')
+        source,package=slicer(executable,model,folder/('slice' if not attempt else f'slice-spacing-{attempt}'),cancelled,workspace=workspace)
+        receipt=verify(package,native_settings,extra_fields=('zaa_enabled',));ranges=verify_finishing_ranges(package,plan)
+        data=source.read_bytes()
+        labels={int(m) for m in re.findall(rb'(?mi)^;\s*printing object\s+.*?\bid:(\d+)\s+copy\s+0\s*$',data)}
+        if len(labels)!=1:raise WaveError('LAYERS_LABELS: a fatia precisa identificar uma única peça.')
+        mapping={next(iter(labels)):str(object_id)}
+        if not spacing_enabled:break
+        from .spacing_plan import plan_spacing
+        progress('Conferindo a altura efetiva dos cordões e o material necessário…')
+        grid,spacing=plan_spacing(data,warp,mapping,str(object_id),maximum,profile.initial_layer_mm,profile.height_mm)
+        spacing_runs.append(spacing)
+        if not spacing['extra_slice_intervals']:break
+        if attempt==2:raise WaveError('BEAD_ITERATIONS: o espaçamento ainda exige outra distribuição; o resultado foi recusado.')
+        warp.regrid_spacing(grid,spacing,progress=progress,cancelled=cancelled,initial_layer_mm=profile.initial_layer_mm)
+    if spacing_enabled:
+        warp.deposition_model={'model':'logical_pitch_finite_bead_v1','profile_minimum_mm':minimum,'profile_maximum_mm':maximum}
     progress('Restaurando o formato, a extrusão e as transições em XYZ…')
-    result=process_conformal_gcode(data,warp,mapping,str(object_id),printer_profile=profile)
+    result=process_conformal_gcode(data,warp,mapping,str(object_id),printer_profile=profile,progress=progress,cancelled=cancelled)
     if not sum(result.report['nonplanar_extrusion_segments_by_role'].values()):
         raise WaveError('LAYERS_NO_EFFECT: a fatia não confirmou camadas com movimento contínuo em Z.')
     audit=audit_finishing(result.gcode,mapping,plan,slope)
@@ -83,6 +95,8 @@ def build_continuous(snapshot,object_id,backup,folder,executable,resolved,profil
                                'within_study_limit':True,'head_clearance_certified':False},
         'physical_gate':'CONTINUOUS_LAYERS_HEAD_AND_DEPOSITION_VALIDATION_REQUIRED',
         'physical_validation':False,'print_allowed':False,'printer_contacted':False}
+    if spacing_enabled:report['deposition_planning']={'passes':spacing_runs,'complete_cell_upper_bound_checked':True,
+        'minimum_height_and_physical_bonding_qualified':False}
     report['local_nonplanar_layers']={k:v['up']+v['down'] if isinstance(v,dict) else v
                                      for k,v in report.get('nonplanar_extrusion_layers',{}).items()}
     output=folder/'surface.gcode';native=folder/'surface.gcode.3mf'

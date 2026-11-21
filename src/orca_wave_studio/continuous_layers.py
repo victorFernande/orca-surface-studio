@@ -662,7 +662,8 @@ class ContinuousLayerWarp:
         self.flattened_snapshot=copy.deepcopy(clean);target=self.flattened_snapshot.objects[0]['volumes'][0]
         target['vertices']=vertices;target['triangles']=[list(f) for f in faces]
         self.reference_world_vertices=tuple(reference_world)
-        self.summary={'study_type':'continuous_surface_coordinates','transition_kernel':'hermite_c1_xyz_v3','stages':self.details,
+        self.flat_world_vertices=tuple(world);self._reference_regions=candidates;self.spacing_enabled=True
+        self.summary={'study_type':'continuous_surface_coordinates','transition_kernel':'hermite_c1_xyz_v4','stages':self.details,
             'transition_order':'overlap_dependencies_then_broad_spans',
             'reference_order_original_z_mm':[r['original_z'] for r in candidates],
             'source_revision':snapshot.revision,'normalization':normalization,'source_mesh_unchanged':True,
@@ -678,11 +679,53 @@ class ContinuousLayerWarp:
             q=np.interp([.05,.95],cumulative,zs[order])
             alignment.append({'original_z_range_mm':row['original_z'],'area_mm2':row['area'],
                 'final_flat_z_range_mm':[float(zs.min()),float(zs.max())],
+                'core_flat_z_interval_mm':list(map(float,q)),
                 'central_90_percent_z_span_mm':float(q[1]-q[0]),
                 'core_in_one_native_band':int(math.floor((q[0]-origin)/height+.5))==int(math.floor((q[1]-origin)/height+.5))})
         self.summary['reference_alignment']=alignment
         if not all(r['core_in_one_native_band'] for r in alignment):
             raise WaveError('LAYERS_ALIGNMENT: uma referência ainda cruza a faixa de corte; a geração foi interrompida.')
+
+    def regrid_spacing(self,grid,plan,progress=lambda message:None,cancelled=lambda:False,initial_layer_mm=.24):
+        """Subdivide the existing certified copy in affine cells, then re-slice.
+
+        The grid and inverse are paired. Each clipped triangle maps exactly to
+        a preceding triangle, inheriting its original-face/crease certificate.
+        This cannot be applied to G-code that has already been deformed.
+        """
+        obj=self.flattened_snapshot.objects[0];vol=obj['volumes'][0]
+        inst=next(i for i in obj['instances_data'] if i.get('printable',True))
+        vertices=copy.deepcopy(vol['vertices']);faces=[tuple(f) for f in vol['triangles']]
+        world=[tuple(transform_point(p,inst['matrix'],vol['matrix'])) for p in vertices]
+        references=list(self.reference_world_vertices) if hasattr(self,'reference_world_vertices') else None
+        for k,value in grid.clipping_planes():
+            if cancelled():raise WaveError('Geração cancelada.')
+            plane=[0.,0.,0.,-value];plane[k]=1.
+            faces=_clip(vertices,faces,world,plane,reference_world=references)
+            if len(faces)>3000000:raise WaveError('BEAD_COMPLEXITY: grade de espaçamento supera 3000000 faces.')
+        transformed=[grid.flatten_point(p) for p in world]
+        direction=_local_z_direction(inst['matrix'],vol['matrix'])
+        vertices=[[v+d*(q[2]-p[2]) for v,d in zip(local,direction)] for local,p,q in zip(vertices,world,transformed)]
+        rows=[];region_points=[];height=self.settings.nominal_layer_height_mm
+        for record,previous in zip(self._reference_regions,self.summary['reference_alignment']):
+            points=[grid.flatten_point(tuple(p)) for p in record['points']];zs=np.asarray([p[2] for p in points]);order=np.argsort(zs)
+            weights=record['weights']**2;cumulative=np.cumsum(weights[order]);cumulative/=cumulative[-1]
+            q=np.interp([.05,.95],cumulative,zs[order])
+            same=int(math.floor((q[0]-initial_layer_mm)/height+.5))==int(math.floor((q[1]-initial_layer_mm)/height+.5))
+            rows.append(dict(previous,final_flat_z_range_mm=[float(zs.min()),float(zs.max())],core_flat_z_interval_mm=list(map(float,q)),
+                             central_90_percent_z_span_mm=float(q[1]-q[0]),core_in_one_native_band=same))
+            region_points.append(points)
+        if not all(r['core_in_one_native_band'] for r in rows):
+            raise WaveError('BEAD_ALIGNMENT: a densificação cruzaria uma referência; o original foi preservado.')
+        vol['vertices']=vertices;vol['triangles']=[list(f) for f in faces]
+        if references is not None:self.reference_world_vertices=tuple(references)
+        self.flat_world_vertices=tuple(transformed);self.stages.append(grid)
+        for record,points in zip(self._reference_regions,region_points):record['points']=points
+        self.summary['stages'].append(dict(kind='layer_grid',purpose='deposition_spacing',flat_levels_mm=list(grid.flat),
+            physical_levels_mm=list(grid.physical),minimum_vertical_jacobian=grid.jmin,maximum_vertical_jacobian=grid.jmax,
+            certificate='exact_affine_cells_preserve_preceding_mesh'))
+        self.summary.update(reference_alignment=rows,deposition_spacing=plan,flattened_faces=len(faces),flattened_vertices=len(vertices))
+        progress(f'Espaçamento: {plan["extra_slice_intervals"]} intervalos adicionais; formato e quinas preservados.')
 
     def map_point(self,p):
         for stage in reversed(self.stages):p=stage.map_point(p)

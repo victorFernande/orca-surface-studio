@@ -178,7 +178,7 @@ function canCapture(){
 }
 function presentResult(){
   const result=state.result,source=result?.report?.source_sha256;
-  if(result?.settings?.backend==='continuous_layers'&&result.report?.warp?.transition_kernel!=='hermite_c1_xyz_v3')return false;
+  if(result?.settings?.backend==='continuous_layers'&&result.report?.warp?.transition_kernel!=='hermite_c1_xyz_v4')return false;
   return Boolean(result?.sha256)&&state.status==='ready'&&!pending&&
     surfaceMode===(['surface','conformal'].includes(result.study_kind))&&
     (!result.revision||result.revision===state.revision)&&
@@ -937,13 +937,14 @@ function renderGuide(active,current,busy){
     count=choices.selection_mode==='all'?'Peça inteira · superfícies compatíveis':areaCount+(areaCount===1?' área selecionada':' áreas selecionadas');
   guideModelName.textContent=active?.name||'Escolha um modelo';guideAreaCount.textContent=count;guideSpeed.textContent=choices.selection_mode==='all'?'Velocidades do perfil selecionado.':'Velocidade nas áreas: 80% do perfil.';
   const finish=current?state.result?.report?.finishing:null;
-  guideFinish.textContent=finish&&choices.backend==='continuous_layers'?'Camadas alinhadas às superfícies da peça.':finish?'Acabamento: camadas de '+numberFormat(finish.finishing_layer_mm,3)+' mm nas faixas escolhidas.':'Acabamento ajustado automaticamente ao perfil.';
+  const beads=current?state.result?.report?.bead_deposition:null;
+  guideFinish.textContent=beads?.maximum_supported_height_mm?'Altura efetiva do cordão: '+numberFormat(beads.minimum_supported_height_mm,3)+'–'+numberFormat(beads.maximum_supported_height_mm,3)+' mm. Material calculado automaticamente.':finish&&choices.backend==='continuous_layers'?'Camadas alinhadas às superfícies da peça.':finish?'Acabamento: camadas de '+numberFormat(finish.finishing_layer_mm,3)+' mm nas faixas escolhidas.':'Acabamento ajustado automaticamente ao perfil.';
   guideText.textContent=guideStep===1?(active?'Escolha o modelo na lista e avance.':'Adicione um modelo à placa do Orca e atualize a lista.'):
     guideStep===2?(choices.selection_mode==='all'?'A peça inteira será estudada, incluindo teto e bordas compatíveis. Clique em Continuar.':'Clique nas áreas da peça ou escolha Peça inteira. Arraste para girar.'):
     guideStep===3?(busy?'Estudando o movimento…':state.status==='error'?state.message:'Clique em Estudar movimento. O resultado aparece aqui no Studio.'):
     state.result?.native_preview?'Resultado conferido e aberto no Preview do Orca.':'Use ▶ para conferir o movimento. Depois mande o resultado para a bandeja do Orca.';
   guideWarning.hidden=guideStep!==4||Boolean(state.result?.report?.print_allowed);
-  guideWarning.textContent='Somente Preview. A impressão ainda depende da verificação das transições e do cabeçote.';
+  guideWarning.textContent=beads?.below_profile_minimum_occurrences?'Somente Preview. Há cordões abaixo da altura mínima do perfil. A impressão exige validar a deposição e o cabeçote.':'Somente Preview. A impressão ainda depende da verificação das transições e do cabeçote.';
   guideNext.textContent=guideStep===1?'Selecionar áreas':guideStep===2?'Continuar':guideStep===3?(busy?'Estudando movimento…':'Estudar movimento'):'Mandar para a bandeja';
   guideNext.disabled=!linked||busy||!active||(guideStep===2&&Boolean(surfaceError()))||(guideStep===3&&Boolean(surfaceError()))||(guideStep===4&&!current);
   guideBack.hidden=guideStep===1;guideBack.disabled=busy;
