@@ -2,6 +2,12 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A **0.12.1 experimental** acrescenta **Enviar para impressora…** no próprio
+Studio. O diálogo usa a conexão do perfil selecionado, identifica o arquivo e
+abre mesmo para um Preview sem modelo na bandeja. O Benchy foi conferido até
+esse popup, sem envio real. Suas pendências físicas continuam bloqueando o
+envio. Veja o [manual e as capturas](docs/ENVIO_PERFIL_V0121.md).
+
 A **0.12.0 experimental** ajusta o espaçamento, a seção do cordão e a extrusão
 localmente. O Benchy recebeu 21 intervalos adicionais e a faixa aberta do casco
 apareceu preenchida na conferência lateral do Preview. O fluxo permanece em
