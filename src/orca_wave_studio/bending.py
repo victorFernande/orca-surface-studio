@@ -39,7 +39,7 @@ def roof_patches(mesh,triangles,limit):
     return patches
 
 
-def _clip(vertices,faces,world,plane):
+def _clip(vertices,faces,world,plane,*,reference_world=None):
     """Split both sides of a linear plane, sharing intersection vertices."""
     values=[sum(a*b for a,b in zip(plane[:3],p))+plane[3] for p in world]
     intersections={};result=[]
@@ -51,6 +51,8 @@ def _clip(vertices,faces,world,plane):
             a,b=edge;t=values[a]/(values[a]-values[b]);index=len(vertices)
             vertices.append([u+t*(v-u) for u,v in zip(vertices[a],vertices[b])])
             world.append(tuple(u+t*(v-u) for u,v in zip(world[a],world[b])))
+            if reference_world is not None:
+                reference_world.append(tuple(u+t*(v-u) for u,v in zip(reference_world[a],reference_world[b])))
             values.append(0.);intersections[edge]=index
         return intersections[edge]
     for tri in faces:
@@ -68,12 +70,22 @@ def _clip(vertices,faces,world,plane):
     return result
 
 
-def _refine(vertices,faces,world,bound,tolerance,max_faces=250000):
-    edges=defaultdict(set);removed=set();queue=[]
+def _refine(vertices,faces,world,bound,tolerance,max_faces=250000,*,crease_edges=None,edge_bound=None,reference_world=None,batch_bound=None):
+    if len(faces)>max_faces:raise WaveError(f'BEND_COMPLEXITY: refinamento supera {max_faces} faces.')
+    edges=defaultdict(set);removed=set();queue=[];errors={}
+    initial=batch_bound(world,faces,reference_world) if batch_bound is not None else ()
     def add(i):
         tri=faces[i]
         for a,b in zip(tri,(*tri[1:],tri[0])):edges[tuple(sorted((a,b)))].add(i)
-        error=bound([world[k] for k in tri])
+        error=(float(initial[i]) if i<len(initial) else
+               bound([world[k] for k in tri],[reference_world[k] for k in tri]) if reference_world is not None
+               else bound([world[k] for k in tri]))
+        if crease_edges is not None and edge_bound is not None:
+            for a,b in zip(tri,(*tri[1:],tri[0])):
+                if tuple(sorted((a,b))) in crease_edges:
+                    error=max(error,edge_bound(world[a],world[b],reference_world[a],reference_world[b])
+                              if reference_world is not None else edge_bound(world[a],world[b]))
+        errors[i]=error
         if error>tolerance:heapq.heappush(queue,(-error,i))
     for i in range(len(faces)):add(i)
     while queue:
@@ -84,15 +96,22 @@ def _refine(vertices,faces,world,bound,tolerance,max_faces=250000):
         adjacent=list(edges[tuple(sorted((a,b)))])
         if len(adjacent)!=2:raise WaveError('BEND_MESH: aresta aberta durante o refinamento.')
         mid=len(vertices);vertices.append([(x+y)/2 for x,y in zip(vertices[a],vertices[b])]);world.append(tuple((x+y)/2 for x,y in zip(world[a],world[b])))
+        if reference_world is not None:
+            reference_world.append(tuple((x+y)/2 for x,y in zip(reference_world[a],reference_world[b])))
+        if crease_edges is not None and tuple(sorted((a,b))) in crease_edges:
+            crease_edges.remove(tuple(sorted((a,b))));crease_edges.update((tuple(sorted((a,mid))),tuple(sorted((mid,b)))))
         for j in adjacent:
             old=faces[j];removed.add(j)
             for u,v in zip(old,(*old[1:],old[0])):edges[tuple(sorted((u,v)))].discard(j)
             u,v,w=next((old[k],old[(k+1)%3],old[(k+2)%3]) for k in range(3) if {old[k],old[(k+1)%3]}=={a,b})
             for new in ((u,mid,w),(mid,v,w)):
                 faces.append(new);add(len(faces)-1)
-        if len(faces)-len(removed)>max_faces:raise WaveError('BEND_COMPLEXITY: refinamento supera 250 mil faces.')
+        if len(faces)-len(removed)>max_faces:raise WaveError(f'BEND_COMPLEXITY: refinamento supera {max_faces} faces.')
     result=[f for i,f in enumerate(faces) if i not in removed]
-    return result,max((bound([world[k] for k in f]) for f in result),default=0.)
+    # Vertices are immutable during refinement; surviving faces keep the same
+    # complete face/crease certificate computed when they entered the queue.
+    final=max((error for i,error in errors.items() if i not in removed),default=0.)
+    return result,final
 
 
 class BendingWarp(RegionalShellWarp):

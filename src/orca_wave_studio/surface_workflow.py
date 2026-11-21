@@ -103,9 +103,13 @@ def build_surface(snapshot,object_id,backup,folder,executable,settings=None,*,pr
                      'selection_mode','selection_revision','wall_selection'}:
         raise WaveError('Parâmetro de superfície desconhecido.')
     backend=options.pop('backend','roof_bending');region_id=options.pop('region_id',None)
-    if backend not in ('roof_bending','native_local'):raise WaveError('Método de superfície desconhecido.')
+    if backend not in ('roof_bending','native_local','continuous_layers'):raise WaveError('Método de superfície desconhecido.')
     resolved=exported_settings(Path(backup),active_profile=True)
     profile=PrinterProfile.from_settings(resolved)
+    if backend=='continuous_layers':
+        from .continuous_workflow import build_continuous
+        return build_continuous(snapshot,object_id,backup,folder,executable,resolved,profile,slicer,workspace,
+                                cancelled,progress,options,verify_profile)
     if backend=='native_local':
         from .native_surfaces import build_local
         report,gcode,package=build_local(snapshot,backup,folder,executable,resolved,profile,slicer,workspace,cancelled,progress,verify_profile,options,object_id)

@@ -39,6 +39,8 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       assert.equal(await page.evaluate(()=>surfaceSettings().wall_selection.length),0,'step 1 must not paint');
       await page.screenshot({path:path.join(output,`${width}-${fallback}-1-model.png`),fullPage:true});
       await page.locator('#guide-next').click();assert.equal(await step(),'2');
+      assert.equal(await page.locator('#wall-all').getAttribute('aria-pressed'),'true');
+      await page.locator('#wall-paint').click();
       assert.equal(await page.locator('#guide-next').isDisabled(),true);
       await page.locator('#canvas').scrollIntoViewIfNeeded();target=await hit();await page.mouse.click(target.x,target.y);
       assert.equal(await page.locator('#guide-next').isEnabled(),true);
@@ -78,14 +80,20 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       await page.locator('#guide-next').click();await page.locator('#guide-next').click();
       const whole=await page.evaluate(()=>window.commands.findLast(m=>m.action==='build_surface'));
       assert.equal(whole.open_preview,false);assert.equal(whole.settings.selection_mode,'all');
+      assert.equal(whole.settings.backend,'continuous_layers');
       assert.deepEqual(whole.settings.wall_selection,[]);
       const wholeResult=structuredClone(result);wholeResult.settings=whole.settings;
       wholeResult.report.wall_selection={mode:'all',areas:[],wall_speed_factor:1};
+      wholeResult.report.warp={...wholeResult.report.warp,transition_kernel:'hermite_c1_xyz_v2'};
       await page.evaluate(({state,result})=>window.orcaWaveReceive({type:'state',state:{...state,
         sequence:35,status:'ready',result,message:'Estudo da peça inteira concluído.'}}),{state,result:wholeResult});
       assert.equal(await step(),'4');
       assert.match(await page.locator('#guide-summary').innerText(),/Peça inteira/);
       assert.match(await page.locator('#guide-summary').innerText(),/Velocidades do perfil selecionado/);
+      const oldKernel=structuredClone(wholeResult);delete oldKernel.report.warp.transition_kernel;
+      await page.evaluate(({state,result})=>window.orcaWaveReceive({type:'state',state:{...state,
+        sequence:36,status:'ready',result}}),{state,result:oldKernel});
+      assert.equal(await page.evaluate(()=>presentResult()),false,'an older transition kernel is stale');
       await page.evaluate(state=>window.orcaWaveReceive({type:'state',state:{...state,sequence:40,
         revision:'changed-project',result:null}}),state);
       assert.equal(await step(),'1');

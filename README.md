@@ -2,6 +2,13 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A **0.11.0 experimental** muda o cálculo de **Peça inteira** para camadas em
+coordenadas reversíveis das superfícies. O Orca fatia uma cópia intermediária
+sem ContourZ e o Studio restaura os percursos e a extrusão ao formato original.
+O fluxo permanece em quatro passos. Veja o [manual e o estado da validação](docs/CAMADAS_CONTINUAS_V0110.md).
+A pintura localizada continua no método anterior. O estudo mantém a liberação
+física desativada; não há promessa de compatibilidade com qualquer geometria.
+
 A **0.10.1** deixa **Peça inteira** disponível no passo Selecionar áreas,
 incluindo o teto e as bordas compatíveis sem marcar cada região. O teste nativo
 passou de 166 para 2.260 movimentos com Z variável, com máximo de 25,79° e a
