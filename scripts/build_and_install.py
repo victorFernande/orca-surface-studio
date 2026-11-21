@@ -17,6 +17,21 @@ import zlib
 
 ROOT=Path(__file__).resolve().parents[1]
 PACKAGE=ROOT/"src"/"orca_wave_studio"
+PAGE_NAME="Surface Studio"
+LEGACY_PAGE_NAME="Estúdio de Ondas Senoidais"
+
+
+def renamed_page_state(content:bytes) -> bytes:
+    """Rename only the tab's saved visibility; never add or alter a grant."""
+    state=json.loads(content)
+    if not isinstance(state,dict) or not isinstance(state.get('capabilities'),list):return content
+    caps=state['capabilities']
+    if any(isinstance(c,dict) and PAGE_NAME in c for c in caps):return content
+    old=[c for c in caps if isinstance(c,dict) and LEGACY_PAGE_NAME in c]
+    if len(old)!=1 or type(old[0][LEGACY_PAGE_NAME]) is not bool:return content
+    entry=old[0]
+    entry[PAGE_NAME]=entry.pop(LEGACY_PAGE_NAME)
+    return (json.dumps(state,ensure_ascii=False,indent=2)+'\n').encode('utf-8')
 
 
 def build() -> tuple[Path,Path]:
@@ -98,15 +113,24 @@ def install(bundle:Path,plugins_root:Path,*,enable_new:bool=False) -> Path:
     target.mkdir(parents=True,exist_ok=True)
     sidecar=target/".install_state.json"
     before=sidecar.read_bytes() if sidecar.is_file() else None
+    after=renamed_page_state(before) if before is not None else None
     temp=target/"orca_wave_generator.py.tmp"
     shutil.copyfile(bundle,temp)
     temp.replace(target/"orca_wave_generator.py")
     if before is not None and sidecar.read_bytes()!=before:
         raise RuntimeError("O estado de instalação foi alterado.")
+    if after is not None and after!=before:
+        # Keep the original sidecar beside it for recovery. Only UI visibility
+        # changes key; all permissions and unrelated settings keep their values.
+        backup=target/".install_state.before-surface-tab.json"
+        if not backup.exists():backup.write_bytes(before)
+        pending=target/".install_state.json.tmp"
+        pending.write_bytes(after)
+        pending.replace(sidecar)
     if before is None and enable_new:
         version=tomllib.loads((ROOT/"pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
         initial={"plugin_name":"Orca Wave Studio","installed_version":version,"installed_from":"local",
-                 "enabled":True,"capabilities":[{"Estúdio de Ondas Senoidais":True},
+                 "enabled":True,"capabilities":[{PAGE_NAME:True},
                     {"Orca Wave Studio • Painel":True},{"Orca Wave Studio Capture":True},
                     {"Orca Wave • OctoPrint (bancada)":True}]}
         sidecar.write_text(json.dumps(initial,ensure_ascii=False,indent=2),encoding="utf-8")

@@ -16,6 +16,31 @@ spec.loader.exec_module(build_module)
 
 
 class BuildTests(unittest.TestCase):
+    def test_tab_rename_keeps_visibility_grants_and_other_capabilities(self):
+        for visible in (False,True):
+            with self.subTest(visible=visible),tempfile.TemporaryDirectory() as folder:
+                root=Path(folder);bundle=root/'bundle.py';bundle.write_text('# fixture\n')
+                target=root/'plugins'/'orca_wave_studio';target.mkdir(parents=True)
+                original={'enabled':False,'capabilities':[
+                    {build_module.LEGACY_PAGE_NAME:visible},{'Other action':False}],
+                    'permissions':{'fs_read':['existing/*'],'process':[]},'custom':'keep'}
+                before=json.dumps(original).encode()
+                (target/'.install_state.json').write_bytes(before)
+                build_module.install(bundle,root/'plugins')
+                actual=json.loads((target/'.install_state.json').read_bytes())
+                expected={**original,'capabilities':[
+                    {build_module.PAGE_NAME:visible},{'Other action':False}]}
+                self.assertEqual(actual,expected)
+                self.assertEqual((target/'.install_state.before-surface-tab.json').read_bytes(),before)
+                persisted=(target/'.install_state.json').read_bytes()
+                build_module.install(bundle,root/'plugins')
+                self.assertEqual((target/'.install_state.json').read_bytes(),persisted)
+
+    def test_explicit_new_tab_preference_is_not_replaced_by_old_preference(self):
+        before=json.dumps({'capabilities':[
+            {build_module.LEGACY_PAGE_NAME:True},{build_module.PAGE_NAME:False}]}).encode()
+        self.assertEqual(build_module.renamed_page_state(before),before)
+
     def test_install_preserves_hidden_page_and_grants_byte_for_byte(self):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder)
