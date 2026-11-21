@@ -1,6 +1,9 @@
 import unittest
 import tempfile
+import shutil
 from pathlib import Path
+from xml.etree import ElementTree as ET
+from zipfile import ZipFile
 from unittest.mock import patch
 from orca_wave_studio.contracts import WaveError
 from orca_wave_studio.engine_parser import read
@@ -13,6 +16,33 @@ from orca_wave_studio.surface_workflow import build_surface
 
 
 class NativeSurfaceTests(unittest.TestCase):
+    def test_selected_workflow_uses_effective_part_speed_and_verifies_native_area_effect(self):
+        snapshot=cylinder_snapshot()
+        snapshot.settings.update(outer_wall_speed=['100'],inner_wall_speed=['80'])
+        snapshot.objects[0]['config']['outer_wall_speed']='50'
+        snapshot.objects[0]['volumes'][0]['config']={'outer_wall_speed':'20'}
+        options={'backend':'native_local','selection_mode':'paint','selection_revision':snapshot.revision,
+                 'wall_selection':[{'origin':[100,60,4],'direction':[-1,0,0],'radius_mm':6}]}
+        lines=self.source().decode().splitlines();ids=[i for i,line in enumerate(lines) if line.startswith('G1 X')]
+        lines[ids[8]]+=' Z0.2';data=('\n'.join(lines)+'\n').encode()
+        with tempfile.TemporaryDirectory() as folder:
+            folder=Path(folder);backup=folder/'original.3mf';write_model_project(snapshot,backup,snapshot.settings)
+            def slicer(executable,model,output,cancelled,*,workspace):
+                with ZipFile(model) as archive:
+                    root=ET.fromstring(archive.read('Metadata/model_settings.config'))
+                    part=root.find("object/part[@subtype='modifier_part']")
+                    config={m.get('key'):m.get('value') for m in part.findall('metadata')}
+                    self.assertEqual(config['outer_wall_speed'],'16')
+                    self.assertEqual(config['inner_wall_speed'],'64')
+                output.mkdir();source=output/'plate_1.gcode';source.write_bytes(data)
+                package=output/'source.gcode.3mf';shutil.copyfile(model,package)
+                return source,package
+            result=build_surface(snapshot,'100',backup,folder/'job','unused',options,slicer=slicer)
+            self.assertTrue(result['report']['wall_selection']['native_modifiers_verified'])
+            self.assertEqual(result['report']['wall_selection_audit']['outside_scope_segments'],0)
+            self.assertGreater(result['report']['wall_selection_audit']['affected_segments'],0)
+            self.assertFalse(result['report']['print_allowed'])
+
     def test_local_workflow_uses_original_mesh_and_never_calls_roof_inverse_map(self):
         snapshot=cylinder_snapshot();before=snapshot.to_dict()
         with tempfile.TemporaryDirectory() as root:

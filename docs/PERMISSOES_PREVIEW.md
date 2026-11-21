@@ -59,3 +59,8 @@ posterior à aprovação, ainda não foi exercitada neste ciclo; não se deve
 confundi-la com as várias aberturas verificadas na mesma sessão.
 
 Veja o [registro com capturas e limites do Benchy](VALIDACAO_NATIVA_V071.md).
+
+Na validação posterior da [0.8.0](SELECAO_PAREDES_V080.md), o escopo foi
+reutilizado após reinícios do Orca. O novo cache foi conferido sem pedido
+individual, com igualdade de conteúdo entre geração, pacote e Preview. Essa
+observação conclui a verificação de persistência que estava pendente acima.

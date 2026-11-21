@@ -21,8 +21,8 @@ class SurfaceWorkflowTests(unittest.TestCase):
             self.assertNotIn('cmd.exe',command)
             self.assertIn('input.3mf',subprocess.list2cmdline(command))
             local=slice_command(Path(folder)/'OrcaSlicer.exe',native_local=True)
-            self.assertEqual(local[:-1],command)
-            self.assertEqual(local[-1],'--zaa-enabled=1')
+            self.assertEqual(local[:-2],command)
+            self.assertEqual(local[-2:],['--zaa-enabled=1','--zaa-minimize-perimeter-height=1'])
 
     def test_changed_material_or_transport_stops_before_generation(self):
         with tempfile.TemporaryDirectory() as folder:

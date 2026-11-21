@@ -1,0 +1,265 @@
+{
+  "version": "0.8.0",
+  "date": "2026-11-21",
+  "environment": "Windows / OrcaSlicer 2.5.1",
+  "execution": "isolated native CLI; not native GUI validation",
+  "profile_label": "Sovol SV06 0.4 nozzle -3DPrinter",
+  "material_label": "Sovol Generic PLA - Voolt3D",
+  "processed_sha256": "4ff6051c23df85f5df6991917f49b133d7f964f898687818c60ceb7fe5d77914",
+  "part_segments": 103354,
+  "nonplanar_extrusion_segments_by_role": {
+    "inner wall": 397,
+    "outer wall": 746
+  },
+  "wall_selection": {
+    "mode": "paint",
+    "areas": [
+      {
+        "center": [
+          138.33302168490155,
+          110.0,
+          18.0
+        ],
+        "radius_mm": 8.0,
+        "source_triangle": 64991,
+        "normal": [
+          0.9530601165007626,
+          0.0,
+          -0.30278113272717805
+        ]
+      },
+      {
+        "center": [
+          80.43177203473732,
+          110.0,
+          12.0
+        ],
+        "radius_mm": 8.0,
+        "source_triangle": 164720,
+        "normal": [
+          -0.5432765433729501,
+          -0.0030853390365468167,
+          0.8395481392414426
+        ]
+      }
+    ],
+    "scope": "closed native modifier spheres including wall thickness",
+    "native_modifiers_verified": true,
+    "wall_speed_factor": 0.8
+  },
+  "wall_selection_audit": {
+    "affected_segments": 1485,
+    "nonplanar_segments": 1143,
+    "affected_segments_per_area": [
+      940,
+      545
+    ],
+    "outside_scope_segments": 0,
+    "scope_margin": "half bead width plus 0.05 mm, at least 0.3 mm",
+    "maximum_motion_slope_deg": 63.07815554262696,
+    "print_allowed": false
+  },
+  "motion_slope_review": {
+    "limit_deg": 30,
+    "maximum_deg": 63.07815554262696,
+    "within_study_limit": false,
+    "head_clearance_certified": false
+  },
+  "physical_gate": "MOTION_SLOPE_ABOVE_STUDY_LIMIT",
+  "body_audit": {
+    "status": "PASS_NOMINAL_BODY_BOUND",
+    "gcode_sha256": "4ff6051c23df85f5df6991917f49b133d7f964f898687818c60ceb7fe5d77914",
+    "minimum_body_z_mm": 1.799999900001694,
+    "minimum_nominal_body_gap_mm": 1.239999900001693,
+    "maximum_material_above_tcp_mm": 0.56,
+    "motions_checked": 118930,
+    "growing_bead_body_checks": 103606,
+    "incomplete_lines": [],
+    "coverage": "All parsed linear motions in labelled print body; startup/homing/footer not certified",
+    "material_model": "Earlier and current finite beads enclosed below maximum trace Z; uncalibrated",
+    "installed_head_registration_verified": false,
+    "worst_bound": {
+      "line_1based": 73,
+      "role": "custom",
+      "motion": "travel",
+      "tcp_segment_z_range_mm": [
+        0.24,
+        1.04
+      ],
+      "material_upper_z_mm": 0.8,
+      "nominal_lower_bound_mm": 1.239999900001693
+    },
+    "nozzle_contact": "UNASSESSED",
+    "manufacturing_uncertainty_included": false,
+    "physical_validation": false,
+    "print_allowed": false,
+    "printer_contacted": false,
+    "nominal_component_count": 56,
+    "nominal_axis": "printer Z = negative CAD Y",
+    "nominal_tcp_cad_mm": [
+      267.2581786613353,
+      341.03574634892607,
+      425.20267174528084
+    ],
+    "cad_metadata_sha256": "22537cd44cef0261c94a50b75903391279fa48480366b30830944d00179f5662",
+    "cad_source_revision": "75f8a0da6ff822c67b6aff62cfa85c7a441e2271",
+    "source_mode": "native_local_surfaces",
+    "package_payload_equal": true,
+    "effective_profile_fields_verified": 26,
+    "native_xyz_e_identity": {
+      "before": {
+        "sha256": "c38be5f6c542685269c3b5c47b7e606bdbf1a5d41a682dd322a1b218592b467c",
+        "moves": 121539
+      },
+      "after": {
+        "sha256": "c38be5f6c542685269c3b5c47b7e606bdbf1a5d41a682dd322a1b218592b467c",
+        "moves": 121539
+      },
+      "equal": true
+    }
+  },
+  "tests_passed": 207,
+  "component_ui_test": "PASS_HEADLESS_COMPONENT: WebGL and software; click/remove/orbit/payload",
+  "native_gui_validated": true,
+  "installed": true,
+  "print_allowed": false,
+  "printer_contacted": false,
+  "physical_print_started": false,
+  "limitations": [
+    "residual stairs not eliminated in all marked areas",
+    "native scope only top-facing eligible geometry",
+    "nominal CAD bound does not qualify nozzle contact or deposition",
+    "motion slope above study limit"
+  ],
+  "native_gui_selection_observed": true,
+  "native_gui": {
+    "part_segments": 102437,
+    "sha256": "28e653ee25f0eeb1fcb22e3c220eb60c3a9874200bb1552a8137ccdc723cb2df",
+    "nonplanar_extrusion_segments_by_role": {
+      "inner wall": 369,
+      "outer wall": 984
+    },
+    "wall_selection": {
+      "mode": "paint",
+      "areas": [
+        {
+          "center": [
+            132.44109033282786,
+            102.66330921302809,
+            25.27302989100768
+          ],
+          "radius_mm": 8.0,
+          "source_triangle": 38363,
+          "normal": [
+            -0.2896654992934189,
+            -0.0016372978288567057,
+            0.9571265421953954
+          ]
+        },
+        {
+          "center": [
+            80.27162672763735,
+            111.92243718902111,
+            10.807387915418175
+          ],
+          "radius_mm": 8.0,
+          "source_triangle": 145416,
+          "normal": [
+            0.05898558301854319,
+            -0.0,
+            0.9982588346696274
+          ]
+        }
+      ],
+      "scope": "closed native modifier spheres including wall thickness",
+      "native_modifiers_verified": true,
+      "wall_speed_factor": 0.8
+    },
+    "wall_selection_audit": {
+      "affected_segments": 1837,
+      "nonplanar_segments": 1353,
+      "affected_segments_per_area": [
+        1170,
+        667
+      ],
+      "outside_scope_segments": 0,
+      "scope_margin": "half bead width plus 0.05 mm, at least 0.3 mm",
+      "maximum_motion_slope_deg": 62.79568002545421,
+      "print_allowed": false
+    },
+    "motion_slope_review": {
+      "limit_deg": 30,
+      "maximum_deg": 62.79568002545421,
+      "within_study_limit": false,
+      "head_clearance_certified": false
+    },
+    "physical_gate": "MOTION_SLOPE_ABOVE_STUDY_LIMIT",
+    "body_audit": {
+      "status": "PASS_NOMINAL_BODY_BOUND",
+      "gcode_sha256": "28e653ee25f0eeb1fcb22e3c220eb60c3a9874200bb1552a8137ccdc723cb2df",
+      "minimum_body_z_mm": 1.799999900001694,
+      "minimum_nominal_body_gap_mm": 1.239999900001693,
+      "maximum_material_above_tcp_mm": 0.56,
+      "motions_checked": 117970,
+      "growing_bead_body_checks": 102689,
+      "incomplete_lines": [],
+      "coverage": "All parsed linear motions in labelled print body; startup/homing/footer not certified",
+      "material_model": "Earlier and current finite beads enclosed below maximum trace Z; uncalibrated",
+      "installed_head_registration_verified": false,
+      "worst_bound": {
+        "line_1based": 73,
+        "role": "custom",
+        "motion": "travel",
+        "tcp_segment_z_range_mm": [
+          0.24,
+          1.04
+        ],
+        "material_upper_z_mm": 0.8,
+        "nominal_lower_bound_mm": 1.239999900001693
+      },
+      "nozzle_contact": "UNASSESSED",
+      "manufacturing_uncertainty_included": false,
+      "physical_validation": false,
+      "print_allowed": false,
+      "printer_contacted": false,
+      "nominal_component_count": 56,
+      "nominal_axis": "printer Z = negative CAD Y",
+      "nominal_tcp_cad_mm": [
+        267.2581786613353,
+        341.03574634892607,
+        425.20267174528084
+      ],
+      "cad_metadata_sha256": "22537cd44cef0261c94a50b75903391279fa48480366b30830944d00179f5662",
+      "cad_source_revision": "75f8a0da6ff822c67b6aff62cfa85c7a441e2271",
+      "source_mode": "native_local_surfaces",
+      "package_payload_equal": true,
+      "effective_profile_fields_verified": 26,
+      "native_xyz_e_identity": {
+        "before": {
+          "sha256": "40a34e7b2af5d3811b1f9a5ead54672add96bdffcd7012c2da64dad10923e9a0",
+          "moves": 120591
+        },
+        "after": {
+          "sha256": "40a34e7b2af5d3811b1f9a5ead54672add96bdffcd7012c2da64dad10923e9a0",
+          "moves": 120591
+        },
+        "equal": true
+      }
+    },
+    "generated_package_cache_equal": true,
+    "preview_receipt_sha256": "28e653ee25f0eeb1fcb22e3c220eb60c3a9874200bb1552a8137ccdc723cb2df",
+    "scope_grant_reused_after_restart": true,
+    "individual_read_prompts": 0,
+    "studio_result_and_preview_button_visible": true,
+    "native_layer95_varying_z_and_positive_extrusion_observed": true,
+    "native_layer95_shown_speed_mm_s": 20,
+    "screenshots": [
+      "images/surface-v080/01-selecao-nativa-proa-popa.jpg",
+      "images/surface-v080/02-preview-frontal-seletivo.jpg",
+      "images/surface-v080/03-camada-95-parede-selecionada.jpg"
+    ],
+    "print_allowed": false,
+    "printer_contacted": false,
+    "physical_print_started": false
+  }
+}
