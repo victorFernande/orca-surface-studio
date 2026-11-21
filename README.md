@@ -2,6 +2,12 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A **0.9.0** abre em um [passo a passo de quatro etapas](docs/PASSO_A_PASSO_V090.md):
+**selecionar modelo → selecionar áreas → estudar movimento → mandar para a bandeja**.
+O modelo permanece visível durante o processo. O estudo fica no Studio; somente
+no último passo o resultado abre no Preview do Orca. Esse botão não inicia impressão.
+As opções anteriores continuam em **Mais opções**.
+
 A 0.8.0 acrescenta a [seleção das áreas das paredes por clique em 3D](docs/SELECAO_PAREDES_V080.md).
 É possível acrescentar/remover áreas e gerar o Preview pela mesma tela. O teste
 de linha de comando confirmou contorno nas áreas escolhidas, mas encontrou

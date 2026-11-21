@@ -25,6 +25,8 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
         }};
       },{state,fallback});
       await page.goto(pathToFileURL(input).href);
+      await page.getByRole('button',{name:'Mais opções',exact:true}).click();
+      await page.locator('#guide-details > summary').click();
       await page.getByRole('button',{name:'Superfície curva',exact:true}).click();
       await page.getByRole('button',{name:'Enquadrar trajetória',exact:true}).click();
       assert.equal(await page.locator('#empty').isVisible(),false);

@@ -16,6 +16,25 @@ from orca_wave_studio.surface_workflow import build_surface
 
 
 class NativeSurfaceTests(unittest.TestCase):
+    def test_only_the_chosen_model_is_copied_when_the_plate_has_two_models(self):
+        snapshot=cylinder_snapshot(two_objects=True);before=snapshot.to_dict()
+        with tempfile.TemporaryDirectory() as root:
+            root=Path(root);backup=root/'original.3mf';write_model_project(snapshot,backup,snapshot.settings)
+            def slicer(executable,model,folder,cancelled,*,workspace):
+                with ZipFile(model) as archive:
+                    xml=ET.fromstring(archive.read('3D/3dmodel.model'))
+                    ns={'m':'http://schemas.microsoft.com/3dmanufacturing/core/2015/02'}
+                    self.assertEqual(len(xml.findall('m:build/m:item',ns)),1)
+                    xs=[float(v.get('x')) for v in xml.findall('.//m:vertex',ns)]
+                    self.assertAlmostEqual(min(xs),100);self.assertAlmostEqual(max(xs),140)
+                folder.mkdir();source=folder/'plate_1.gcode';source.write_bytes(self.source())
+                package=folder/'source.gcode.3mf';build_sliced_package(self.source(),package,project_3mf=model)
+                return source,package
+            result=build_surface(snapshot,'101',backup,root/'job','unused',{'backend':'native_local'},slicer=slicer)
+            self.assertEqual(result['object_id'],'101')
+            self.assertEqual(result['revision'],snapshot.revision)
+            self.assertEqual(before,snapshot.to_dict())
+
     def test_selected_workflow_uses_effective_part_speed_and_verifies_native_area_effect(self):
         snapshot=cylinder_snapshot()
         snapshot.settings.update(outer_wall_speed=['100'],inner_wall_speed=['80'])

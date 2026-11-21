@@ -401,13 +401,14 @@ class StudioController:
                 self._conformal_failed(ctx,exc)
         threading.Thread(target=work,name="OrcaWave-PrepareModel",daemon=True).start()
 
-    def build_surface(self,selected,settings):
+    def build_surface(self,selected,settings,*,open_after_study=True):
+        if type(open_after_study) is not bool:raise WaveError('Escolha se o Preview deve abrir após o estudo.')
         if not self.host:raise WaveError('Gere a superfície dentro do OrcaSlicer.')
         self.refresh()
         with self.lock:
             original=self.snapshot
-            if not original or len(original.objects)!=1 or selected!=[str(original.objects[0]['id'])]:
-                raise WaveError('Deixe a peça escolhida na placa para gerar esta superfície.')
+            if not original or len(selected)!=1 or selected[0] not in {str(o['id']) for o in original.objects}:
+                raise WaveError('Selecione um modelo da placa para estudar o movimento.')
             if self._job:raise WaveError('Aguarde ou cancele o cálculo atual.')
             executable=self.host.slicer_executable()
             workspace=self.host.slicer_workspace()
@@ -427,8 +428,9 @@ class StudioController:
                                      progress=progress,cancelled=cancelled,workspace=workspace)
                 with self.lock:
                     if cancelled() or not self.snapshot or self.snapshot.revision!=original.revision:return
-                    self._result=result;self._status='ready';self._job=None;self._pending_open=True
-                    self._message='Superfície gerada com o perfil ativo. Abrindo o Preview para conferência.'
+                    self._result=result;self._status='ready';self._job=None;self._pending_open=open_after_study
+                    self._message=('Superfície gerada com o perfil ativo. Abrindo o Preview para conferência.'
+                                   if open_after_study else 'Estudo concluído. Confira o movimento e mande para a bandeja.')
                     self.event('integrated_surface_generated',sha256=result['sha256'],printer_contacted=False)
             except Exception as exc:
                 with self.lock:
@@ -945,7 +947,7 @@ class StudioController:
             elif action=="prepare_conformal":
                 self.prepare_conformal(selected,payload.get("settings",{}))
             elif action=='build_surface':
-                self.build_surface(selected,payload.get('settings',{}))
+                self.build_surface(selected,payload.get('settings',{}),open_after_study=payload.get('open_preview',True))
             elif action=='cancel_build':
                 self.invalidate('Cálculo cancelado. A peça original foi preservada.')
             elif action=="generate_conformal":
@@ -955,6 +957,8 @@ class StudioController:
                     raise WaveError("Abra o projeto original para estudar sua superfície.")
                 self.surface_study(selected,payload.get("settings",{}))
             elif action=="open_preview":
+                if payload.get('sha256') and (not self._result or payload['sha256']!=self._result['sha256']):
+                    raise WaveError('O estudo mudou. Confira o resultado atual antes de mandar para a bandeja.')
                 if not self._opening_preview:
                     self.open_preview()
             elif action in {"open_panel","hide_panel"}:

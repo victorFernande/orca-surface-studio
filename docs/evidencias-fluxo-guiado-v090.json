@@ -1,0 +1,86 @@
+{
+  "version": "0.9.0",
+  "native_orca_controlled": true,
+  "printer_contacted": false,
+  "steps": [
+    "Selecionar modelo",
+    "Selecionar áreas",
+    "Estudar movimento",
+    "Mandar para a bandeja"
+  ],
+  "native_gui": {
+    "model": "3DBenchy-original.stl",
+    "size_mm": [
+      60,
+      31,
+      48
+    ],
+    "profile": "Sovol SV06 0.4 nozzle -3DPrinter",
+    "filament": "Sovol Generic PLA - Voolt3D",
+    "selected_areas": 2,
+    "radius_mm": 8,
+    "study_stayed_in_studio": true,
+    "playback_observed_percent": [
+      0,
+      41
+    ],
+    "explicit_transfer_opened_native_preview": true,
+    "native_open_dialog": "Open as project -> OK",
+    "layers": 240,
+    "physical_qualification": false,
+    "generated_sha256": "6a1151f65431dd6a3d8209f7b683a3220ce4ea850aa41657465d26c60dc79bb4",
+    "package_sha256": "6a1151f65431dd6a3d8209f7b683a3220ce4ea850aa41657465d26c60dc79bb4",
+    "preview_cache_sha256": "6a1151f65431dd6a3d8209f7b683a3220ce4ea850aa41657465d26c60dc79bb4",
+    "preview_receipt_sha256": "6a1151f65431dd6a3d8209f7b683a3220ce4ea850aa41657465d26c60dc79bb4",
+    "host_preview_verified": true
+  },
+  "automated": {
+    "python_tests": 210,
+    "guided_ui": {
+      "status": "PASS_GUIDED_COMPONENT",
+      "native_orca_controlled": false,
+      "printer_contacted": false,
+      "outcomes": [
+        {
+          "fallback": false,
+          "width": 1580,
+          "height": 1000,
+          "errors": [],
+          "four_steps": true,
+          "study_does_not_open_orca": true,
+          "explicit_transfer_only": true,
+          "stale_selection_invalidated": true
+        },
+        {
+          "fallback": true,
+          "width": 1580,
+          "height": 1000,
+          "errors": [],
+          "four_steps": true,
+          "study_does_not_open_orca": true,
+          "explicit_transfer_only": true,
+          "stale_selection_invalidated": true
+        },
+        {
+          "fallback": false,
+          "width": 390,
+          "height": 844,
+          "errors": [],
+          "four_steps": true,
+          "study_does_not_open_orca": true,
+          "explicit_transfer_only": true,
+          "stale_selection_invalidated": true
+        }
+      ]
+    },
+    "advanced_ui": {
+      "webgl": true,
+      "software_rendering": true,
+      "passed": true
+    }
+  },
+  "limitations": [
+    "Existing Benchy transition and physical qualification limits remain.",
+    "Region choice uses clicks, not continuous brush strokes."
+  ]
+}
