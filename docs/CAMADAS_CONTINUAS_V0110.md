@@ -5,10 +5,12 @@ da peça. O objetivo é percorrer as bordas inclinadas da proa e da popa e o tet
 do Benchy na mesma camada lógica, em vez de voltar periodicamente a um plano
 horizontal. O modelo original continua preservado.
 
-**Estado da validação:** implementação experimental, com 240 testes locais
-aprovados e verificação dos quatro passos em três condições de interface.
-A geração completa e o Preview do Benchy ainda estão em validação. Esses
-testes não são uma liberação para impressão física.
+**Estado da validação: não aprovado para imprimir o Benchy.** Há 240 testes
+locais aprovados e teste local dos quatro passos em três condições de interface,
+separado do Orca nativo. A auditoria completa do arquivo de referência encontrou
+uma transição de 52,7° e espaçamento excessivo entre camadas. O Preview de
+diagnóstico foi inspecionado no Orca, sem iniciar impressão. A eliminação de
+todos os degraus e a conclusão do fluxo pelo plugin continuam pendentes.
 
 ## Como usar
 
@@ -18,7 +20,8 @@ testes não são uma liberação para impressão física.
    **Escolher na peça** continua disponível com o acabamento localizado anterior.
 3. Clique **Continuar** e **Estudar movimento**. A peça permanece visível enquanto
    o cálculo prepara e fatia uma cópia privada. Aguarde a conclusão.
-4. Confira o resultado e clique **Mandar para a bandeja**. Se o Orca apresentar
+4. Quando o estudo concluir com resultado válido, confira-o e clique
+   **Mandar para a bandeja**. Se o Orca apresentar
    o diálogo de importação, escolha **Open as project** para abrir o pacote já
    fatiado no Preview.
 
@@ -36,9 +39,66 @@ Um único botão inicia o estudo; a peça original permanece visível:
 
 ![Iniciar o estudo de movimento](images/continuous-v0110/03-estudar.jpg)
 
+Nesta rodada, a execução pela interface chegou à restauração dos movimentos
+XYZ. Uma execução de referência independente, com sua própria cópia da malha e
+fatia nativa correspondentes, terminou a auditoria e reprovou o resultado. A
+execução repetida na interface foi cancelada; não foi observado seu retorno
+final de erro, nem concluído o passo **Mandar para a bandeja**.
+
+![Estudo em execução antes do cancelamento](images/continuous-v0110/04-estudo-em-execucao.jpg)
+
 No Preview, examine uma camada isolada nas bordas e no teto. O Z precisa variar
 durante a extrusão dentro dessa camada. Deslocar uma camada horizontal inteira
 ou apenas reduzir a altura das camadas não comprova o novo comportamento.
+
+## Conferência do Preview de diagnóstico
+
+Foi aberto manualmente um pacote separado, chamado **HOLD-continuous-benchy**,
+somente para inspecionar a falha. Esse pacote não é um resultado aprovado pelo
+botão do Studio. **Não pressione Print nesse diagnóstico.**
+
+A vista completa mostra trajetórias curvas e falhas nas ligações do casco:
+
+![Vista lateral do diagnóstico não aprovado](images/continuous-v0110/05-preview-diagnostico.jpg)
+
+Na camada 329 exibida pelo Orca, o bico passou por Z **39,088 mm** e
+**40,167 mm**, em movimentos de extrusão classificados como Top surface.
+O marcador e o inspetor mostram o Z variando na mesma camada lógica:
+
+![Bico no teto em Z 39,088 mm](images/continuous-v0110/07-teto-bico-z39088.jpg)
+
+![Bico no teto em Z 40,167 mm](images/continuous-v0110/08-teto-bico-z40167.jpg)
+
+A camada 189 também apresentou a borda inclinada da proa; nesta posição de
+extrusão da parede externa, o marcador indica Z **22,036 mm**:
+
+![Bico na borda da proa](images/continuous-v0110/10-proa-bico-z22036.jpg)
+
+O G-code do diagnóstico, o extraído de seu pacote e o arquivo temporário lido
+pelo Orca têm o mesmo SHA-256. Isso confirma o conteúdo visualizado; não é uma
+aprovação de deposição ou de impressão.
+
+| Verificação da referência | Resultado |
+|---|---|
+| Perfil selecionado | 23 campos conferidos, correspondentes |
+| Cópia da malha | 2.135.318 faces; limite normal/quinas de 0,010 mm |
+| Cordas emitidas | Limite máximo calculado de 0,009977 mm |
+| Novos segmentos subdivididos | Mínimo de 0,182 mm, acima de 0,15 mm |
+| Inclinação dos movimentos | **52,664°; excede o limite de 30°** |
+| Espaçamento normal amostrado | **0,065 a 0,954 mm; deposição não qualificada** |
+| Trechos com espaçamento acima da largura da linha | **1.170** |
+| Impressão física | **Não iniciada** |
+
+O mínimo dos novos segmentos não inclui deslocamentos nem arestas curtas
+originais preservadas para o estudo. Os sete núcleos de referência ficaram na
+mesma faixa de corte; essa medida considera os 90% centrais ponderados por área
+e não representa uma porcentagem da peça sem degraus.
+
+As regiões precisam ser coordenadas em conjunto, com limites de inclinação e
+de espaçamento entre camadas. Os mapas atuais preservam a referência geométrica,
+mas sua composição ainda concentra a deformação em certas transições. A versão
+permanece experimental. As [medidas e hashes](evidence/continuous-v0110-benchy.json)
+registram o resultado recusado.
 
 ## O que o cálculo preserva e verifica
 

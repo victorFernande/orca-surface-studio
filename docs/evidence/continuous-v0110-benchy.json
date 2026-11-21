@@ -1,0 +1,104 @@
+{
+  "date": "2026-11-21",
+  "version": "0.11.0 experimental",
+  "status": "BLOCKED_FINISH_SLOPE",
+  "scope": "Matching reference mesh, inverse field and native planar slice; not the separate live Studio job.",
+  "native_preview": {
+    "observed": true,
+    "opened_manually": true,
+    "approved_for_print": false,
+    "sliced_only_package": true,
+    "full_part_inspected": true,
+    "isolated_display_layers": [
+      329,
+      189
+    ],
+    "roof_nozzle_z_mm": [
+      39.088,
+      40.167
+    ],
+    "bow_nozzle_z_mm": 22.036,
+    "cache_hash_verified_directly": true,
+    "cache_gcode_sha256": "9e261fa03f7cbb0fcf8b36cade8bab23f76d55a3fef5181fa5c8711988277db4"
+  },
+  "print_allowed": false,
+  "physical_validation": false,
+  "print_started": false,
+  "checks": {
+    "local_tests": 240,
+    "guided_component_scenarios": 3,
+    "profile_matched": true,
+    "profile_fields_checked": 23,
+    "native_contouring_disabled": true,
+    "install_state_preserved": true
+  },
+  "hashes": {
+    "preserved_original_project": "49f38d20d15da1ccf93ca91b43656c7cf739d45668fb2d58c0e0e7f43219f894",
+    "reference_capture": "4814b1ba1d71c14e168c37d14d3abb4558d0198ffcd86ae695e75db17ea48091",
+    "planar_gcode": "a2685d9b5e71c4b38daa73caa46e3aec9a077235b8c6db9307a736f056ce6303",
+    "diagnostic_gcode": "9e261fa03f7cbb0fcf8b36cade8bab23f76d55a3fef5181fa5c8711988277db4",
+    "package_extracted_gcode": "9e261fa03f7cbb0fcf8b36cade8bab23f76d55a3fef5181fa5c8711988277db4",
+    "installed_bundle": "61a2c8b542c8f334466240240134160b6944e660b13a2be1ad2819173208354a"
+  },
+  "geometry": {
+    "source_mesh_unchanged": true,
+    "flattened_faces": 2135318,
+    "mesh_normal_and_crease_bound_mm": 0.009999999283904241,
+    "maximum_chord_bound_mm": 0.009976878940146941,
+    "combined_budget_mm": 0.02,
+    "minimum_subdivided_segment_mm": 0.18208819704747625,
+    "reference_cores_in_one_native_band": 7,
+    "reference_core_measure": "Central 90 percent by area; not a smooth-area coverage percentage."
+  },
+  "motion": {
+    "limit_deg": 30,
+    "maximum_deg": 52.66353665521742,
+    "worst": {
+      "line": 318882,
+      "role": "internal solid infill",
+      "logical_layer": 99,
+      "start": [
+        119.008,
+        121.949,
+        11.69974
+      ],
+      "end": [
+        119.165,
+        121.958,
+        11.905898
+      ]
+    },
+    "segments": 602037,
+    "nonplanar_extrusion_segments_by_role": {
+      "inner wall": 149916,
+      "outer wall": 102492,
+      "internal solid infill": 35416,
+      "sparse infill": 29706,
+      "overhang wall": 388,
+      "internal bridge": 4385,
+      "top surface": 4796,
+      "bridge": 698
+    }
+  },
+  "deposition_not_qualified": {
+    "normal_spacing_mm": [
+      0.06518115980013757,
+      0.9543287979035853
+    ],
+    "cell_volume_scale_range": [
+      0.5657172355457767,
+      5.32258832293732
+    ],
+    "segments_with_gap_above_line_width": 1170
+  },
+  "rejection": "FINISH_SLOPE: o Orca ainda gerou uma transição de 52.7°, acima de 30°. O resultado foi recusado para preservar a peça; escolha uma região menor.",
+  "native_studio_execution": {
+    "model_selected": true,
+    "whole_model_selected": true,
+    "study_started": true,
+    "geometry_and_planar_slice_completed": true,
+    "cancelled_after_independent_reference_rejection": true,
+    "final_error_response_observed": false,
+    "automatic_preview_transfer_completed": false
+  }
+}

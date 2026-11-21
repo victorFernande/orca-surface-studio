@@ -1,6 +1,6 @@
 # ADR-0015 — Planejar camadas nas coordenadas das superfícies
 
-Status: implementação experimental; qualificação física pendente.
+Status: implementação experimental; caso Benchy reprovado na auditoria e no Preview de diagnóstico.
 
 ## Contexto
 
@@ -94,7 +94,30 @@ recusa referências incompatíveis, malha excessiva, limites de movimento ou
 segmentação incompatíveis. O estudo e o Preview não liberam impressão física
 automaticamente. Não há envio à impressora neste teste.
 
-## Alternativas
+## Impedimento observado no Benchy
+
+A referência completa com orçamento de malha de 0,01 mm produziu 602.037
+segmentos. A auditoria dos movimentos emitidos mediu 52,664° em preenchimento
+sólido interno, acima dos 30° do estudo. O espaçamento normal amostrado chegou a
+0,954 mm, com 1.170 trechos acima da largura nominal da linha. A aproximação
+geométrica, a inversibilidade e o alinhamento das referências passaram; a
+deposição e as transições do resultado não foram aprovadas.
+
+O Preview nativo abriu um pacote de diagnóstico separado, identificado HOLD.
+O cache nativo manteve o mesmo hash do pacote e do G-code desse diagnóstico.
+Foram observados dois extremos de Z no teto dentro da camada exibida 329,
+além da borda inclinada na camada 189. A vista completa também mostrou falhas
+nas ligações do casco. O fluxo de quatro passos pela interface não foi concluído:
+a execução repetida foi cancelada depois da reprovação independente da referência.
+
+O domínio vertical amplo de um estágio pode dilatar a variação lateral de outro
+na composição, mesmo onde o primeiro campo tem altura XY constante. Continuidade
+C1 e jacobiano positivo não limitam esse gradiente composto nem o espaçamento
+de deposição. A etapa restante exige restrições conjuntas sobre o campo, com
+nova validação geométrica e de percursos. A liberação física continua falsa.
+Ver [evidências](../evidence/continuous-v0110-benchy.json).
+
+## Alternativas consideradas
 
 - Refinar apenas camadas planas: reduz a escala, preserva a causa dos degraus.
 - Compor com ContourZ: mistura dois campos e invalida a análise de deposição.
