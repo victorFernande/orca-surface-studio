@@ -1,6 +1,7 @@
 # ADR-0016 — Ordenar transições por dependência e extensão
 
-Status: experimental; validação de referência em andamento.
+Status: experimental; redução angular confirmada no G-code e no Preview,
+com espaçamento/deposição ainda reprovados para liberação física.
 
 ## Contexto
 
@@ -40,4 +41,8 @@ aprovação digital não qualifica folga do cabeçote, deposição ou impressão
 O estado de impressão continua bloqueado até essas verificações.
 
 O registro de referência da 0.11.0 permanece histórico. A comparação desta
-mudança será registrada separadamente, com capturas reais do Preview.
+mudança está no [relatório da 0.11.1](../CASCO_TRANSICOES_V0111.md), com capturas
+reais do Preview: a inclinação máxima emitida caiu de 52,664° para 17,614°,
+mas o indicador de espaçamento acima da largura passou de 1.170 para 2.166
+ocorrências. A prioridade resolve a amplificação angular observada, sem
+qualificar apoio, espaçamento ou extrusão física. A liberação continua falsa.
