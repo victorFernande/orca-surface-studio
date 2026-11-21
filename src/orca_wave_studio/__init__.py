@@ -1,6 +1,6 @@
 """Orca Surface Studio. Legacy import identity retained for existing installs."""
 
-__version__ = "0.9.1"
+__version__ = "0.10.0"
 
 try:
     import orca as _native_orca

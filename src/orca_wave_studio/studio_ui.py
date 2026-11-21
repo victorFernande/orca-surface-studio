@@ -411,6 +411,10 @@ function diagnostics(current){
       if(Number.isFinite(angle))record(metrics,'Maior inclinação do percurso',numberFormat(angle,1)+'°');
       if(angle>r.settings.max_slope_deg)$('result-note').textContent='Somente Preview: há movimentos mais inclinados que o limite do estudo. O arquivo não está liberado para imprimir.';
     }
+    if(rep.finishing){
+      record(metrics,'Camadas de acabamento',numberFormat(rep.finishing.finishing_layer_mm,3)+' mm');
+      record(metrics,'Amostragem vertical',numberFormat(rep.finishing.sampling_reduction_percent,0)+'% menor que a nominal');
+    }
     record(metrics,'Folga do cabeçote','Pendente');
     record(metrics,'Trechos com Z variável',Object.values(rep.nonplanar_extrusion_segments_by_role||{}).reduce((a,b)=>a+b,0));
   }
@@ -886,7 +890,7 @@ guideToggle.onclick=()=>{
 };
 $('objects').closest('section').id='model-section';$('params').closest('section').id='area-section';profileBox.id='profile-card';
 const guideSummary=node('section','section guide-summary');guideSummary.id='guide-summary';
-guideSummary.append(node('h3','','Seu estudo'));const guideModelName=node('strong'),guideAreaCount=node('p','message');guideSummary.append(guideModelName,guideAreaCount,node('small','','Velocidade nas áreas: 80% do perfil.'));profileBox.after(guideSummary);
+guideSummary.append(node('h3','','Seu estudo'));const guideModelName=node('strong'),guideAreaCount=node('p','message'),guideFinish=node('p','message');guideSummary.append(guideModelName,guideAreaCount,guideFinish,node('small','','Velocidade nas áreas: 80% do perfil.'));profileBox.after(guideSummary);
 const guideHelp=node('section','section guide-help');guideHelp.id='guide-help';
 const guideHeading=node('h2'),guideText=node('p'),guideWarning=node('p','guide-warning');guideWarning.id='guide-warning';guideHelp.append(guideHeading,guideText,guideWarning);
 const reviewScroll=document.querySelector('#review>.scroll');reviewScroll.prepend(guideHelp);
@@ -922,6 +926,8 @@ function renderGuide(active,current,busy){
   const choices=surfaceSettings(),areaCount=choices.wall_selection?.length||0,
     count=choices.selection_mode==='all'?'Todas as áreas compatíveis':areaCount+(areaCount===1?' área selecionada':' áreas selecionadas');
   guideModelName.textContent=active?.name||'Escolha um modelo';guideAreaCount.textContent=count;
+  const finish=current?state.result?.report?.finishing:null;
+  guideFinish.textContent=finish?'Acabamento: camadas de '+numberFormat(finish.finishing_layer_mm,3)+' mm nas faixas escolhidas.':'Acabamento ajustado automaticamente ao perfil.';
   guideText.textContent=guideStep===1?(active?'Escolha o modelo na lista e avance.':'Adicione um modelo à placa do Orca e atualize a lista.'):
     guideStep===2?'Clique nas áreas da peça que deseja suavizar. Arraste para girar.':
     guideStep===3?(busy?'Estudando o movimento…':state.status==='error'?state.message:'Clique em Estudar movimento. O resultado aparece aqui no Studio.'):
