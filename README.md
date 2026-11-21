@@ -1,23 +1,48 @@
 # Orca Surface Studio
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
-A versão 0.5.1 mantém os identificadores internos e os nomes de capacidades da
+A versão 0.6.0 mantém os identificadores internos e os nomes de capacidades da
 instalação anterior para preservar ativação, permissões e presets. O título do
 estúdio já usa o novo nome.
+
+## Superfície com o perfil selecionado — 0.6.0
+
+Coloque a peça na placa, confira impressora e filamento no Orca, abra o Studio,
+escolha **Superfície curva** e clique **Gerar superfície e abrir Preview**.
+O botão prepara uma cópia, chama o próprio fatiador do Orca em segundo plano,
+reconstrói Z/extrusão e abre o resultado na janela nativa. O original fica salvo.
+
+A área central mostra o modelo antes do cálculo e continua visível se houver
+erro. Ajustes de referência, inclinação e amostragem ficam recolhidos em
+**Ajustes da superfície**. Veja o [fluxo e os limites atuais](docs/FLUXO_SUPERFICIE_V060.md).
+
+O novo motor aceita a topologia do teto do Benchy, incluindo suas aberturas.
+Ele usa coordenadas alinhadas ao plano de referência do teto e conserva a
+curvatura residual da malha. Bico, filamento, camadas, mesa, velocidades e vazão
+vêm do perfil selecionado; aquecimento, retrações, macros e transporte nativo
+são preservados na cópia. Não há valores de máquina escolhidos pela marca.
+
+A compatibilidade geral é o objetivo; nesta versão o contrato é XYZ linear,
+uma peça, uma instância e um volume sólido. Esteiras e recursos que exigem
+outro referencial ou comandos ainda não interpretados recebem diagnóstico.
+Geometria digital válida não certifica folga do cabeçote nem deposição física.
 
 O cupom experimental de 25° foi impresso na SV06 com PLA Voolt3D sem FP e o
 usuário relatou resultado perfeito em 21/11/2026. Esse ensaio usou preparação
 isolada; não equivale a validar modelos arbitrários ou o fluxo inteiro do
-plugin. O [manual do teste real do Benchy, com capturas](docs/MANUAL_BENCHY.md)
+plugin. O [manual histórico 0.5.1 do Benchy, com capturas](docs/MANUAL_BENCHY.md)
 registra a correção de desempenho e a recusa da preparação pela topologia do
-teto. O Benchy não chegou ao Preview conformal nem foi enviado à impressora.
+teto naquela versão. Na 0.6.0, o Benchy chegou ao Preview pelo botão integrado,
+com integridade confirmada e Z variável durante a extrusão. Não foi enviado à
+impressora. Veja o [registro atual com capturas](docs/FLUXO_SUPERFICIE_V060.md#teste-real-pelo-botão-do-studio).
 
 
 Plugin de trajetórias senoidais para OrcaSlicer 2.5.1 no Windows. A série 0.5
 acrescenta o **estudo de topo, face inferior e beiral**, com cupons de 5° a 25°,
 seleção automática de região e correção pelo mapa. O estudo gera trajetórias
-inclinadas, mas ainda não aprova acabamento ou impressão; o Benchy completo é
-recusado por sua topologia. Veja [resultados e uso](docs/ESTUDO_TETO_20_25.md).
+inclinadas, mas ainda não aprova acabamento ou impressão. O motor retangular
+0.5 recusava o Benchy por topologia; o novo fluxo 0.6 usa uma transformação do
+sólido completo. Veja [resultados históricos](docs/ESTUDO_TETO_20_25.md).
 
 O modo **Vaso senoidal** continua combinando ondas radiais em X/Y e subida/descida em Z
 durante a extrusão. A intensidade cresce suavemente até o topo, com a região
@@ -50,7 +75,8 @@ gera deposição, base ou interior imprimíveis e não habilita Print. A prepara
 conformal da versão 0.5.0 é um estudo separado de casca pareada, descrito acima. Veja
 [o estudo de superfície](docs/SUPERFICIE_CONFORMAL.md).
 
-O agente desta versão envia exclusivamente ao simulador identificado de loopback.
+O agente de bancada envia exclusivamente ao simulador identificado de loopback.
+A cópia do fluxo integrado preserva o agente nativo configurado no perfil ativo.
 A integração completa pelo botão Print e a impressão física ainda não estão validadas.
 Consulte [o relatório do estudo](docs/ESTUDO_INTEGRACAO.md).
 
@@ -74,7 +100,7 @@ Os artefatos universais ficam em `dist/`.
 
 ## Ocultar a aba e manter o ícone
 
-No gerenciador **Plugins**, expanda **Orca Wave Studio** e desmarque somente a
+No gerenciador **Plugins**, expanda **Orca Surface Studio** e desmarque somente a
 capacidade **Estúdio de Ondas Senoidais** (Pages). Mantenha
 **Orca Wave Studio • Painel** (Script), **Orca Wave Studio Capture** e o agente ativos.
 

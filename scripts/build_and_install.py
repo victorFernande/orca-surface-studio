@@ -31,9 +31,9 @@ def build() -> tuple[Path,Path]:
 # dependencies = ["numpy>=1.26"]
 #
 # [tool.orcaslicer.plugin]
-# name = "Orca Wave Studio"
-# description = "Estudio de ondas parametricas e integracao de bancada com OrcaSlicer"
-# author = "Orca Wave Studio"
+# name = "Orca Surface Studio"
+# description = "Superficies inclinadas e ondas com o perfil selecionado no OrcaSlicer"
+# author = "Orca Surface Studio"
 # version = "{version}"
 # ///
 '''

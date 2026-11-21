@@ -1,5 +1,13 @@
 # Teste do Benchy no Wave Studio
 
+## Teste 0.6.0 — fluxo integrado aprovado até o Preview
+
+O [manual atualizado](FLUXO_SUPERFICIE_V060.md#teste-real-pelo-botão-do-studio)
+registra a geração pelo botão do Studio com o perfil ativo, a abertura nativa,
+a igualdade do G-code e dois pontos da mesma camada superior com Z diferente.
+Há capturas reais do modelo, do resultado e do marcador do bico. Não houve
+envio ou impressão física. As limitações e os resultados anteriores seguem abaixo.
+
 ## Teste atual 0.5.1 — 21/11/2026
 
 O [manual com nove capturas da interface](MANUAL_BENCHY.md) registra o teste

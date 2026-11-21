@@ -1,0 +1,62 @@
+import tempfile
+import threading
+import time
+import unittest
+from pathlib import Path
+from unittest.mock import Mock,patch
+
+from orca_wave_studio.controller import StudioController
+from orca_wave_studio.fixtures import cylinder_snapshot
+from orca_wave_studio.geometry import analyze_snapshot
+
+
+class SurfaceWorkflowControllerTests(unittest.TestCase):
+    def test_reopening_the_page_does_not_restart_the_same_mesh_analysis(self):
+        started=threading.Event();release=threading.Event()
+        with tempfile.TemporaryDirectory() as root:
+            snapshot=cylinder_snapshot();host=Mock();host.snapshot.return_value=snapshot
+            host.allowed_source_roots.return_value=(Path(root),)
+            controller=StudioController(Path(root),host)
+            def preview(*args):started.set();release.wait(3);return {'objects':[],'id':'test'}
+            with patch('orca_wave_studio.model_preview.model_preview',side_effect=preview),\
+                 patch('orca_wave_studio.roof_regions.roof_region_catalog',return_value={'regions':[]}):
+                controller.refresh();self.assertTrue(started.wait(2));job=controller._analysis_job
+                controller.refresh();self.assertEqual(controller._analysis_job,job)
+                release.set()
+                deadline=time.monotonic()+2
+                while controller._analysis_job and time.monotonic()<deadline:time.sleep(.01)
+            self.assertTrue(controller.state()['objects'])
+
+    def test_cancelled_worker_cannot_publish_or_open_a_stale_preview(self):
+        started=threading.Event();release=threading.Event()
+        with tempfile.TemporaryDirectory() as root:
+            storage=Path(root);snapshot=cylinder_snapshot();host=Mock()
+            host.snapshot.return_value=snapshot;host.allowed_source_roots.return_value=(storage,)
+            host.capture_ready.return_value=True
+            def export(path):path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b'private-original')
+            host.export_project.side_effect=export
+            controller=StudioController(storage,host);controller.snapshot=snapshot;controller._objects=analyze_snapshot(snapshot)
+            def builder(*args,**kwargs):
+                started.set();release.wait(3)
+                self.assertTrue(kwargs['cancelled']())
+                return {'sha256':'old','package_path':'stale.gcode.3mf'}
+            with patch('orca_wave_studio.surface_workflow.build_surface',side_effect=builder):
+                controller.build_surface(['100'],{})
+                self.assertTrue(started.wait(2))
+                controller.handle({'action':'cancel_build'});release.set()
+                time.sleep(.05)
+            self.assertIsNone(controller.state()['result'])
+            self.assertFalse(controller._pending_open)
+            host.open_preview.assert_not_called();host.prepare_vase.assert_not_called()
+
+    def test_state_reuses_the_revision_of_the_frozen_snapshot(self):
+        from orca_wave_studio.contracts import ProjectSnapshot
+        with tempfile.TemporaryDirectory() as root:
+            controller=StudioController(Path(root));snapshot=cylinder_snapshot();controller.snapshot=snapshot
+            getter=ProjectSnapshot.revision.fget;calls=[]
+            def counted(s):calls.append(s);return getter(s)
+            with patch.object(ProjectSnapshot,'revision',property(counted)):
+                a=controller.state();b=controller.state()
+                controller.snapshot=cylinder_snapshot(two_objects=True);c=controller.state()
+            self.assertEqual(len(calls),2)
+            self.assertEqual(a['revision'],b['revision']);self.assertNotEqual(b['revision'],c['revision'])

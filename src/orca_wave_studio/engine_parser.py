@@ -103,15 +103,19 @@ class Parsed:
     seen: set
     roles: dict
     loops: list
+    retraction_rounding: dict
 
 
-def read(source, selection, mapping):
+def read(source, selection, mapping, *, profile_macros=False, require_planar=True):
     lines = source.decode("latin1").splitlines(keepends=True)
+    last_object_stop=max((i for i,line in enumerate(lines) if re.match(r'^;\s*stop printing object\b',line,re.I)),default=len(lines))
+    footer_start=next((i for i,line in enumerate(lines) if i>last_object_stop and re.match(r'^;\s*filament end gcode\s*$',line,re.I)),len(lines))
     moves, roles, loops = {}, {}, []
     resets, barrier, seen = set(), set(), set()
     xyz = (None,) * 3
     e = feed = 0.0
     retract_debt = 0.0
+    rounding_budget=0.;rounding_receipts={};native_wipe=False
     motors_released = False
     absolute = e_abs = True
     layer = -1
@@ -135,9 +139,13 @@ def read(source, selection, mapping):
     for i, line in enumerate(lines):
         body, sep, comment = line.partition(";")
         body, comment = body.strip(), comment.strip()
+        if profile_macros and body and i>=footer_start:
+            barrier.add(i);continue
         if not body:
             if not sep:
                 continue
+            if comment=='WIPE_START':native_wipe=True
+            elif comment=='WIPE_END':native_wipe=False
             label = LABEL.match(comment)
             if label:
                 key = int(label[2]), int(label[3])
@@ -186,6 +194,12 @@ def read(source, selection, mapping):
                         raise WaveError("Metadado geométrico inválido.")
             continue
         command = re.match(r"([GMT]\d+)\s*(.*)$", body, re.IGNORECASE)
+        # Machine macros are preserved only outside the labelled print body.
+        # They are opaque: forget the origin/modes instead of inventing their
+        # effects. The native stream must establish positions before mapping.
+        macro_section=profile_macros and (layer<0 or (i>last_object_stop and active is None))
+        if not command and macro_section and re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*(?:\s+[^\r\n]*)?',body):
+            xyz=(None,)*3;e_abs=None;barrier.add(i);continue
         if not command:
             raise WaveError(f"Linha {i + 1}: comando fora do dialeto de bancada.")
         cmd, args = command[1].upper(), command[2]
@@ -225,6 +239,8 @@ def read(source, selection, mapping):
             xyz = (None,) * 3
             continue
         if cmd not in {"G0", "G1", "G92"}:
+            if macro_section and not cmd.startswith('T'):
+                xyz=(None,)*3;e_abs=None;barrier.add(i);continue
             raise WaveError(
                 f"Linha {i + 1}: {cmd} fora do piloto linear de ferramenta única."
             )
@@ -279,6 +295,15 @@ def read(source, selection, mapping):
             comment,
         )
         moves[i] = m
+        # Orca's relative-E wipe sum and its separate unretract are rounded to
+        # five decimals. Bound that run's accumulated half-quanta; never use a
+        # blanket tolerance for arbitrary retract debt or other input dialects.
+        if profile_macros and modal_roles:
+            if native_wipe and m.de<0:rounding_budget+=.000005
+            elif retract_debt>0 and m.de>0 and not m.deposits:rounding_budget+=.000005
+            if m.deposits and 0<retract_debt<=rounding_budget+1e-12:
+                rounding_receipts[i]={'residual_mm':retract_debt,'bound_mm':rounding_budget}
+                retract_debt=0.;rounding_budget=0.
         if m.deposits:
             if (
                 obj is None
@@ -287,7 +312,7 @@ def read(source, selection, mapping):
                 not in {"prime tower", "wipe tower", "skirt", "brim", "skirt/brim"}
             ):
                 raise WaveError(
-                    "Deposição sem identificação inequívoca de objeto ou purga."
+                    f"Linha {i+1}: deposição sem identificação inequívoca de objeto ou purga."
                 )
             if obj in selection:
                 if (
@@ -304,13 +329,13 @@ def read(source, selection, mapping):
                 if role in OUTER:
                     if retract_debt > 1e-7:
                         raise WaveError(
-                            "Recuperação de retração misturada à deposição do perímetro."
+                            f"Linha {i+1}: recuperação de retração misturada à deposição do perímetro ({retract_debt:.8f} mm)."
                         )
                     if (
                         None in xyz
                         or None in end
-                        or abs(xyz[2] - z) > 0.00002
-                        or abs(end[2] - z) > 0.00002
+                        or (require_planar and abs(xyz[2] - z) > 0.00002)
+                        or (require_planar and abs(end[2] - z) > 0.00002)
                         or feed <= 0
                     ):
                         raise WaveError(
@@ -328,9 +353,10 @@ def read(source, selection, mapping):
                         loops.append([])
                     loops[-1].append(m)
         retract_debt = max(0.0, retract_debt - m.de)
+        if retract_debt==0:rounding_budget=0.
         xyz, e = tuple(end), new_e
     if active is not None:
         raise WaveError("Rótulo de objeto sem fechamento.")
     if not set(selection) <= {mapping[key[0]] for key in seen}:
         raise WaveError("Objeto selecionado sem rótulo verificável.")
-    return Parsed(lines, moves, resets, barrier, seen, roles, loops)
+    return Parsed(lines, moves, resets, barrier, seen, roles, loops,rounding_receipts)

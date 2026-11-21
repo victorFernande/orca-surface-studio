@@ -89,7 +89,7 @@ let activeId=null,baseParameters={...defaults};
 const objectParameters=new Map(),objectPresets=new Map();
 let surfaceMode=false;
 const surfaceByObject=new Map();
-const surfaceSettings=()=>({step_mm:.4,max_slope_deg:30,retain_native_short_edges:false,backend:'regional_paired',region_id:null,...surfaceByObject.get(activeId)});
+const surfaceSettings=()=>({step_mm:.4,max_slope_deg:30,retain_native_short_edges:true,backend:'roof_bending',region_id:null,...surfaceByObject.get(activeId)});
 function surfaceError(){
   const {step_mm,max_slope_deg}=surfaceSettings();
   if(!Number.isFinite(step_mm)||step_mm<.15||step_mm>2)return 'Use um passo entre 0,15 e 2 mm.';
@@ -134,8 +134,8 @@ panelHelp.append(node('summary','','Como ocultar a aba do Studio'),
 $('preview').after(panelHelp);
 function send(action,extra={}){
   if(!linked)return false;
-  try{const bridge=activeBridge(),obj=['surface_study','prepare_conformal'].includes(action)
-    ?{action,object_ids:[activeId],settings:action==='prepare_conformal'?{...surfaceSettings()}:
+  try{const bridge=activeBridge(),obj=['surface_study','prepare_conformal','build_surface'].includes(action)
+    ?{action,object_ids:[activeId],settings:action!=='surface_study'?{...surfaceSettings()}:
       {step_mm:surfaceSettings().step_mm,max_slope_deg:surfaceSettings().max_slope_deg}}
     :(action==='generate_conformal'?{action,object_ids:[activeId]}:
       {action,object_ids:[...selection],parameters:{...parameters},...extra});
@@ -162,7 +162,7 @@ function presentResult(){
   return Boolean(result?.sha256)&&state.status==='ready'&&!pending&&
     surfaceMode===(['surface','conformal'].includes(result.study_kind))&&
     (!result.revision||result.revision===state.revision)&&
-    (result.study_kind==='surface'||!source||source===state.capture?.sha256)&&resultConfig===signature();
+    (result.workflow==='integrated'||result.study_kind==='surface'||!source||source===state.capture?.sha256)&&resultConfig===signature();
 }
 function valid(p=parameters){
   if(!Object.entries(p).every(([k,v])=>k==='mode'||k==='bench_only'||(k==='end_height_mm'&&v===null)||Number.isFinite(v)))return 'Preencha todos os valores numéricos.';
@@ -254,6 +254,7 @@ function roofRegions(active,disabled){
   roofSelect.replaceChildren(new Option('Escolha automática',''));
   for(const row of rows)roofSelect.append(new Option(row.label,row.id));
   roofSelect.value=surfaceSettings().region_id||'';roofMap.replaceChildren();
+  roofMap.hidden=!rows.length;
   const candidate=rows.find(r=>r.id===chosen);
   roofNote.textContent=catalog?.reason||('Topo, borda e face inferior serão avaliados juntos. '+
     (candidate?'Inclinação medida: '+numberFormat(candidate.slope_deg)+'°. ':'')+'Capacidade do cabeçote: não verificada.');
@@ -352,12 +353,12 @@ function diagnostics(current){
     return;
   }
   const r=state.result,rep=r.report||{};
-  $('result-note').textContent=r.study_kind==='conformal'?'Trajetória reconstruída a partir da cópia fatiada no Orca. Impressão indisponível.':surfaceMode?'Percurso da superfície no Studio. Deposição e impressão ainda não validadas.':
+  $('result-note').textContent=r.workflow==='integrated'?'Gerado com o perfil selecionado. Confira o Preview e a folga do cabeçote antes de imprimir.':r.study_kind==='conformal'?'Trajetória reconstruída a partir da cópia fatiada no Orca. Impressão indisponível.':surfaceMode?'Percurso da superfície no Studio. Deposição e impressão ainda não validadas.':
     (state.demo?'Trajetória do exemplo de bancada.':'Trajetória processada para a seleção atual.');
   record(metrics,'SHA-256',r.sha256.slice(0,12),r.sha256);
   if(surfaceMode){record(metrics,'Passo do estudo',numberFormat(surfaceSettings().step_mm)+' mm');
     record(metrics,'Limite digital escolhido',numberFormat(surfaceSettings().max_slope_deg)+'°');
-    record(metrics,'Cabeçote da SV06','Não verificado');
+    record(metrics,'Folga do cabeçote','Não verificada');
     if(rep.regional_audit){
       record(metrics,'Aprovação conjunta','Incompleta · impressão bloqueada');
       for(const [face,label] of [['top','Topo'],['underside','Face inferior']]){
@@ -392,6 +393,7 @@ class PathView {
     this.center=[0,0,0];this.radius=1;this.layer='';this.cursor=0;this.light=false;this.lost=false;
     try{this.gl=canvas.getContext('webgl2',{alpha:true,antialias:true,depth:true});if(this.gl)this.init()}
     catch(e){this.error=e.message;this.gl=null}
+    if(!this.gl)this.ctx=canvas.getContext('2d');
     canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();this.lost=true;render()});
     canvas.addEventListener('webglcontextrestored',()=>{this.lost=false;this.buffers=[];this.init();sceneTag='';render()});
     new ResizeObserver(()=>this.draw()).observe(canvas);
@@ -408,22 +410,22 @@ class PathView {
   }
   init(){
     const g=this.gl,prog=g.createProgram();
-    const vertex='#version 300 es\nin vec3 pos;uniform vec3 center;uniform vec2 angle;uniform vec3 scale;uniform float size;void main(){vec3 d=pos-center;float s=sin(angle.x),c=cos(angle.x);float horizontal=c*d.x+s*d.y;float depth=-s*d.x+c*d.y;float sp=sin(angle.y),cp=cos(angle.y);gl_Position=vec4(horizontal*scale.x,(cp*d.z+sp*depth)*scale.y,(cp*depth-sp*d.z)*scale.z,1.0);gl_PointSize=size;}';
-    const fragment='#version 300 es\nprecision mediump float;uniform vec4 color;uniform bool point;out vec4 pixel;void main(){if(point&&distance(gl_PointCoord,vec2(.5))>.5)discard;pixel=color;}';
+    const vertex='#version 300 es\nin vec3 pos;in float shade;out float lighting;uniform vec3 center;uniform vec2 angle;uniform vec3 scale;uniform float size;void main(){vec3 d=pos-center;float s=sin(angle.x),c=cos(angle.x);float horizontal=c*d.x+s*d.y;float depth=-s*d.x+c*d.y;float sp=sin(angle.y),cp=cos(angle.y);gl_Position=vec4(horizontal*scale.x,(cp*d.z+sp*depth)*scale.y,(cp*depth-sp*d.z)*scale.z,1.0);gl_PointSize=size;lighting=shade;}';
+    const fragment='#version 300 es\nprecision mediump float;in float lighting;uniform vec4 color;uniform bool point;out vec4 pixel;void main(){if(point&&distance(gl_PointCoord,vec2(.5))>.5)discard;pixel=vec4(color.rgb*lighting,color.a);}';
     for(const [type,src] of [[g.VERTEX_SHADER,vertex],[g.FRAGMENT_SHADER,fragment]]){
       const shader=g.createShader(type);g.shaderSource(shader,src);g.compileShader(shader);
       if(!g.getShaderParameter(shader,g.COMPILE_STATUS))throw Error(g.getShaderInfoLog(shader));
       g.attachShader(prog,shader);g.deleteShader(shader);
     }
     g.linkProgram(prog);if(!g.getProgramParameter(prog,g.LINK_STATUS))throw Error(g.getProgramInfoLog(prog));
-    g.useProgram(prog);this.pos=g.getAttribLocation(prog,'pos');this.u={};
+    g.useProgram(prog);this.pos=g.getAttribLocation(prog,'pos');this.shade=g.getAttribLocation(prog,'shade');this.u={};
     for(const key of ['center','angle','scale','size','color','point'])this.u[key]=g.getUniformLocation(prog,key);
     g.enableVertexAttribArray(this.pos);g.enable(g.DEPTH_TEST);g.depthFunc(g.LEQUAL);
     g.enable(g.BLEND);g.blendFunc(g.SRC_ALPHA,g.ONE_MINUS_SRC_ALPHA);
   }
-  get available(){return Boolean(this.gl)&&!this.lost}
+  get available(){return (Boolean(this.gl)||Boolean(this.ctx))&&!this.lost}
   makeBuffer(data){
-    if(!this.available)return null;
+    if(!this.gl||this.lost)return null;
     const g=this.gl,buf=g.createBuffer();g.bindBuffer(g.ARRAY_BUFFER,buf);
     g.bufferData(g.ARRAY_BUFFER,new Float32Array(data),g.STATIC_DRAW);this.buffers.push(buf);return buf;
   }
@@ -444,7 +446,14 @@ class PathView {
     return {flat,indices,groups,byLayer,buffer:this.makeBuffer(flat)};
   }
   load(r){
-    if(this.available)this.buffers.forEach(b=>this.gl.deleteBuffer(b));this.buffers=[];this.streams={};
+    if(this.gl&&!this.lost)this.buffers.forEach(b=>this.gl.deleteBuffer(b));this.buffers=[];this.streams={};
+    const triangles=r?.model?.objects?.filter(o=>!activeId||String(o.id)===activeId).flatMap(o=>o.triangles)||[];
+    const mesh=triangles.flat(2),shades=[];
+    for(const t of triangles){const [a,b,c]=t,u=b.map((v,i)=>v-a[i]),v=c.map((n,i)=>n-a[i]);
+      const n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+      const light=.42+.58*Math.abs((.3*n[0]-.4*n[1]+.86*n[2])/Math.max(1e-9,Math.hypot(...n)));
+      shades.push(light,light,light)}
+    this.mesh={flat:mesh,shades,buffer:this.makeBuffer(mesh),shadeBuffer:this.makeBuffer(shades)};
     for(const k of ['original','deformed']){
       const pts=r?.[k+'_points']||[],own=r?.[k+'_layer_ids'];
       const ids=own?.length===pts.length?own:(r?.layer_ids?.length===pts.length?r.layer_ids:null);
@@ -456,6 +465,7 @@ class PathView {
     Object.values(this.streams).forEach(s=>{for(let i=0;i<s.flat.length;i++){
       const a=i%3;low[a]=Math.min(low[a],s.flat[i]);high[a]=Math.max(high[a],s.flat[i]);
     }});
+    for(let i=0;i<mesh.length;i++){const a=i%3;low[a]=Math.min(low[a],mesh[i]);high[a]=Math.max(high[a],mesh[i])}
     if(!Number.isFinite(low[0])){this.grid=null;this.draw();return}
     this.center=low.map((v,i)=>(v+high[i])/2);this.radius=Math.max(.2,Math.hypot(...low.map((v,i)=>high[i]-v))/2);
     this.sceneCenter=this.center;this.sceneRadius=this.radius;
@@ -487,6 +497,7 @@ class PathView {
   }
   draw(){
     if(!this.available)return;
+    if(!this.gl){this.drawCanvas();return}
     const g=this.gl,c=this.canvas,dpr=Math.min(window.devicePixelRatio||1,2),u=this.u;
     const w=Math.max(1,Math.round(c.clientWidth*dpr)),h=Math.max(1,Math.round(c.clientHeight*dpr));
     if(c.width!==w||c.height!==h){c.width=w;c.height=h}
@@ -496,6 +507,14 @@ class PathView {
     const scale=.85*this.zoom/this.radius;
     g.uniform3f(u.scale,scale*Math.min(1,h/w),scale*Math.min(1,w/h),.16/this.radius);
     const bind=(buf)=>{g.bindBuffer(g.ARRAY_BUFFER,buf);g.vertexAttribPointer(this.pos,3,g.FLOAT,false,0,0)};
+    g.disableVertexAttribArray(this.shade);g.vertexAttrib1f(this.shade,1);
+    if(this.mesh?.flat.length&&this.layer===''){
+      bind(this.mesh.buffer);g.bindBuffer(g.ARRAY_BUFFER,this.mesh.shadeBuffer);
+      g.enableVertexAttribArray(this.shade);g.vertexAttribPointer(this.shade,1,g.FLOAT,false,0,0);
+      g.uniform1i(u.point,false);g.uniform4fv(u.color,this.light?[.57,.66,.70,.9]:[.38,.52,.57,.92]);
+      g.enable(g.POLYGON_OFFSET_FILL);g.polygonOffset(1,1);g.drawArrays(g.TRIANGLES,0,this.mesh.flat.length/3);
+      g.disable(g.POLYGON_OFFSET_FILL);g.disableVertexAttribArray(this.shade);g.vertexAttrib1f(this.shade,1);
+    }
     g.uniform1i(u.point,false);g.uniform1f(u.size,1);bind(this.grid.buffer);
     g.uniform4fv(u.color,this.light?[.29,.36,.43,.25]:[.32,.39,.45,.35]);
     g.drawArrays(g.LINES,0,this.grid.count);
@@ -512,6 +531,27 @@ class PathView {
       bind(this.lens().buffer);g.disable(g.DEPTH_TEST);g.uniform1i(u.point,true);
       g.uniform4f(u.color,.09,.10,.12,1);g.uniform1f(u.size,11*dpr);g.drawArrays(g.POINTS,idx,1);
       g.uniform4f(u.color,1,.77,.28,1);g.uniform1f(u.size,7*dpr);g.drawArrays(g.POINTS,idx,1);g.enable(g.DEPTH_TEST);
+    }
+  }
+  drawCanvas(){
+    const c=this.canvas,g=this.ctx,w=c.width=Math.max(1,c.clientWidth),h=c.height=Math.max(1,c.clientHeight);
+    g.clearRect(0,0,w,h);const scale=.42*this.zoom*Math.min(w,h)/this.radius;
+    const project=p=>{const d=p.map((n,i)=>n-this.center[i]),x=Math.cos(this.yaw)*d[0]+Math.sin(this.yaw)*d[1],
+      depth=-Math.sin(this.yaw)*d[0]+Math.cos(this.yaw)*d[1];
+      return [w/2+x*scale,h/2-(Math.cos(this.pitch)*d[2]+Math.sin(this.pitch)*depth)*scale,
+        Math.cos(this.pitch)*depth-Math.sin(this.pitch)*d[2]]};
+    if(this.layer===''&&this.mesh?.flat.length){
+      const faces=[];for(let i=0;i<this.mesh.flat.length;i+=9){const p=[0,3,6].map(k=>project(this.mesh.flat.slice(i+k,i+k+3)));
+        faces.push({p,depth:p.reduce((sum,q)=>sum+q[2],0)/3,shade:this.mesh.shades[i/3]})}
+      faces.sort((a,b)=>b.depth-a.depth);for(const f of faces){const t=f.shade;
+        g.fillStyle=`rgb(${Math.round(90*t)},${Math.round(145*t)},${Math.round(155*t)})`;
+        g.beginPath();f.p.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.closePath();g.fill()}
+    }
+    for(const kind of(view==='compare'?['original','deformed']:[view])){
+      const s=this.streams[kind];if(!s)continue;g.strokeStyle=kind==='original'?'#509cfb':'#00dfbb';g.lineWidth=1.2;
+      for(const group of s.groups){if(this.layer!==''&&group.layer!==this.layer)continue;
+        g.beginPath();for(let i=0;i<group.count;i++){const p=project(s.flat.slice((group.start+i)*3,(group.start+i)*3+3));
+          i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])}g.stroke()}
     }
   }
 }
@@ -573,7 +613,9 @@ function render(){
   const label=$('amplitude_mm').closest('.field').querySelector('label');label.textContent=combined?'Intensidade das ondas':'Amplitude';
   $('r-amplitude_mm').max=combined?5:1;
   const stepBox=$('step_mm').closest('.field'),stepParent=combined?advanced:primary;
-  if(stepBox.parentElement!==stepParent)stepParent.append(stepBox);
+  surfaceAdvanced.hidden=!surfaceMode;
+  const targetParent=surfaceMode?surfaceAdvanced:stepParent;
+  if(stepBox.parentElement!==targetParent)targetParent.append(stepBox);
   $('max_slope_deg').closest('.field').hidden=!surfaceMode;surfaceInfo.hidden=!surfaceMode;
   const stage=state.conformal?.phase,full=state.result?.study_kind==='conformal';
   roofRegions(active,busy||Boolean(stage));
@@ -582,12 +624,12 @@ function render(){
     checking:'Verificando malha…',awaiting_slice:'Aguardando Fatiar no Orca',slicing:'Fatiando no Orca…',
     captured:'Gerar percurso conformal',generating:'Gerando percurso…',ready:'Percurso conformal gerado'};
   $('generate').innerHTML=icon(surfaceMode?'curve':'wave')+(surfaceMode?
-    ' '+(conformalLabel[stage]||(linked?'Preparar fatiamento conformal':'Estudar superfície')):
+    ' '+(conformalLabel[stage]||(linked?'Gerar superfície e abrir Preview':'Estudar superfície')):
     (combined?' Gerar e abrir Preview':' Gerar G-code com ondas'));
   surfaceInfo.textContent=state.conformal?(state.conformal.settings?.backend==='regional_paired'?
     'Topo e face inferior são preparados juntos, preservando a base e sem faixa plana na borda. Clique em Fatiar no Orca. Somente estudo digital.':
     'Estudo anterior: somente topo parcial; bordas planas. Não demonstra o beiral completo.'):
-    (linked?'O Studio preserva o original e testa topo, face inferior e borda em conjunto. Furos, cavidades ou transições não demonstradas impedem a geração.':
+    (linked?'O Studio prepara e fatia uma cópia com o perfil ativo, preservando a peça e suas aberturas. O resultado abre no Preview do Orca.':
       'O percurso geométrico isolado é apenas uma visualização do topo; não comprova deposição.');
   $('surface-only').hidden=!surfaceMode||!linked||Boolean(stage);$('surface-only').disabled=!active||busy||Boolean(error);
   $('bench-note').textContent=combined?'Vaso senoidal · somente Preview · sem envio à impressora':surfaceMode?((full||stage)?'Estudo conformal · impressão indisponível':'Estudo geométrico · impressão indisponível'):'Estudo de bancada · impressão pelo OrcaSlicer';
@@ -614,8 +656,12 @@ function render(){
   $('preview').disabled=!linked||(surfaceMode&&!full)||!current||busy||!state.result?.package_path;
   $('preview').title=surfaceMode&&!full?'Percurso da superfície disponível no visor do Studio.':'Abrir trajetória processada no OrcaSlicer';
   objects();diagnostics(current);analytic();
-  const tag=current?[surfaceMode?'surface':'wave',state.result.sha256].join('/'):'none';
-  if(sceneTag!==tag){stop();sceneTag=tag;viewer.load(current?state.result:null);$('scrub').value=0;setLayers()}
+  profileCard.textContent=state.printer_profile?.name||'Selecione uma impressora no Orca';
+  profileDetails.textContent=state.printer_profile?.issue||
+    (state.printer_profile?.nozzle_mm?'Bico '+numberFormat(state.printer_profile.nozzle_mm)+' mm · camada '+numberFormat(state.printer_profile.layer_mm)+' mm · '+state.printer_profile.firmware:'O perfil acompanha a seleção feita no Orca.');
+  cancelBuild.hidden=!(state.status==='processing'&&!stage);cancelBuild.disabled=false;
+  const tag=[current?state.result.sha256:'model',state.model_preview?.id,activeId].join('/');
+  if(sceneTag!==tag){stop();sceneTag=tag;viewer.load({...current?state.result:{},model:state.model_preview});$('scrub').value=0;setLayers()}
   const modes=document.querySelectorAll('[data-view]');
   for(const b of modes){
     b.setAttribute('aria-pressed',String(view===b.dataset.view));
@@ -624,14 +670,23 @@ function render(){
   }
   const n=viewer.active().length;
   $('legend-original').hidden=!n||view==='deformed';$('legend-modified').hidden=!n||view==='original';
-  $('empty').hidden=viewer.available&&n>0;
+  const hasModel=Boolean(viewer.mesh?.flat.length);
+  $('empty').hidden=viewer.available&&(n>0||hasModel);
   $('empty-msg').textContent=!viewer.available?'WebGL 2 indisponível. A trajetória 3D precisa de aceleração gráfica neste visor.':
     (busy?'Analisando a trajetória atual…':(surfaceMode&&!current?'Estude a superfície da peça para visualizar seu percurso.':
     (state.result&&!current?'Configuração alterada. Gere novamente para visualizar.':
     (current?'A trajetória desta visualização não contém pontos.':'Gere uma trajetória para inspecionar o percurso do bico.'))));
-  for(const id of ['fit','zoom-in','zoom-out'])$(id).disabled=!viewer.available||!n;
+  for(const id of ['fit','zoom-in','zoom-out'])$(id).disabled=!viewer.available||(!n&&!hasModel);
   timeline();
+  if(hasModel&&!n)$('point-label').textContent='Modelo original · '+(busy?'calculando trajetórias…':'arraste para girar');
 }
+const profileBox=node('section','section'),profileCard=node('strong'),profileDetails=node('p','muted');
+profileBox.append(node('h3','','Perfil selecionado no Orca'),profileCard,profileDetails);
+document.querySelector('#config .section').after(profileBox);
+const surfaceAdvanced=node('details','field');surfaceAdvanced.append(node('summary','','Ajustes da superfície'));
+surfaceAdvanced.append($('max_slope_deg').closest('.field'),roofBox,nativeCornersBox);primary.append(surfaceAdvanced);
+const cancelBuild=node('button','wide outline','Cancelar cálculo');cancelBuild.id='cancel-build';cancelBuild.hidden=true;
+$('generate').after(cancelBuild);cancelBuild.onclick=()=>send('cancel_build');
 const prep=node('button','wide outline','Preparar captura no Orca');prep.id='prepare-capture';prep.hidden=true;
 $('analyze').after(prep);
 const surfaceOnly=node('button','wide outline','Estudar apenas a superfície');surfaceOnly.id='surface-only';surfaceOnly.hidden=true;
@@ -639,13 +694,13 @@ $('generate').after(surfaceOnly);surfaceOnly.onclick=()=>request('surface_study'
 function request(action){
   if(!linked||controlsBusy())return;
   notice('');pending=action;
-  if(['generate','surface_study','generate_conformal'].includes(action))generation=signature();
+  if(['generate','surface_study','generate_conformal','build_surface'].includes(action))generation=signature();
   render();
   if(!send(action)){pending=null;generation=null;render()}
 }
 $('refresh').onclick=()=>request('refresh');$('analyze').onclick=()=>request('analyze');
 prep.onclick=()=>request(!surfaceMode&&parameters.mode==='combined'?'prepare_vase':'prepare_capture');$('generate').onclick=()=>request(surfaceMode?
-  (state.conformal?.phase==='captured'?'generate_conformal':'prepare_conformal'):'generate');
+  (state.conformal?.phase==='captured'?'generate_conformal':(state.conformal?'prepare_conformal':'build_surface')):'generate');
 $('preview').onclick=()=>{if(state.result?.study_kind!=='surface'&&presentResult())send('open_preview',{sha256:state.result.sha256})};
 $('suggest').onclick=()=>{
   const obj=(state.objects||[]).find(o=>String(o.id)===activeId);
@@ -678,7 +733,7 @@ function applyState(next){
   // Background mesh analysis temporarily publishes an empty object list.
   // Keep the last known objects disabled until the replacement arrives so
   // selections and per-object edits are not deleted between the two replies.
-  if(next.status==='analyzing'&&!next.objects?.length&&state.objects?.length)
+  if(next.status==='analyzing'&&next.revision===state.revision&&!next.objects?.length&&state.objects?.length)
     next={...next,objects:state.objects};
   if(Number.isFinite(next.sequence)&&next.sequence<hostSequence)return;
   if(Number.isFinite(next.sequence))hostSequence=next.sequence;
@@ -686,7 +741,7 @@ function applyState(next){
   // Avoid rebuilding focused object buttons and preset menus on those replies.
   const stamp=JSON.stringify([next.native,next.demo,next.status,next.message,next.revision,
     next.capture?.capture_id,next.capture?.sha256,next.capture_setup_required,next.objects,
-    next.presets,next.parameters,next.parameters_by_object,next.selected_object_ids,next.conformal,
+    next.presets,next.parameters,next.parameters_by_object,next.selected_object_ids,next.conformal,next.model_preview?.id,
     next.result?.sha256,next.result?.study_kind,next.result?.object_id,next.result?.settings,next.result?.package_path]);
   if(!pending&&stamp===stateStamp){state=next;schedulePoll();return}
   stateStamp=stamp;

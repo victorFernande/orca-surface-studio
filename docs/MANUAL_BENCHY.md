@@ -1,5 +1,9 @@
 # Orca Surface Studio — uso e teste real com o Benchy
 
+> Registro histórico da 0.5.1. O [teste da 0.6.0](FLUXO_SUPERFICIE_V060.md#teste-real-pelo-botão-do-studio)
+> concluiu geração e Preview pelo plugin, com capturas da camada inclinada.
+> A impressão física do Benchy permanece pendente.
+
 Data: **21/11/2026**. Plataforma: **Windows, OrcaSlicer 2.5.1**.
 Versão inicial: 0.5.0; versão corrigida e instalada durante o teste: **0.5.1**.
 
