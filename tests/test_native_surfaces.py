@@ -28,7 +28,7 @@ class NativeSurfaceTests(unittest.TestCase):
                     xs=[float(v.get('x')) for v in xml.findall('.//m:vertex',ns)]
                     self.assertAlmostEqual(min(xs),100);self.assertAlmostEqual(max(xs),140)
                 folder.mkdir();source=folder/'plate_1.gcode';source.write_bytes(self.source())
-                package=folder/'source.gcode.3mf';build_sliced_package(self.source(),package,project_3mf=model)
+                package=folder/'source.gcode.3mf';shutil.copyfile(model,package)
                 return source,package
             result=build_surface(snapshot,'101',backup,root/'job','unused',{'backend':'native_local'},slicer=slicer)
             self.assertEqual(result['object_id'],'101')
@@ -43,7 +43,8 @@ class NativeSurfaceTests(unittest.TestCase):
         options={'backend':'native_local','selection_mode':'paint','selection_revision':snapshot.revision,
                  'wall_selection':[{'origin':[100,60,4],'direction':[-1,0,0],'radius_mm':6}]}
         lines=self.source().decode().splitlines();ids=[i for i,line in enumerate(lines) if line.startswith('G1 X')]
-        lines[ids[8]]+=' Z0.2';data=('\n'.join(lines)+'\n').encode()
+        lines[ids[328]]=lines[ids[328]].replace(' Z0.28','')+' Z0.278'
+        lines[ids[329]]+=' Z0.28';data=('\n'.join(lines)+'\n').encode()
         with tempfile.TemporaryDirectory() as folder:
             folder=Path(folder);backup=folder/'original.3mf';write_model_project(snapshot,backup,snapshot.settings)
             def slicer(executable,model,output,cancelled,*,workspace):
@@ -69,7 +70,7 @@ class NativeSurfaceTests(unittest.TestCase):
             def slicer(executable,model,folder,cancelled,*,workspace):
                 folder.mkdir(parents=True);data=self.source();source=folder/'plate_1.gcode';source.write_bytes(data)
                 package=folder/'source.gcode.3mf'
-                build_sliced_package(data,package,project_3mf=model)
+                shutil.copyfile(model,package)
                 return source,package
             with patch('orca_wave_studio.surface_workflow.BendingWarp',side_effect=AssertionError('double map')):
                 result=build_surface(snapshot,'100',backup,root/'job','unused',{'backend':'native_local'},slicer=slicer)
@@ -80,10 +81,11 @@ class NativeSurfaceTests(unittest.TestCase):
             self.assertEqual(len(result['report']['effective_profile_verification']['verified_fields']),26)
 
     def source(self):
-        data=cylinder_gcode(layers=2).decode()
+        data=cylinder_gcode(layers=2).decode().replace(';Z:0.40000\n;HEIGHT:0.2',';Z:0.28000\n;HEIGHT:0.08').replace('Z0.40000','Z0.28000')
         # A native-style varying-Z extrusion, kept separate from inverse mapping.
         lines=data.splitlines();indices=[i for i,l in enumerate(lines) if l.startswith('G1 X')]
-        for n,i in enumerate(indices[:8]):lines[i]+=' Z'+str(.2+.005*(n%2))
+        for n,i in enumerate(indices[320:328]):lines[i]+=' Z'+str(.28-.002*(n%2))
+        lines[indices[328]]+=' Z0.28'
         return ('; zaa_enabled = 1\n'+'\n'.join(lines)+'\n').encode()
 
     def test_native_local_preserves_every_xyz_and_extrusion_while_obeying_profile(self):

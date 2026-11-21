@@ -2,6 +2,13 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A **0.10.0** reduz os degraus com acabamento automático nas faixas selecionadas,
+sem deformar a malha. No novo teste pelo plugin, a maior transição de extrusão
+do Benchy caiu de **63,36° para 26,12°**, com camadas locais de **0,07 mm**.
+Os quatro passos continuam iguais. Veja o [teste no Preview, com capturas e
+limitações físicas](docs/ACABAMENTO_BENCHY_V0100.md). O resultado ainda não
+certifica uma superfície sem degraus ou autoriza impressão física.
+
 O [teste de uso completo com o Benchy na 0.9.1](docs/TESTE_USUARIO_BENCHY_V091.md)
 registra seleção das bordas, estudo, reprodução e conferência de Z durante
 extrusão no Preview, com capturas nativas. Nenhuma impressão foi iniciada;

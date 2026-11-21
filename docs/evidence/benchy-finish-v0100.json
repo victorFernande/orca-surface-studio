@@ -1,0 +1,146 @@
+{
+  "version": "0.10.0",
+  "date": "2026-11-21",
+  "kind": "native GUI user flow, followed by read-only file audit",
+  "environment": {
+    "orca": "2.5.1 Windows",
+    "printer": "Sovol SV06 0.4 nozzle -3DPrinter",
+    "material": "Sovol Generic PLA - Voolt3D",
+    "process": "0.20mm Standard @Sovol SV06"
+  },
+  "steps": [
+    "Selecionar modelo",
+    "Selecionar áreas",
+    "Estudar movimento",
+    "Mandar para a bandeja"
+  ],
+  "preview_observed": true,
+  "native_layer_count_observed": 470,
+  "printer_contacted": false,
+  "print_started": false,
+  "baseline": {
+    "version": "0.9.1",
+    "maximum_motion_slope_deg": 63.363199075824,
+    "sha256": "386c5faedefa8c58bc8ce9b7c40215e78741f75a96dd29c10c0bf84e5eb006d7"
+  },
+  "finishing": {
+    "nominal_layer_mm": 0.2,
+    "finishing_layer_mm": 0.07,
+    "profile_minimum_layer_mm": 0.07,
+    "profile_maximum_layer_mm": 0.28,
+    "minimum_z_mm": 0.035,
+    "first_layer_mm": 0.24,
+    "ranges": [
+      {
+        "min_z": 2.6,
+        "max_z": 27.4,
+        "layer_height": 0.07
+      }
+    ],
+    "sampling_reduction_percent": 64.99999999999999,
+    "mesh_vertices_moved": 0,
+    "xyz_e_rewritten": false,
+    "scope": "whole cross-sections in selected height bands; Z contouring only in selected areas",
+    "native_verification": {
+      "matched": true,
+      "ranges": [
+        {
+          "min_z": 2.6,
+          "max_z": 27.4,
+          "layer_height": 0.07
+        }
+      ]
+    },
+    "path_audit": {
+      "maximum_motion_slope_deg": 26.123317515925052,
+      "limit_deg": 30,
+      "within_study_limit": true,
+      "worst_line": 46437,
+      "finishing_deposition_segments": 199515,
+      "first_layer_preserved": true,
+      "minimum_layer_step_mm": 0.06999999999999673,
+      "maximum_layer_step_mm": 0.20000000000000284,
+      "maximum_feature_height_mm": 0.368782,
+      "physical_qualification": false
+    }
+  },
+  "wall_selection_audit": {
+    "affected_segments": 252,
+    "nonplanar_segments": 166,
+    "affected_segments_per_area": [
+      97,
+      155
+    ],
+    "outside_scope_segments": 0,
+    "scope_margin": "half bead width plus 0.05 mm, at least 0.3 mm",
+    "maximum_motion_slope_deg": 26.123317515925052,
+    "print_allowed": false
+  },
+  "geometry": {
+    "same_world_vertices_and_faces_as_baseline": true,
+    "vertices": 112569,
+    "triangles": 225154
+  },
+  "native_xyz_e_identity": {
+    "before": {
+      "sha256": "12aaa437a4be2df11bcd745fe835874d8ce79c27c9f4ec0687bcb329471ba63d",
+      "moves": 269293
+    },
+    "after": {
+      "sha256": "12aaa437a4be2df11bcd745fe835874d8ce79c27c9f4ec0687bcb329471ba63d",
+      "moves": 269293
+    },
+    "equal": true
+  },
+  "effective_profile_fields_verified": 26,
+  "sha256": {
+    "generated": "a8b06ce87f01a8f7fdf13567f53b74494e6678bf685667ec984ca8fc72129f22",
+    "package_payload": "a8b06ce87f01a8f7fdf13567f53b74494e6678bf685667ec984ca8fc72129f22",
+    "native_preview_cache": "a8b06ce87f01a8f7fdf13567f53b74494e6678bf685667ec984ca8fc72129f22",
+    "preview_receipt": "a8b06ce87f01a8f7fdf13567f53b74494e6678bf685667ec984ca8fc72129f22",
+    "report": "a8b06ce87f01a8f7fdf13567f53b74494e6678bf685667ec984ca8fc72129f22"
+  },
+  "preview_detail": {
+    "one_based_layer": 245,
+    "nominal_z_mm": 18.88,
+    "extrusion_lines": [
+      236756,
+      236758
+    ],
+    "extrusion_z_mm": [
+      18.863,
+      18.862
+    ],
+    "relative_extrusion_mm": [
+      0.00051,
+      0.00051
+    ],
+    "cursor_positions_observed": [
+      {
+        "step": 180,
+        "z_mm": 18.863
+      },
+      {
+        "step": 182,
+        "z_mm": 18.862,
+        "state": "retract immediately after extrusion"
+      }
+    ]
+  },
+  "nominal_body_bound": {
+    "status": "PASS_NOMINAL_BODY_BOUND",
+    "minimum_nominal_body_gap_mm": 1.239999900001693,
+    "motions_checked": 262609,
+    "growing_bead_body_checks": 227902,
+    "installed_head_registration_verified": false,
+    "nozzle_contact": "UNASSESSED",
+    "physical_validation": false,
+    "print_allowed": false
+  },
+  "limitations": [
+    "Finer sampling reduces stairs; zero stairs and physical roughness have not been demonstrated.",
+    "Height bands refine entire cross-sections; Z contouring is restricted to selected areas.",
+    "Nominal CAD body bound does not certify installed head, nozzle contact or deposition.",
+    "No physical print or transport to the printer was performed."
+  ]
+}

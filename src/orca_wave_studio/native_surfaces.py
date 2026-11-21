@@ -13,6 +13,7 @@ from .package import build_sliced_package,extract_plate_gcode
 from .profile_limits import limit_result
 from .project_io import write_model_project
 from .wall_selection import resolve_areas,sphere_modifier,audit_selected_paths
+from .surface_finishing import finishing_plan,verify_finishing_ranges,audit_finishing
 
 LOCAL_FIELDS=('zaa_enabled','zaa_min_z','zaa_minimize_perimeter_height','zaa_dont_alternate_fill_direction')
 
@@ -22,7 +23,7 @@ def local_settings(resolved):
     # These are native deposition controls, not a head-clearance angle.
     layer=float(result['layer_height'])
     result.update(zaa_enabled='1',zaa_min_z=str(min(.05,layer/4)),
-                  zaa_minimize_perimeter_height='1',zaa_dont_alternate_fill_direction='0')
+                  zaa_minimize_perimeter_height='0',zaa_dont_alternate_fill_direction='0')
     return result
 
 
@@ -77,9 +78,11 @@ def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,worksp
     if sum(i.get('printable',True) for i in obj['instances_data'])!=1:
         raise WaveError('Este estudo requer uma cópia do modelo selecionado.')
     areas=resolve_areas(snapshot,object_id,options or {})
+    finishing=finishing_plan(settings,obj,areas)
     modifiers=[sphere_modifier(area,i+1) for i,area in enumerate(areas)]
     effective={**resolved,**obj.get('config',{}),**obj['volumes'][0].get('config',{})}
     for modifier in modifiers:
+        modifier['config'].update(zaa_min_z=f"{finishing['minimum_z_mm']:.9g}",zaa_minimize_perimeter_height='0')
         for key in ('outer_wall_speed','inner_wall_speed'):
             value=effective.get(key)
             values=value if isinstance(value,list) else [value]
@@ -89,20 +92,32 @@ def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,worksp
             except (ValueError,TypeError):
                 raise WaveError('WALL_SPEED: o perfil precisa informar velocidades de parede numéricas.')
             modifier['config'][key]=';'.join(f'{v:.9g}' for v in speeds)
-    progress('Fatiando as superfícies locais com o contorno em Z do próprio Orca…')
+    progress(f"Preparando acabamento de {finishing['finishing_layer_mm']:g} mm nas faixas escolhidas…")
     from dataclasses import replace
-    model=folder/'prepared.3mf';write_model_project(replace(snapshot,objects=(obj,)),model,settings,modifiers=modifiers)
+    copied=obj
+    if not areas:
+        copied={**obj,'config':{**obj.get('config',{}),'zaa_min_z':str(finishing['minimum_z_mm']),
+                               'zaa_minimize_perimeter_height':'0'},
+                'volumes':[{**v,'config':{**v.get('config',{}),'zaa_min_z':str(finishing['minimum_z_mm']),
+                                         'zaa_minimize_perimeter_height':'0'}} for v in obj['volumes']]}
+    model=folder/'prepared.3mf'
+    write_model_project(replace(snapshot,objects=(copied,)),model,settings,modifiers=modifiers,
+                        layer_ranges=finishing['ranges'])
     if cancelled():raise WaveError('Geração cancelada.')
     source,package=slicer(executable,model,folder/'slice',cancelled,workspace=workspace)
     receipt=verify(package,settings,extra_fields=LOCAL_FIELDS)
+    finishing_receipt=verify_finishing_ranges(package,finishing)
     if areas:
         verify_area_modifiers(package,modifiers)
     data=source.read_bytes();labels={int(m) for m in re.findall(rb'(?mi)^;\s*printing object\s+.*?\bid:(\d+)\s+copy\s+0\s*$',data)}
     if len(labels)!=1:raise WaveError('LOCAL_LABELS: a fatia precisa identificar uma única peça.')
     mapping={next(iter(labels)):object_id}
     selection_audit=audit_selected_paths(data,mapping,areas) if areas else None
+    finishing_audit=audit_finishing(data,mapping,finishing,slope_limit)
     progress('Conferindo os caminhos locais e os limites da impressora selecionada…')
     result=contour_result(data,profile,mapping)
+    if not result.report['nonplanar_extrusion_detected']:
+        raise WaveError('FINISH_NO_EFFECT: não há contorno em Z compatível nesta região da peça.')
     if cancelled():raise WaveError('Geração cancelada.')
     output=folder/'surface.gcode';native=folder/'surface.gcode.3mf'
     atomic_write(output,result.gcode)
@@ -117,14 +132,10 @@ def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,worksp
             'scope':'closed native modifier spheres including wall thickness',
             'native_modifiers_verified':bool(areas),'wall_speed_factor':.8 if areas else 1},
         'wall_selection_audit':selection_audit,
-        'perimeter_minimization_angle_deg':1}
-    if selection_audit:
-        report['motion_slope_review']={'limit_deg':slope_limit,
-            'maximum_deg':selection_audit['maximum_motion_slope_deg'],
-            'within_study_limit':selection_audit['maximum_motion_slope_deg']<=slope_limit,
-            'head_clearance_certified':False}
-        if not report['motion_slope_review']['within_study_limit']:
-            report['physical_gate']='MOTION_SLOPE_ABOVE_STUDY_LIMIT'
+        'perimeter_minimization_angle_deg':0,
+        'finishing':{**finishing,'native_verification':finishing_receipt,'path_audit':finishing_audit},
+        'motion_slope_review':{'limit_deg':slope_limit,'maximum_deg':finishing_audit['maximum_motion_slope_deg'],
+                             'within_study_limit':True,'head_clearance_certified':False}}
     return report,output,native
 
 

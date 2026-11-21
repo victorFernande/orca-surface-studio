@@ -45,7 +45,7 @@ def slice_command(executable,workspace=None,*,native_local=False):
     command=[str(Path(executable).resolve()),'--datadir','profile','input.3mf',
             '--gcode-label-objects','--gcode-comments','--slice','0','--outputdir','output',
             '--export-3mf','source.gcode.3mf']
-    if native_local:command.extend(['--zaa-enabled=1','--zaa-minimize-perimeter-height=1'])
+    if native_local:command.extend(['--zaa-enabled=1','--zaa-minimize-perimeter-height=0'])
     return command
 
 

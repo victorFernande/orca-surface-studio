@@ -10,7 +10,7 @@ from .contracts import ProjectSnapshot, WaveError
 from .geometry import transform_point
 
 
-def write_model_project(snapshot:ProjectSnapshot, path:Path, settings:dict, *, modifiers=()) -> None:
+def write_model_project(snapshot:ProjectSnapshot, path:Path, settings:dict, *, modifiers=(), layer_ranges=()) -> None:
     """Copy printable mesh instances into world coordinates without touching the host."""
     ns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"
     ET.register_namespace("",ns)
@@ -33,7 +33,7 @@ def write_model_project(snapshot:ProjectSnapshot, path:Path, settings:dict, *, m
     plate=ET.SubElement(config,"plate")
     ET.SubElement(plate,"metadata",key="plater_id",value="1")
     count=0
-    if modifiers and (len(snapshot.objects)!=1 or
+    if (modifiers or layer_ranges) and (len(snapshot.objects)!=1 or
             sum(i.get('printable',True) for i in snapshot.objects[0]['instances_data'])!=1):
         raise WaveError('A seleção por áreas requer uma peça com uma instância.')
     for obj in snapshot.objects:
@@ -94,6 +94,12 @@ def write_model_project(snapshot:ProjectSnapshot, path:Path, settings:dict, *, m
             "Metadata/model_settings.config":ET.tostring(config,encoding="utf-8",xml_declaration=True),
             "Metadata/project_settings.config":json.dumps(settings,ensure_ascii=False).encode(),
             "_rels/.rels":rels,"[Content_Types].xml":types}
+        if layer_ranges:
+            ranges=ET.Element('objects');item=ET.SubElement(ranges,'object',id='1')
+            for band in layer_ranges:
+                row=ET.SubElement(item,'range',min_z=f"{band['min_z']:.6f}",max_z=f"{band['max_z']:.6f}")
+                ET.SubElement(row,'option',opt_key='layer_height').text=f"{band['layer_height']:.6f}"
+            entries['Metadata/layer_config_ranges.xml']=ET.tostring(ranges,encoding='utf-8',xml_declaration=True)
         for name,data in entries.items():
             info=ZipInfo(name,(2026,1,1,0,0,0))
             info.compress_type=ZIP_DEFLATED
