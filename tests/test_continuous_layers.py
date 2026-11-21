@@ -13,6 +13,21 @@ def field():
 
 
 class ContinuousLayerTests(unittest.TestCase):
+    def test_processed_report_with_mapped_short_edge_is_json_serializable(self):
+        import json
+        from orca_wave_studio.conformal import process_conformal_gcode
+        warp=ContinuousLayerWarp.__new__(ContinuousLayerWarp)
+        warp.stages=[SurfaceStage(field(),1.,19.)];warp.object_id='1';warp.anchor_z=1.
+        warp.settings=RegionalShellSettings(nominal_layer_height_mm=.12,retain_native_short_edges=True,tolerance_mm=.01)
+        code=b'\n'.join([b'G90',b'M83',b'G92 E0',b'G0 X1 Y1 Z0.24 F1200',
+            b';LAYER_CHANGE',b';Z:10',b';HEIGHT:0.12',b'; printing object A id:0 copy 0',
+            b';TYPE:Outer wall',b';WIDTH:0.42',b'G0 Z10',b'G1 X1.05 E0.005',b'G1 X9 E0.3',
+            b'; stop printing object A id:0 copy 0'])+b'\n'
+        result=process_conformal_gcode(code,warp,{0:'1'},'1')
+        self.assertGreater(result.report['inherited_mapped_short_deposition_segments'],0)
+        self.assertIs(type(warp.stages[0].tangent),float)
+        self.assertEqual(json.loads(json.dumps(result.report))['processed_sha256'],result.report['processed_sha256'])
+
     def test_clipped_mesh_cannot_bypass_the_output_face_budget(self):
         from orca_wave_studio.bending import _refine
         from orca_wave_studio.contracts import WaveError

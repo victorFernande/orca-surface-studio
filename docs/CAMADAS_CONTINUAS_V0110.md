@@ -5,7 +5,7 @@ da peça. O objetivo é percorrer as bordas inclinadas da proa e da popa e o tet
 do Benchy na mesma camada lógica, em vez de voltar periodicamente a um plano
 horizontal. O modelo original continua preservado.
 
-**Estado da validação:** implementação experimental, com 239 testes locais
+**Estado da validação:** implementação experimental, com 240 testes locais
 aprovados e verificação dos quatro passos em três condições de interface.
 A geração completa e o Preview do Benchy ainda estão em validação. Esses
 testes não são uma liberação para impressão física.

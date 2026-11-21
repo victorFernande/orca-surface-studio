@@ -163,7 +163,7 @@ class SurfaceStage:
             hi=(self.cap-field.high)/(self.cap-t)
             minimum=min(lo,hi)
             if minimum<=1/3+1e-6:continue
-            m=min(1.,minimum,.9*(3*minimum-1))
+            m=float(min(1.,minimum,.9*(3*minimum-1)))
             bounds=self._derivative_bounds(float(t),m)
             choices.append((bounds[1]/bounds[0],float(t),m,bounds))
         if not choices:raise WaveError('LAYERS_JACOBIAN: não há uma transição suave com espessura positiva.')
