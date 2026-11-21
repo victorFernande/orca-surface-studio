@@ -458,6 +458,30 @@ def _core_interval(row):
     return np.interp([.05,.95],cumulative,zs[order])
 
 
+def _transition_order(candidates,extension_mm,flat_tolerance_mm):
+    """Keep overlapping footprints in height order; flatten broad spans first.
+
+    Constant extensions of disjoint fields still have a vertical Jacobian.
+    Applying a short rear reference before a broad front reference can multiply
+    the latter's slope throughout the hull. Prioritize the broad reference when
+    no XY dependency requires the opposite order. This is a planning heuristic,
+    not a replacement for the complete mesh, chord and emitted-motion audits.
+    """
+    pending=sorted(candidates,key=lambda r:r['original_z'][1]);ordered=[]
+    def overlaps(a,b):
+        return all(max(a['original_bounds'][k][0],b['original_bounds'][k][0])<=
+                   min(a['original_bounds'][k][1],b['original_bounds'][k][1])+2*extension_mm
+                   for k in (0,1))
+    while pending:
+        available=[i for i,row in enumerate(pending)
+                   if not any(overlaps(row,prior) for prior in pending[:i])]
+        # Preserve flat landmarks early, and use stable height order for ties.
+        index=max(available,key=lambda i:(pending[i]['field_span_mm']<flat_tolerance_mm,
+                          pending[i]['original_z'][1]-pending[i]['original_z'][0],-i))
+        ordered.append(pending.pop(index))
+    return ordered
+
+
 class ContinuousLayerWarp:
     def __init__(self,snapshot,object_id,settings=None,progress=lambda message:None,cancelled=lambda:False,initial_layer_mm=None):
         self.object_id=str(object_id);self.source_revision=snapshot.revision
@@ -477,12 +501,13 @@ class ContinuousLayerWarp:
             if area<threshold:continue
             center=[(a+b)/2 for a,b in field.bounds]
             candidates.append({'points':points,'weights':weights,'area':area,'original_z':[min(p[2] for p in points),max(p[2] for p in points)],
-                'original_bounds':field.bounds,'original_gradient':field.gradient(*center),
+                'original_bounds':field.bounds,'field_span_mm':field.high-field.low,'original_gradient':field.gradient(*center),
                 'original_plane':max(abs(c) for c in field.coefficients[3:])<.01})
         candidates.sort(key=lambda r:r['original_z'][1])
         inclined=[r for r in candidates if HeightField(r['points'],r['weights'],4*self.settings.step_mm).high-HeightField(r['points'],r['weights'],4*self.settings.step_mm).low>=self.settings.nominal_layer_height_mm*.75]
         if not inclined:raise WaveError('LAYERS_SURFACE: não há uma superfície inclinada extensa para alinhar as camadas.')
-        highest=inclined[-1]
+        highest=max(inclined,key=lambda r:r['original_z'][1])
+        candidates=_transition_order(candidates,4*self.settings.step_mm,self.settings.nominal_layer_height_mm*.75)
         if len(candidates)>12:raise WaveError('LAYERS_COMPLEXITY: mais de doze superfícies extensas exigem decomposição adicional.')
         first_layer=initial_layer_mm if initial_layer_mm is not None else number(snapshot.settings,'initial_layer_print_height',self.settings.nominal_layer_height_mm)
         self.anchor_z=max(mesh.bounds[0][2]+max(first_layer,self.settings.nominal_layer_height_mm*2),.5)
@@ -637,7 +662,9 @@ class ContinuousLayerWarp:
         self.flattened_snapshot=copy.deepcopy(clean);target=self.flattened_snapshot.objects[0]['volumes'][0]
         target['vertices']=vertices;target['triangles']=[list(f) for f in faces]
         self.reference_world_vertices=tuple(reference_world)
-        self.summary={'study_type':'continuous_surface_coordinates','transition_kernel':'hermite_c1_xyz_v2','stages':self.details,
+        self.summary={'study_type':'continuous_surface_coordinates','transition_kernel':'hermite_c1_xyz_v3','stages':self.details,
+            'transition_order':'overlap_dependencies_then_broad_spans',
+            'reference_order_original_z_mm':[r['original_z'] for r in candidates],
             'source_revision':snapshot.revision,'normalization':normalization,'source_mesh_unchanged':True,
             'mesh_normal_and_crease_error_budget_mm':total_bound,'flattened_faces':len(faces),'flattened_vertices':len(vertices),
             'vertex_reference':'original_source_faces_before_grid','output_face_limit':3000000,

@@ -84,13 +84,13 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       assert.deepEqual(whole.settings.wall_selection,[]);
       const wholeResult=structuredClone(result);wholeResult.settings=whole.settings;
       wholeResult.report.wall_selection={mode:'all',areas:[],wall_speed_factor:1};
-      wholeResult.report.warp={...wholeResult.report.warp,transition_kernel:'hermite_c1_xyz_v2'};
+      wholeResult.report.warp={...wholeResult.report.warp,transition_kernel:'hermite_c1_xyz_v3'};
       await page.evaluate(({state,result})=>window.orcaWaveReceive({type:'state',state:{...state,
         sequence:35,status:'ready',result,message:'Estudo da peça inteira concluído.'}}),{state,result:wholeResult});
       assert.equal(await step(),'4');
       assert.match(await page.locator('#guide-summary').innerText(),/Peça inteira/);
       assert.match(await page.locator('#guide-summary').innerText(),/Velocidades do perfil selecionado/);
-      const oldKernel=structuredClone(wholeResult);delete oldKernel.report.warp.transition_kernel;
+      const oldKernel=structuredClone(wholeResult);oldKernel.report.warp.transition_kernel='hermite_c1_xyz_v2';
       await page.evaluate(({state,result})=>window.orcaWaveReceive({type:'state',state:{...state,
         sequence:36,status:'ready',result}}),{state,result:oldKernel});
       assert.equal(await page.evaluate(()=>presentResult()),false,'an older transition kernel is stale');

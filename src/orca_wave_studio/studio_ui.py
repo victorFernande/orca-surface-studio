@@ -178,7 +178,7 @@ function canCapture(){
 }
 function presentResult(){
   const result=state.result,source=result?.report?.source_sha256;
-  if(result?.settings?.backend==='continuous_layers'&&result.report?.warp?.transition_kernel!=='hermite_c1_xyz_v2')return false;
+  if(result?.settings?.backend==='continuous_layers'&&result.report?.warp?.transition_kernel!=='hermite_c1_xyz_v3')return false;
   return Boolean(result?.sha256)&&state.status==='ready'&&!pending&&
     surfaceMode===(['surface','conformal'].includes(result.study_kind))&&
     (!result.revision||result.revision===state.revision)&&
