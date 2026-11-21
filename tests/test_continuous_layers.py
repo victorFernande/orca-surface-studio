@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from orca_wave_studio.continuous_layers import HeightField,SurfaceStage,LayerGridStage,ContinuousLayerWarp,_normal_certificate
+from orca_wave_studio.continuous_layers import HeightField,SurfaceStage,LayerGridStage,ContinuousLayerWarp,_normal_certificate,_transition_order
 from orca_wave_studio.regional_shell import RegionalShellSettings
 
 
@@ -13,6 +13,30 @@ def field():
 
 
 class ContinuousLayerTests(unittest.TestCase):
+    def test_disjoint_broad_transition_precedes_short_transition_without_crossing_dependencies(self):
+        def region(name,x,z,span):
+            return dict(name=name,original_bounds=(x,(0.,10.)),original_z=z,field_span_mm=span)
+        floor=region('floor',(0.,40.),(2.,2.),0.)
+        rear=region('rear',(0.,10.),(5.,8.),3.)
+        box=region('box',(2.,8.),(9.,9.),0.)
+        front=region('front',(20.,40.),(8.,13.),5.)
+        rim=region('rim',(20.,40.),(14.,20.),6.)
+        roof=region('roof',(0.,40.),(25.,27.),2.)
+        ordered=_transition_order([rear,floor,box,front,rim,roof],1.6,.09)
+        self.assertEqual([r['name'] for r in ordered],['floor','front','rim','rear','box','roof'])
+        # The source ordering and bounds remain unchanged.
+        self.assertEqual(rear['original_z'],(5.,8.))
+        self.assertEqual(front['original_bounds'][0],(20.,40.))
+
+    def test_touching_extended_footprints_keep_lower_reference_first(self):
+        low=dict(original_bounds=((0.,10.),(0.,10.)),original_z=(2.,3.),field_span_mm=1.)
+        high=dict(original_bounds=((13.,20.),(0.,10.)),original_z=(4.,10.),field_span_mm=6.)
+        self.assertEqual(_transition_order([high,low],1.6,.09),[low,high])
+        # A genuine gap permits the broad reference first; no model names or
+        # Benchy-specific coordinates are used in the planner.
+        high['original_bounds']=((13.3,20.),(0.,10.))
+        self.assertEqual(_transition_order([high,low],1.6,.09),[high,low])
+
     def test_processed_report_with_mapped_short_edge_is_json_serializable(self):
         import json
         from orca_wave_studio.conformal import process_conformal_gcode

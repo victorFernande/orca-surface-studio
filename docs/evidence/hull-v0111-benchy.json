@@ -1,0 +1,84 @@
+{
+  "date": "2026-11-21",
+  "version": "0.11.1 experimental",
+  "status": "PARTIAL_ANGLE_REDUCED_BLOCKED_DEPOSITION",
+  "scope": "Matching reference geometry, native CLI slice and inverse field; package manually opened in native Preview. Guided component test is separate.",
+  "print_allowed": false,
+  "physical_validation": false,
+  "print_started": false,
+  "checks": {
+    "local_tests": 242,
+    "guided_component_scenarios": 3,
+    "old_v2_result_invalidated": true,
+    "profile_fields_checked": 23,
+    "profile_matched": true,
+    "native_contouring_disabled": true,
+    "install_state_preserved": true
+  },
+  "motion": {
+    "limit_deg": 30,
+    "before": {
+      "maximum_motion_slope_deg": 52.66353665521742,
+      "forward_hull_roi_maximum_motion_slope_deg": 52.66353665521742,
+      "forward_hull_overhang_role_length_mm": 70.94855608789251,
+      "deposition_segments": 602037
+    },
+    "after": {
+      "maximum_motion_slope_deg": 17.614279687430493,
+      "forward_hull_roi_maximum_motion_slope_deg": 17.260998587299508,
+      "forward_hull_overhang_role_length_mm": 0.0375310877007358,
+      "deposition_segments": 586901
+    },
+    "first_layer_preserved": true,
+    "roi": "Midpoint X>118 and 7<Z<20 mm only in this reference placement; not a planner rule.",
+    "overhang_role_caveat": "Native classification length, not proof of physical support."
+  },
+  "geometry": {
+    "flattened_faces": 1758790,
+    "normal_and_crease_bound_mm": 0.009999987165016334,
+    "maximum_chord_bound_mm": 0.009963308072045188,
+    "total_budget_mm": 0.02,
+    "minimum_new_subdivided_segment_mm": 0.19990948595801947,
+    "reference_cores_in_one_native_band": 7,
+    "inherited_mapped_short_segments": 23988,
+    "source_mesh_unchanged": true
+  },
+  "deposition_not_qualified": {
+    "visible_preview_spacing_remains": true,
+    "before_native_feature_height_spacing_indicator_mm": [
+      0.06518115980013757,
+      0.9543287979035853
+    ],
+    "after_native_feature_height_spacing_indicator_mm": [
+      0.062005761733099,
+      1.158884736392327
+    ],
+    "before_occurrences_above_width": 1170,
+    "after_occurrences_above_width": 2166,
+    "caveat": "Indicator uses native feature height, including bridges; it is not a certified adjacent-layer bead gap. Occurrences count sampled contributions, not unique physical gaps. Native feature-height display metadata is inherited."
+  },
+  "native_preview": {
+    "observed": true,
+    "opened_manually": true,
+    "sliced_only_package": true,
+    "refinishing_not_triggered": true,
+    "full_part_inspected": true,
+    "isolated_display_layer": 97,
+    "inner_wall_nozzle_z_mm": [
+      15.834,
+      10.303
+    ],
+    "cache_hash_verified_directly": true,
+    "approved_for_print": false
+  },
+  "hashes": {
+    "preserved_original_project": "49f38d20d15da1ccf93ca91b43656c7cf739d45668fb2d58c0e0e7f43219f894",
+    "planar_source_gcode": "6165ed0298fd426542352d27046e8e08890661b27f5ebb55221f0048ca595f29",
+    "generated_gcode": "ceae78a554ab4a277a25500c70aa7d4c1c165d4d79bc91a0312277ee3391ba17",
+    "integrated_package_extracted": "ceae78a554ab4a277a25500c70aa7d4c1c165d4d79bc91a0312277ee3391ba17",
+    "held_preview_gcode": "1e26c88e7ff5a6b2f435ffaafa526dace172d987cc55140603caac39bb301360",
+    "held_package_extracted": "1e26c88e7ff5a6b2f435ffaafa526dace172d987cc55140603caac39bb301360",
+    "native_preview_cache": "1e26c88e7ff5a6b2f435ffaafa526dace172d987cc55140603caac39bb301360",
+    "installed_bundle": "69b93928cefd1b1feac9946d55e7a3d6dfb6874170201461e7d60536211e689a"
+  }
+}
