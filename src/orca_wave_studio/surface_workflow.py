@@ -108,7 +108,7 @@ def build_surface(snapshot,object_id,backup,folder,executable,settings=None,*,pr
     profile=PrinterProfile.from_settings(resolved)
     if backend=='native_local':
         from .native_surfaces import build_local
-        report,gcode,package=build_local(snapshot,backup,folder,executable,resolved,profile,slicer,workspace,cancelled,progress,verify_profile,options)
+        report,gcode,package=build_local(snapshot,backup,folder,executable,resolved,profile,slicer,workspace,cancelled,progress,verify_profile,options,object_id)
         return _result(snapshot,object_id,folder,settings,report,gcode,package,backend)
     if any(k in options for k in ('selection_mode','selection_revision','wall_selection')):
         raise WaveError('A seleção por clique é usada no método de superfícies locais.')

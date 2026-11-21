@@ -11,6 +11,32 @@ from orca_wave_studio.geometry import analyze_snapshot
 
 
 class SurfaceWorkflowControllerTests(unittest.TestCase):
+    def test_study_does_not_open_preview_until_the_user_sends_the_result(self):
+        for auto_open in (False,True):
+            with self.subTest(auto_open=auto_open),tempfile.TemporaryDirectory() as root:
+                storage=Path(root);snapshot=cylinder_snapshot();host=Mock()
+                host.snapshot.return_value=snapshot;host.allowed_source_roots.return_value=(storage,)
+                host.capture_ready.return_value=True
+                def export(path):path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b'original')
+                host.export_project.side_effect=export
+                controller=StudioController(storage,host);controller.snapshot=snapshot;controller._objects=analyze_snapshot(snapshot)
+                result={'sha256':'study','package_path':'study.gcode.3mf','revision':snapshot.revision}
+                with patch('orca_wave_studio.surface_workflow.build_surface',return_value=result):
+                    controller.build_surface(['100'],{},open_after_study=auto_open)
+                    deadline=time.monotonic()+2
+                    while controller._job and time.monotonic()<deadline:time.sleep(.01)
+                self.assertEqual(controller.state()['status'],'ready')
+                self.assertEqual(controller._pending_open,auto_open)
+                host.open_preview.assert_not_called()
+
+    def test_old_study_hash_cannot_be_sent_from_the_last_step(self):
+        with tempfile.TemporaryDirectory() as root:
+            host=Mock();host.allowed_source_roots.return_value=()
+            controller=StudioController(Path(root),host);controller._result={'sha256':'new'}
+            state=controller.handle({'action':'open_preview','sha256':'old'})
+            self.assertEqual(state['state']['status'],'error')
+            host.open_preview.assert_not_called()
+
     def test_reopening_the_page_does_not_restart_the_same_mesh_analysis(self):
         started=threading.Event();release=threading.Event()
         with tempfile.TemporaryDirectory() as root:

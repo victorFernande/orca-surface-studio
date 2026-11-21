@@ -66,14 +66,18 @@ def contour_result(data,profile,mapping):
     return ProcessedResult(final,report)
 
 
-def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,workspace,cancelled,progress,verify,options=None):
+def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,workspace,cancelled,progress,verify,options=None,object_id=None):
     folder=Path(folder);settings=local_settings(resolved)
     slope_limit=(options or {}).get('max_slope_deg',30)
     if type(slope_limit) not in (int,float) or not math.isfinite(slope_limit) or not 5<=slope_limit<=45:
         raise WaveError('WALL_SLOPE: o limite do estudo precisa ficar entre 5 e 45 graus.')
-    areas=resolve_areas(snapshot,str(snapshot.objects[0]['id']),options or {})
+    object_id=str(object_id or snapshot.objects[0]['id'])
+    obj=next((o for o in snapshot.objects if str(o['id'])==object_id),None)
+    if obj is None:raise WaveError('Selecione um modelo da placa.')
+    if sum(i.get('printable',True) for i in obj['instances_data'])!=1:
+        raise WaveError('Este estudo requer uma cópia do modelo selecionado.')
+    areas=resolve_areas(snapshot,object_id,options or {})
     modifiers=[sphere_modifier(area,i+1) for i,area in enumerate(areas)]
-    obj=snapshot.objects[0]
     effective={**resolved,**obj.get('config',{}),**obj['volumes'][0].get('config',{})}
     for modifier in modifiers:
         for key in ('outer_wall_speed','inner_wall_speed'):
@@ -86,7 +90,8 @@ def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,worksp
                 raise WaveError('WALL_SPEED: o perfil precisa informar velocidades de parede numéricas.')
             modifier['config'][key]=';'.join(f'{v:.9g}' for v in speeds)
     progress('Fatiando as superfícies locais com o contorno em Z do próprio Orca…')
-    model=folder/'prepared.3mf';write_model_project(snapshot,model,settings,modifiers=modifiers)
+    from dataclasses import replace
+    model=folder/'prepared.3mf';write_model_project(replace(snapshot,objects=(obj,)),model,settings,modifiers=modifiers)
     if cancelled():raise WaveError('Geração cancelada.')
     source,package=slicer(executable,model,folder/'slice',cancelled,workspace=workspace)
     receipt=verify(package,settings,extra_fields=LOCAL_FIELDS)
@@ -94,7 +99,7 @@ def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,worksp
         verify_area_modifiers(package,modifiers)
     data=source.read_bytes();labels={int(m) for m in re.findall(rb'(?mi)^;\s*printing object\s+.*?\bid:(\d+)\s+copy\s+0\s*$',data)}
     if len(labels)!=1:raise WaveError('LOCAL_LABELS: a fatia precisa identificar uma única peça.')
-    mapping={next(iter(labels)):str(snapshot.objects[0]['id'])}
+    mapping={next(iter(labels)):object_id}
     selection_audit=audit_selected_paths(data,mapping,areas) if areas else None
     progress('Conferindo os caminhos locais e os limites da impressora selecionada…')
     result=contour_result(data,profile,mapping)
