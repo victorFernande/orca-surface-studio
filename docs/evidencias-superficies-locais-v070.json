@@ -136,7 +136,9 @@
     "reported_distance_mm": 8,
     "approximate": true,
     "component_identified": false,
-    "duct_and_probe_inclusion": "PENDING_USER_CLARIFICATION"
+    "duct_and_probe_inclusion": true,
+    "measurement_method": "user-reported approximate minimum; instrument and tolerance unspecified",
+    "scope_confirmed": true
   },
   "bundle_built": true,
   "installed": true,
@@ -200,5 +202,6 @@
     "part_segments": 114311,
     "nonplanar_segments": 9933,
     "cache_verified": false
-  }
+  },
+  "follow_up_v071": "evidencias-validacao-nativa-v071.json"
 }

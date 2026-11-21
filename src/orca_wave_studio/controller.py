@@ -846,14 +846,18 @@ class StudioController:
             request=self._preview_request
             if request is None:
                 return self._preview_verified and bool(path) and Path(path).resolve()==expected
+            # A user-owned permission dialog may stay open longer than parsing.
+            # Pause this deadline only after a recognized audited-read failure;
+            # resume on the focused Studio, retaining all identity/hash checks.
+            if request.get('waiting_access'):
+                if not resume_access:return False
+                request['expires']=time.monotonic()+180
             if time.monotonic()>=request["expires"]:
                 self.invalidate("O Orca não confirmou a abertura e análise do pacote dentro de três minutos.")
                 return False
             if not request["completed"] or not path or Path(path).resolve()!=expected:
                 return False
             if time.monotonic()<request.get("retry_after",0):
-                return False
-            if request.get("waiting_access") and not resume_access:
                 return False
             if request.get("checking"):
                 return False

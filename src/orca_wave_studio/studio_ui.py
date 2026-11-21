@@ -32,6 +32,7 @@ body.compact{height:auto;min-height:100vh}body.compact header{padding:0 10px;hei
 html[data-theme=dark]{--orca-accent:#00a896;color-scheme:dark}html[data-theme=light]{--orca-accent:#00897b;color-scheme:light}
 body[data-mode]{background:var(--bg-app);color:var(--text-main);font-family:var(--font-sans)}
 body h1,body h2,body h3,body label,body input,body select{color:var(--text-main)}
+body select{appearance:none;-webkit-appearance:none;background-color:var(--bg-input)!important;color:var(--text-main)!important;padding-right:22px;background-image:linear-gradient(45deg,transparent 50%,var(--text-muted) 50%),linear-gradient(135deg,var(--text-muted) 50%,transparent 50%);background-position:calc(100% - 12px) 50%,calc(100% - 8px) 50%;background-size:4px 4px;background-repeat:no-repeat}
 body button{color:var(--text-main);background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:7px 10px}
 .panel-help{margin:8px 0;color:var(--text-muted);font-size:11px}.panel-help summary{font-size:11px}
 body.compact header:has(#panel-action:not([hidden])){height:auto;min-height:46px;flex-wrap:wrap;padding-top:5px;padding-bottom:5px}

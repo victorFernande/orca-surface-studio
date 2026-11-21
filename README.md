@@ -1,6 +1,10 @@
 # Orca Surface Studio
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
+
+A 0.7.1 usa uma [autorização de leitura única para o cache do Preview](docs/PERMISSOES_PREVIEW.md),
+aprovada e salva pelo próprio Orca. Isso reduz pedidos por arquivo; não aprova
+automaticamente janelas de segurança nem libera impressão física.
 A versão 0.6.0 mantém os identificadores internos e os nomes de capacidades da
 instalação anterior para preservar ativação, permissões e presets. O título do
 estúdio já usa o novo nome.
@@ -16,8 +20,10 @@ sem deformar a peça ou repetir o mapa do teto do Benchy em outras regiões.
 O candidato Benchy foi gerado com o perfil real, com XYZ/E nativos preservados
 e conferência de 26 campos. O limite nominal calculado para o corpo do cabeçote
 SV06 foi positivo, mas isso não certifica o bico, o cabeçote instalado ou a
-deposição. **O arquivo continua sem liberação física**; o Preview da nova versão
-aguarda conferência autorizada. Veja [resultados e limites](docs/SUPERFICIES_LOCAIS_V070.md).
+deposição. **O arquivo continua sem liberação física**. O Preview foi conferido
+na 0.7.1, incluindo Z variável na extrusão da borda da proa; ainda há degraus
+residuais. Veja o [teste nativo com capturas](docs/VALIDACAO_NATIVA_V071.md)
+e os [resultados e limites](docs/SUPERFICIES_LOCAIS_V070.md).
 
 ## Superfície com o perfil selecionado — 0.6.0
 
