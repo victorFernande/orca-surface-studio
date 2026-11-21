@@ -1,6 +1,10 @@
 # Orca Surface Studio
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
+
+A 0.7.1 prepara uma [autorização de leitura única para o cache do Preview](docs/PERMISSOES_PREVIEW.md),
+aprovada e salva pelo próprio Orca. Isso reduz pedidos por arquivo; não aprova
+automaticamente janelas de segurança nem libera impressão física.
 A versão 0.6.0 mantém os identificadores internos e os nomes de capacidades da
 instalação anterior para preservar ativação, permissões e presets. O título do
 estúdio já usa o novo nome.

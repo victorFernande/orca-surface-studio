@@ -26,6 +26,20 @@ _controller=None
 _last_settings={}
 
 
+def preview_cache_read_targets(environment=None) -> list[str]:
+    """Declare a reviewable read-only cache tree without probing the filesystem.
+
+    Orca itself prompts and persists this permission. Never edit its grants.
+    Missing/ambiguous environment paths retain the per-file approval fallback.
+    """
+    env=os.environ if environment is None else environment
+    configured=env.get('TEMP') or env.get('TMP') or env.get('TMPDIR')
+    if not configured:return []
+    root=Path(configured)
+    if not root.is_absolute() or '..' in root.parts or '*' in str(root):return []
+    return [str(root/'orcaslicer_model'/'*')]
+
+
 def _storage() -> Path:
     if orca is not None:
         return Path(orca.host.plugin.storage())
@@ -328,7 +342,8 @@ if orca is not None:
             from .surface_workflow import slice_command
             executable=NativeHost().slicer_executable()
             commands=[subprocess.list2cmdline(slice_command(executable,native_local=local)) for local in (False,True)]
-            orca.request_permissions(threading=True,network=["http://127.0.0.1","http://[::1]"],
+            orca.request_permissions(fs_read=preview_cache_read_targets(),
+                                       threading=True,network=["http://127.0.0.1","http://[::1]"],
                                        process=commands)
             configure_native_agent(lambda:get_controller().agent_context())
             for capability in (WavePage,WaveDock,WaveCapturePipeline,WaveOctoPrintAgent):

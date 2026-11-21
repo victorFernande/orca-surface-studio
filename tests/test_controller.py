@@ -132,6 +132,7 @@ class ControllerTests(unittest.TestCase):
         self.assertFalse(c.agent_context()["approval_current"])
         self.assertFalse(Path(package).with_name("preview-receipt.json").exists())
         c._preview_request["retry_after"]=0
+        c._preview_request['expires']=0  # Time in a user-owned dialog is not parsing time.
         with patch.object(Path,"read_bytes",side_effect=AssertionError('Hidden/modal Studio must not read')):
             self.assertFalse(c.verify_preview(package))
             c.handle({"action":"poll","ui_focused":False})
@@ -140,6 +141,13 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(receipt["cache_path"],str(path.resolve()))
         self.assertEqual(receipt["sha256"],digest(path.read_bytes()))
         self.assertIn("Preview do Orca confirmado",c.state()["message"])
+
+    def test_preview_still_times_out_without_a_pending_permission_dialog(self):
+        c,path,package=self.preview_files()
+        c._preview_request['expires']=0
+        self.assertFalse(c.verify_preview(package,resume_access=True))
+        self.assertIsNone(c._result)
+        self.assertFalse(Path(package).with_name('preview-receipt.json').exists())
 
     def test_preview_changed_while_waiting_for_permission_is_rejected(self):
         c,path,package=self.preview_files()
