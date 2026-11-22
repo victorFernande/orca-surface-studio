@@ -1,48 +1,67 @@
-"""Bounded display mesh, independent of the processing/print geometry."""
+"""Faithful display mesh, independent of processing and print geometry.
+
+Large models use indexed float32 buffers rather than destructive clustering.
+No source face is sampled, collapsed or truncated.
+"""
 from __future__ import annotations
 
 import math
+from array import array
+import base64
+import sys
 from .contracts import fingerprint
 from .geometry import transform_point
 
 
-def model_preview(snapshot, max_triangles=4000):
-    objects=[]
+def _buffer(values, kind):
+    data = array(kind, values)
+    if data.itemsize != 4:
+        raise RuntimeError('Display buffers require four-byte components')
+    if sys.byteorder != 'little':
+        data.byteswap()
+    return base64.b64encode(data.tobytes()).decode('ascii')
+
+
+def model_preview(snapshot):
+    objects = []
     for obj in snapshot.objects:
-        triangles=[];low=[math.inf]*3;high=[-math.inf]*3
-        instances=[i for i in obj.get('instances_data',[]) if i.get('printable',True)]
-        total=sum(len(v.get('triangles',[])) for v in obj.get('volumes',[]))*len(instances)
-        source_faces=[]
-        for instance in instances:
-            for vol in obj.get('volumes',[]):
-                if vol.get('kind')!='part' or vol.get('negative'):continue
-                points=[transform_point(p,instance['matrix'],vol['matrix']) for p in vol['vertices']]
-                for p in points:
-                    for k in range(3):low[k]=min(low[k],p[k]);high[k]=max(high[k],p[k])
-                for tri in vol['triangles']:
-                    source_faces.append(tuple(points[i] for i in tri))
-        if source_faces:
-            # Cluster only the display mesh. Sampling independent source facets
-            # would make a dense STL appear full of holes in the viewport.
-            cell=max(max(high[k]-low[k] for k in range(3))/100,1e-5)
-            triangles=source_faces
-            for attempt in range(12):
-                buckets={};sums={};mapped=[]
-                for tri in source_faces:
-                    keys=[]
-                    for p in tri:
-                        key=tuple(math.floor((p[k]-low[k])/cell) for k in range(3));keys.append(key)
-                        if key not in sums:sums[key]=[0.,0.,0.,0]
-                        row=sums[key]
-                        for k in range(3):row[k]+=p[k]
-                        row[3]+=1
-                    if len(set(keys))==3:buckets.setdefault(tuple(sorted(keys)),keys)
-                if len(buckets)<=max_triangles or attempt==11:
-                    triangles=[[[round(sums[key][k]/sums[key][3],5) for k in range(3)] for key in keys]
-                               for keys in list(buckets.values())[:max_triangles]]
-                    break
-                cell*=1.35
-        if triangles:
-            objects.append({'id':str(obj['id']),'name':obj['name'],'triangles':triangles,
-                            'bounds':[low,high],'display_only':True,'source_triangles':total})
-    return {'id':fingerprint(objects),'objects':objects,'display_only':True}
+        vertices, indices = [], []
+        low, high = [math.inf] * 3, [-math.inf] * 3
+        for instance in obj.get('instances_data', []):
+            if not instance.get('printable', True):
+                continue
+            for volume in obj.get('volumes', []):
+                if volume.get('kind') != 'part' or volume.get('negative'):
+                    continue
+                # Weld exact positions inside each volume, never between parts.
+                welded, source_indices = {}, {}
+                for face in volume['triangles']:
+                    for source_index in face:
+                        if source_index not in source_indices:
+                            point = tuple(transform_point(volume['vertices'][source_index],
+                                                          instance['matrix'], volume['matrix']))
+                            if point not in welded:
+                                welded[point] = len(vertices) // 3
+                                vertices.extend(point)
+                                for axis in range(3):
+                                    low[axis] = min(low[axis], point[axis])
+                                    high[axis] = max(high[axis], point[axis])
+                            source_indices[source_index] = welded[point]
+                        indices.append(source_indices[source_index])
+        if not indices:
+            continue
+        count = len(indices) // 3
+        item = {'id': str(obj['id']), 'name': obj['name'], 'bounds': [low, high],
+                'display_only': True, 'source_triangles': count,
+                'source_fidelity': 'original_faces', 'triangles': []}
+        if count <= 4000:
+            points = [vertices[i:i + 3] for i in range(0, len(vertices), 3)]
+            item['triangles'] = [[points[index] for index in indices[i:i + 3]]
+                                 for i in range(0, len(indices), 3)]
+        else:
+            item['mesh'] = {'encoding': 'indexed-f32-u32-le-v1',
+                            'vertex_count': len(vertices) // 3, 'triangle_count': count,
+                            'positions': _buffer(vertices, 'f'), 'indices': _buffer(indices, 'I')}
+        objects.append(item)
+    return {'id': fingerprint(objects), 'objects': objects, 'display_only': True,
+            'source_fidelity': 'original_faces'}

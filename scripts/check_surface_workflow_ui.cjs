@@ -28,6 +28,8 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       await page.getByRole('button',{name:'Mais opções',exact:true}).click();
       await page.locator('#guide-details > summary').click();
       await page.getByRole('button',{name:'Superfície curva',exact:true}).click();
+      // Paint is explicit: current versions start with whole-model selection.
+      await page.locator('#wall-paint').click();
       await page.getByRole('button',{name:'Enquadrar trajetória',exact:true}).click();
       assert.equal(await page.locator('#empty').isVisible(),false);
       assert.equal(await page.getByText(state.printer_profile.name,{exact:true}).count(),1);
@@ -73,11 +75,11 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       }
       await page.getByRole('button',{name:'Remover área 1',exact:true}).click();
       assert.equal(await page.locator('#generate').isDisabled(),true);
-      await page.getByRole('button',{name:'Todas compatíveis',exact:true}).click();
+      await page.getByRole('button',{name:'Peça inteira',exact:true}).click();
       await page.screenshot({path:path.join(output,fallback?'mesh-software.png':'mesh-webgl.png')});
       await page.getByRole('button',{name:'Gerar superfície e abrir Preview',exact:true}).click();
       const command=await page.evaluate(()=>window.commands.findLast(c=>c.action==='build_surface'));
-      assert.equal(command.settings.backend,'native_local');assert.deepEqual(command.object_ids,['1']);
+      assert.equal(command.settings.backend,'continuous_layers');assert.deepEqual(command.object_ids,['1']);
       if(process.argv[4]){
         const result=JSON.parse(fs.readFileSync(process.argv[4],'utf8'));
         result.object_id='1';result.revision=state.revision;result.settings=command.settings;
