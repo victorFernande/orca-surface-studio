@@ -77,9 +77,14 @@ foi publicada no Orca Cloud neste trabalho.
 - A geometria completa do Benchy manteve 60,001 × 31,004 × 48 mm nas quatro
   orientações cardinais, com troca esperada dos eixos XY e sem alterar a fonte.
 - O bundle e o wheel foram gerados e a instalação local foi atualizada.
-- A captura da janela do Orca falhou na recuperação do monitor; nenhum clique
-  foi enviado com estado desconhecido. A recarga nativa e o novo Preview
-  do Benchy continuam pendentes. Não houve nova impressão.
+- Na primeira conferência, a captura da janela do Orca falhou na recuperação
+  do monitor; nenhum clique foi enviado com estado desconhecido. No ensaio
+  posterior de 22/11/2026, a versão instalada foi carregada, o giro de 180°
+  foi aplicado pela interface e o novo Preview foi verificado byte a byte.
+  O ensaio exigiu preparação manual da proposta de camadas e abertura pelas
+  opções adicionais após a primeira recusa. A folga física permanece
+  inconclusiva e não houve nova impressão. Veja o
+  [registro completo com capturas](TESTE_BENCHY_GIRO180_V0150.md).
 
 O arquivo do ensaio anterior permanece reprovado **nessa posição e para esse
 mapa de cabeçote**, sem repetição automática. A SV06 já estava `Operational`,
