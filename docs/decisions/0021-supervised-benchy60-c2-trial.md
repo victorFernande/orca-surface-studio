@@ -86,6 +86,12 @@ sinalizar erro. A mesa estava em 47,5 °C com alvo de 65 °C, e o bico em
 149,31 °C com alvo inicial de 150 °C. Essa leitura confirmou o aquecimento
 inicial; ainda não comprovou a primeira camada depositada.
 
+Às **00:40:00**, a mesa estava em **65,29 °C** (alvo 65 °C) e o bico em
+**202,01 °C** (alvo 200 °C). O trabalho correto continuava em `Printing`, sem
+erro sinalizado, e a posição no arquivo havia avançado de 147 para 17.153
+bytes. Essa leitura confirma aquecimento final e avanço do arquivo; não
+substitui a observação da deposição e da adesão pelo operador.
+
 Registrar separadamente avanço e observação física do operador.
 Uma impressão concluída ou uma avaliação positiva desse Benchy não aprova
 automaticamente outras geometrias, cabeçotes ou impressoras.
