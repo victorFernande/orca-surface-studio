@@ -1,6 +1,6 @@
 # Camadas contínuas sobre superfícies — estudo 0.14.0
 
-**Em validação; não liberado para imprimir.** O objetivo é obter linhas
+**Em validação; sem liberação geral de impressão.** O objetivo é obter linhas
 contínuas acompanhando cada superfície, com espaçamento regular e formato
 preservado. O arquivo do Preview não deve ser enviado enquanto houver
 pendências do cabeçote e da deposição.
@@ -143,8 +143,12 @@ O resultado conserva `physical_validation=False` e `print_allowed=False`.
 Uma consulta sem movimentos obteve os limites ativos da SV06: Z 10 mm/s e
 100 mm/s²; o deslocamento XY do sensor informado pelo firmware é X25/Y−18.
 O valor Z de `M851` é a compensação de disparo do sensor, **não** a altura
-física de sua carcaça. Nenhuma impressão deste segundo candidato foi iniciada
-durante a conferência descrita aqui.
+física de sua carcaça. A conferência inicial terminou sem impressão.
+Posteriormente, com nova confirmação de presença e preparação da máquina,
+o ensaio supervisionado de 60 mm teve seu início aceito em 22/11/2026,
+00:36 (America/Sao_Paulo), usando a hipótese de 4 mm informada pelo operador.
+O resultado físico permanece pendente. Transporte, reconciliação dos
+comentários do servidor e limites estão no [ADR-0021](decisions/0021-supervised-benchy60-c2-trial.md).
 
 ## Alcance dos testes
 
