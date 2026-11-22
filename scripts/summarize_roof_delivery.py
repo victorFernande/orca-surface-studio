@@ -23,7 +23,7 @@ native=load(native_path) if native_path.is_file() else None
 before=load(folder/'verification/installation-before.json')
 plugin=Path(os.environ['APPDATA'])/'OrcaSlicer/orca_plugins/orca_wave_studio'
 bundle=ROOT/'dist/orca_wave_generator.py'
-wheel=ROOT/f'dist/orca_wave_generator-{__version__}-py3-none-any.whl'
+wheel=ROOT/f'dist/orca_wave_studio-{__version__}-py3-none-any.whl'
 source=ROOT/'src/orca_wave_studio'
 with ZipFile(wheel) as archive:
     wheel_matches=all(archive.read('orca_wave_studio/'+p.name)==p.read_bytes() for p in source.glob('*.py'))

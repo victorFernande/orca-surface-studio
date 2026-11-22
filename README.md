@@ -2,7 +2,17 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
-**Auditoria do Benchy na SV06, com hipótese de 4 mm:** o arquivo atual foi
+A **0.14.0 em estudo** substitui os campos sequenciais por um campo suave
+conjunto, com verificação do interior das faces, material pelo perfil e
+invalidação dos resultados antigos. O Benchy de 60 mm ainda não está liberado
+para imprimir. Veja o [registro e o uso em quatro passos](docs/CAMADAS_SUAVES_V0140.md).
+
+A **0.13.0 experimental foi reprovada no Preview pelo usuário**: a redução
+global de intensidade não manteve o alinhamento desejado do topo e do casco.
+O ensaio físico não permanece ativo, e a estratégia não deve ser o padrão do
+fluxo guiado. Veja o [registro da tentativa](docs/ADAPTACAO_PERFIL_V0130.md).
+
+**Auditoria do Benchy anterior na SV06, com hipótese de 4 mm:** o arquivo 0.12.0 foi
 reprovado para liberação. Foi reproduzida uma interferência condicional com
 o CAD do sensor, e 52 camadas contêm trechos abaixo da altura mínima do perfil.
 O envio continua bloqueado. Veja a

@@ -9,7 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from .capture import atomic_write
-from .continuous_layers import ContinuousLayerWarp
+from .spline_planning import prepare_spline_warp
 from .conformal import process_conformal_gcode
 from .contracts import WaveError,digest
 from .geometry import transform_point
@@ -32,7 +32,11 @@ def build_continuous(snapshot,object_id,backup,folder,executable,resolved,profil
     settings=RegionalShellSettings(step_mm=options.get('step_mm',.4),max_slope_deg=slope,
         nominal_layer_height_mm=flat_height,tolerance_mm=.01,
         retain_native_short_edges=options.get('retain_native_short_edges',True))
-    warp=ContinuousLayerWarp(snapshot,object_id,settings,progress=progress,cancelled=cancelled,initial_layer_mm=profile.initial_layer_mm)
+    warp=prepare_spline_warp(snapshot,object_id,settings,profile,resolved,progress=progress,cancelled=cancelled,
+                             cache_folder=folder.parent/'phase-cache')
+    flat_height=getattr(warp,'nominal_slice_height_mm',flat_height)
+    if not minimum<=flat_height<=maximum:raise WaveError('LAYERS_PROFILE: a altura planejada saiu dos limites do perfil.')
+    settings=replace(settings,nominal_layer_height_mm=flat_height)
     # Split the 0.02 mm coordinate budget between the slicing-copy surface
     # certificate and the emitted inverse-mapped chords.
     mesh_error=float(warp.summary.get('mesh_normal_and_crease_error_budget_mm',.01))
@@ -74,12 +78,21 @@ def build_continuous(snapshot,object_id,backup,folder,executable,resolved,profil
         grid,spacing=plan_spacing(data,warp,mapping,str(object_id),maximum,profile.initial_layer_mm,profile.height_mm)
         spacing_runs.append(spacing)
         if not spacing['extra_slice_intervals']:break
+        if warp.summary.get('partial_adaptation'):
+            raise WaveError('BEAD_ADAPTATION: reduza a adaptação para respeitar a altura máxima dos cordões.')
         if attempt==2:raise WaveError('BEAD_ITERATIONS: o espaçamento ainda exige outra distribuição; o resultado foi recusado.')
         warp.regrid_spacing(grid,spacing,progress=progress,cancelled=cancelled,initial_layer_mm=profile.initial_layer_mm)
-    if spacing_enabled:
-        warp.deposition_model={'model':'logical_pitch_finite_bead_v1','profile_minimum_mm':minimum,'profile_maximum_mm':maximum}
+    finite_beads=getattr(warp,'finite_beads',spacing_enabled)
+    enforce_height_limits=warp.summary.get('enforce_height_limits',warp.summary.get('partial_adaptation'))
+    if finite_beads:
+        warp.deposition_model={'model':'logical_pitch_finite_bead_v1','profile_minimum_mm':minimum,'profile_maximum_mm':maximum,
+                               'reject_below_profile_minimum':bool(enforce_height_limits)}
     progress('Restaurando o formato, a extrusão e as transições em XYZ…')
     result=process_conformal_gcode(data,warp,mapping,str(object_id),printer_profile=profile,progress=progress,cancelled=cancelled)
+    if enforce_height_limits:
+        beads=result.report.get('bead_deposition',{})
+        if not beads or beads['below_profile_minimum_occurrences'] or beads['above_profile_maximum_occurrences']:
+            raise WaveError('BEAD_ADAPTATION: o cordão efetivo saiu dos limites do perfil; o resultado foi recusado.')
     if not sum(result.report['nonplanar_extrusion_segments_by_role'].values()):
         raise WaveError('LAYERS_NO_EFFECT: a fatia não confirmou camadas com movimento contínuo em Z.')
     audit=audit_finishing(result.gcode,mapping,plan,slope)
@@ -96,7 +109,9 @@ def build_continuous(snapshot,object_id,backup,folder,executable,resolved,profil
         'physical_gate':'CONTINUOUS_LAYERS_HEAD_AND_DEPOSITION_VALIDATION_REQUIRED',
         'physical_validation':False,'print_allowed':False,'printer_contacted':False}
     if spacing_enabled:report['deposition_planning']={'passes':spacing_runs,'complete_cell_upper_bound_checked':True,
-        'minimum_height_and_physical_bonding_qualified':False}
+        'minimum_height_and_physical_bonding_qualified':False,
+        'minimum_height_checked':bool(warp.summary.get('partial_adaptation')),
+        'physical_bonding_qualified':False}
     report['local_nonplanar_layers']={k:v['up']+v['down'] if isinstance(v,dict) else v
                                      for k,v in report.get('nonplanar_extrusion_layers',{}).items()}
     output=folder/'surface.gcode';native=folder/'surface.gcode.3mf'

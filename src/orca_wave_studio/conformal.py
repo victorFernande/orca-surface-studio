@@ -231,6 +231,10 @@ def _joined_geometry(first, second, warp, step, minimum, tolerance, extra=()):
 def _join_short_edges(parsed, selected, warp, step, minimum, tolerance,*,progress=lambda message:None,cancelled=lambda:False):
     moves = list(parsed.moves.values())
     skipped, plans = set(), {}
+    prepare_layer=getattr(warp,'prepare_layer',None);prepared_layer=None;layer_moves={}
+    if callable(prepare_layer):
+        for move in moves:
+            if move.obj==selected and move.deposits:layer_moves.setdefault(move.layer,[]).append(move)
     for index, m in enumerate(moves):
         if index%1000==0 and cancelled():raise WaveError('Geração cancelada.')
         if index%10000==0:progress(f'Conferindo quinas e movimentos curtos: {100*index/max(1,len(moves)):.0f}%…')
@@ -238,6 +242,8 @@ def _join_short_edges(parsed, selected, warp, step, minimum, tolerance,*,progres
                 or None in m.start or None in m.end or m.end[2] <= warp.anchor_z):
             continue
         field = _role_warp(warp, m)
+        if callable(prepare_layer) and m.layer!=prepared_layer:
+            prepare_layer(layer_moves.get(m.layer,()),m.h or .2);prepared_layer=m.layer
         p, q = _point(field, m.start, True), _point(field, m.end, True)
         if math.dist(p, q) >= minimum - 2e-6:
             continue
@@ -351,6 +357,10 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
     if bead_policy:
         from .bead_deposition import layer_pitches,bead_portion,section_area
         pitches=layer_pitches(parsed,selected_object_id)
+    prepare_layer=getattr(warp,'prepare_layer',None);prepared_layer=None;layer_moves={}
+    if callable(prepare_layer):
+        for move in parsed.moves.values():
+            if move.obj==selected_object_id and move.deposits:layer_moves.setdefault(move.layer,[]).append(move)
     report = {
         "study_type": "conformal_full_part", "bench_only": True, "print_allowed": False,
         "physical_validation": False, "native_preview_validated": False,
@@ -470,6 +480,10 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
 
         # The 0.15 mm minimum applies to recreated deposition segments. Travel
         # can use smaller steps to cross the local field and layer transitions.
+        if dep and callable(prepare_layer) and m.layer!=prepared_layer:
+            if cancelled():raise WaveError('Geração cancelada.')
+            prepare_layer(layer_moves.get(m.layer,()),pitches[m.layer] if bead_policy else m.h)
+            prepared_layer=m.layer
         geometry = plan[1][0] if plan else _geometry(m, own, warp, step, minimum if dep else .01, tolerance)
         points, error, shortest, longest = geometry
         if actual_pos is not None and math.dist(points[0][1], actual_pos) > 2e-5:
@@ -538,8 +552,10 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
                         bead_report['maximum_supported_height_mm']=max(bead_report['maximum_supported_height_mm'],*gaps)
                         bead_report['below_profile_minimum_occurrences']+=min(gaps)<bead_policy['profile_minimum_mm']-2e-5
                         bead_report['above_profile_maximum_occurrences']+=max(gaps)>bead_policy['profile_maximum_mm']+2e-5
+                        if bead_policy.get('reject_below_profile_minimum') and min(gaps)<bead_policy['profile_minimum_mm']-2e-5:
+                            raise WaveError(f'BEAD_MINIMUM: linha {i+1}, cordão de {min(gaps):.6f} mm abaixo de {bead_policy["profile_minimum_mm"]:g} mm; replaneje o espaçamento.')
                         if max(gaps)>bead_policy['profile_maximum_mm']+2e-5:
-                            raise WaveError('BEAD_HEIGHT: cordão apoiado acima da altura máxima do perfil; replaneje o espaçamento.')
+                            raise WaveError(f'BEAD_HEIGHT: linha {i+1}, cordão de {max(gaps):.6f} mm acima de {bead_policy["profile_maximum_mm"]:g} mm; replaneje o espaçamento.')
                     else:
                         gaps, scales = zip(*(_gap_and_scale(field, at, native.h) for at in (left, mid, right)))
                         extrusion += base_e * (scales[0] + 4 * scales[1] + scales[2]) / 6
@@ -609,7 +625,7 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
                 report['inherited_mapped_short_deposition_segments'] += 1
                 report['inherited_mapped_short_deposition_min_mm'] = min(
                     report['inherited_mapped_short_deposition_min_mm'] or shortest,shortest)
-            audit["e_delta_changed"] += abs(delta) > 1e-8
+            audit["e_delta_changed"] += int(abs(delta) > 1e-8)
             audit["max_abs_e_delta_change_mm"] = max(audit["max_abs_e_delta_change_mm"], abs(delta))
             if abs(delta) > 1e-8 and not inherited:
                 raise WaveError(f"Linha {i+1}: aresta curta com fluxo alterado.")

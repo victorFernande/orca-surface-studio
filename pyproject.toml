@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "orca-wave-studio"
-version = "0.12.1"
+version = "0.14.0"
 description = "OrcaSlicer surface and sinusoidal toolpath studio using the active printer profile"
 requires-python = ">=3.12"
-dependencies = ["numpy>=1.26"]
+dependencies = ["numpy>=1.26", "scipy>=1.14", "osqp>=1.0"]
 license = {text = "MIT"}
 authors = [{name = "Orca Surface Studio"}]
 

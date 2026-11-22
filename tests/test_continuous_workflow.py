@@ -42,7 +42,7 @@ class ContinuousWorkflowTests(unittest.TestCase):
                 folder.mkdir();source=folder/'plate_1.gcode';source.write_text('\n'.join(lines)+'\n')
                 package=folder/'source.gcode.3mf';shutil.copyfile(model,package)
                 return source,package
-            with patch('orca_wave_studio.continuous_workflow.ContinuousLayerWarp',return_value=warp) as factory:
+            with patch('orca_wave_studio.continuous_workflow.prepare_spline_warp',return_value=warp) as factory:
                 result=build_surface(snapshot,'1',backup,root/'job','unused',
                     {'backend':'continuous_layers','selection_mode':'all'},slicer=slicer)
             self.assertEqual(factory.call_args.args[2].tolerance_mm,.01)
