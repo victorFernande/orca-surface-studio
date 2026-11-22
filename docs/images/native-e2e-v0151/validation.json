@@ -1,0 +1,140 @@
+{
+  "date": "2026-11-22",
+  "application": "OrcaSlicer 2.5.1 build eef7710c",
+  "plugin_version": "0.15.1",
+  "bundle_sha256": "ec395e86554b81d41b1e8ec4032035514508dbedac2c67708af1c153017bfc8b",
+  "installed_bundle_matches": true,
+  "printer_profile": "Sovol SV06 0.4 nozzle -3DPrinter",
+  "nozzle_mm": 0.4,
+  "layer_mm": 0.2,
+  "test_mode": "native Windows UI: select model, whole piece, study movement",
+  "printer_actions_performed": false,
+  "physical_print_started": false,
+  "native_preview_opened": false,
+  "overall_pass": false,
+  "benchy_source_sha256": "74ec6ee3dba54a4973bad319c13e4d7df20a860ef82209912adceedeb8e8e643",
+  "benchy_source_unchanged": true,
+  "cases": {
+    "benchy": {
+      "job_id": "d9b7fa0ee3bc44f480aab432806450d2",
+      "status": "failed",
+      "error": "SPLINE_INVERSE",
+      "final_result_generated": false,
+      "files": {
+        "original.3mf": {
+          "bytes": 2531132,
+          "sha256": "ba7e4a21c6bb182bfb0604c415bc79a573bdcb8f07b0b6c3c92e973a50951fc6"
+        },
+        "prepared.3mf": {
+          "bytes": 8647782,
+          "sha256": "e29c77b695c6eb645b1af0d42a5ebcb0c0a034d7ffca96d28b9d0577982042f0"
+        },
+        "surface-coordinates.json": {
+          "bytes": 7147,
+          "sha256": "52ea46c570bda27b8abffa163a1d579dc1931c8050682f4259ae5142327e51ed"
+        },
+        "slice/plate_1.gcode": {
+          "bytes": 5290482,
+          "sha256": "f07a9a23bd7ed4c5fce7adbd76cdc5280d60800f87273407bdd2920e091c842f"
+        },
+        "slice/slicing.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "slice/source.gcode.3mf": {
+          "bytes": 9155698,
+          "sha256": "862666760ccf1bacf31ff6c2fe264a7a20c1f94848abedd6aa80665b8c1e25f6"
+        }
+      },
+      "input_triangles": 225154,
+      "prepared_triangles": 557546,
+      "mesh_error_budget_mm": 0.009999875092253318
+    },
+    "vase_100_percent": {
+      "job_id": "2ac7d041365a4552918a14d2e4b46d4b",
+      "status": "failed",
+      "error": "SPLINE_COMPLEXITY",
+      "final_result_generated": false,
+      "files": {
+        "original.3mf": {
+          "bytes": 1161622,
+          "sha256": "feb0c8b8edfcec6ac9e8a2d7e2b82de6558aba9f226c6d96f0aae4a86794dcac"
+        }
+      },
+      "rim_peak_to_peak_mm": 2.9000015258789062
+    },
+    "vase_90_percent": {
+      "job_id": "dfd270a071964eba98ea299a81cdc0ec",
+      "status": "failed",
+      "error": "SPLINE_ALIGNMENT",
+      "final_result_generated": false,
+      "files": {
+        "original.3mf": {
+          "bytes": 1160289,
+          "sha256": "eb62c941eb5f6dc32c7d7d569274a47e0c21573f0ddda61b9bbd919c8054c34b"
+        }
+      },
+      "rim_peak_to_peak_mm": 2.610001373291016
+    }
+  },
+  "captures": {
+    "benchy-study-error.png": "71e82e1ab1b552bd3972223cf2a4ceaaa8586a3f52a57594c96e2cbe0b572223",
+    "vase-model.png": "56d02224939c0de3ee946a94d742b6e4a37c531964afc4ae1165b372f14986dd",
+    "vase-complexity-error.png": "eeeced45c655e3583289374393659875e2890ec38d0361f9155001939c2626e9",
+    "vase-alignment-error.png": "973099d4c5e325f4420fbfee93050dff3abca78097acbf1a7f758a125aaf6dcd"
+  },
+  "numerical_diagnostic": {
+    "converged": true,
+    "iterations": 57,
+    "last": [
+      {
+        "iteration": 49,
+        "error": -10.048888108780197,
+        "bracket": 9.510434421065051,
+        "z": 5.716079734937102
+      },
+      {
+        "iteration": 50,
+        "error": 4.119363237899645,
+        "bracket": 9.332881097438587,
+        "z": 14.539134387942454
+      },
+      {
+        "iteration": 51,
+        "error": -8.623855333720481,
+        "bracket": 8.823054653005352,
+        "z": 6.758673543572436
+      },
+      {
+        "iteration": 52,
+        "error": 1.8553296579969825,
+        "bracket": 7.780460844370018,
+        "z": 12.077316577506888
+      },
+      {
+        "iteration": 53,
+        "error": -0.32778337935103075,
+        "bracket": 5.318643033934452,
+        "z": 10.814734727710634
+      },
+      {
+        "iteration": 54,
+        "error": -0.004081327667712742,
+        "bracket": 1.2625818497962538,
+        "z": 10.983085890190711
+      },
+      {
+        "iteration": 55,
+        "error": -7.06972707931186e-07,
+        "bracket": 1.094230687316177,
+        "z": 10.985236453300644
+      },
+      {
+        "iteration": 56,
+        "error": -2.1316282072803006e-14,
+        "bracket": 1.0920801242062446,
+        "z": 10.985236825953015
+      }
+    ]
+  }
+}
