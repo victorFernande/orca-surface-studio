@@ -6,6 +6,7 @@ import json
 from .branding import ICON_SVG
 from .controller import BUILTIN_PRESETS
 from .placement_ui import MARKUP as PLACEMENT_MARKUP,SCRIPT as PLACEMENT_SCRIPT
+from .model_preview_ui import SCRIPT as MODEL_PREVIEW_SCRIPT
 
 
 def get_studio_html(initial_state: dict | None = None, *, dock: bool = False) -> str:
@@ -16,6 +17,7 @@ def get_studio_html(initial_state: dict | None = None, *, dock: bool = False) ->
     return (_HTML.replace("__LAYOUT__", "dock" if dock else "page")
             .replace("__BRAND_ICON__", ICON_SVG.replace('<svg ', '<svg class="brandmark" role="img" aria-label="Trajetória subindo a 30 graus" ', 1))
             .replace("__PLACEMENT_MARKUP__",PLACEMENT_MARKUP).replace("__PLACEMENT_SCRIPT__",PLACEMENT_SCRIPT)
+            .replace("__MODEL_PREVIEW_SCRIPT__",MODEL_PREVIEW_SCRIPT)
             .replace("__PRESET_DATA__", factory).replace("__STATE__", payload))
 
 
@@ -468,6 +470,7 @@ function diagnostics(current){
   if(Array.isArray(rep.warnings)&&rep.warnings.length)$('result-note').textContent+=' '+rep.warnings.join(' ');
   $('result-path').textContent=(r.study_kind==='surface'?r.gcode_path:r.package_path)||'';
 }
+__MODEL_PREVIEW_SCRIPT__
 class PathView {
   constructor(canvas){
     this.canvas=canvas;this.streams={};this.buffers=[];this.zoom=1;this.yaw=-.62;this.pitch=.56;
@@ -518,18 +521,10 @@ class PathView {
     const s=Math.sin(this.yaw),c=Math.cos(this.yaw),sp=Math.sin(this.pitch),cp=Math.cos(this.pitch);
     const direction=[-s*cp,c*cp,-sp],H=[c,s,0],V=[-s*sp,c*sp,cp];
     const origin=this.center.map((v,i)=>v+H[i]*x+V[i]*y-direction[i]*this.radius*4);
-    const sub=(a,b)=>a.map((v,i)=>v-b[i]),dot=(a,b)=>a.reduce((sum,v,i)=>sum+v*b[i],0),
-      cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
-    let nearest=Infinity;
-    for(let i=0;i<this.mesh.flat.length;i+=9){
-      const a=this.mesh.flat.slice(i,i+3),b=this.mesh.flat.slice(i+3,i+6),c=this.mesh.flat.slice(i+6,i+9),
-        e1=sub(b,a),e2=sub(c,a),p=cross(direction,e2),det=dot(e1,p);
-      if(Math.abs(det)<1e-12)continue;
-      const t=sub(origin,a),u=dot(t,p)/det,q=cross(t,e1),v=dot(direction,q)/det,d=dot(e2,q)/det;
-      if(u>=0&&v>=0&&u+v<=1&&d>=0)nearest=Math.min(nearest,d);
-    }
-    return Number.isFinite(nearest)?{ray:{origin,direction},point:origin.map((v,i)=>v+nearest*direction[i])}:null;
+    const nearest=displayRayDistance(this.mesh.flat,origin,direction);
+    return nearest!==null?{ray:{origin,direction},point:origin.map((v,i)=>v+nearest*direction[i])}:null;
   }
+
   selectedAreas(){
     return surfaceMode&&surfaceSettings().backend==='native_local'&&surfaceSettings().selection_mode==='paint'
       ?(presentResult()?state.result?.report?.wall_selection?.areas:(wallMarks.get(activeId)||[]).slice(0,surfaceSettings().wall_selection.length))||[]:[];
@@ -537,7 +532,7 @@ class PathView {
   makeBuffer(data){
     if(!this.gl||this.lost)return null;
     const g=this.gl,buf=g.createBuffer();g.bindBuffer(g.ARRAY_BUFFER,buf);
-    g.bufferData(g.ARRAY_BUFFER,new Float32Array(data),g.STATIC_DRAW);this.buffers.push(buf);return buf;
+    g.bufferData(g.ARRAY_BUFFER,data instanceof Float32Array?data:new Float32Array(data),g.STATIC_DRAW);this.buffers.push(buf);return buf;
   }
   stream(points,layers,breaks){
     const flat=[],indices=[],groups=[],cuts=new Set(breaks||[]),byLayer=new Map();
@@ -557,12 +552,7 @@ class PathView {
   }
   load(r){
     if(this.gl&&!this.lost)this.buffers.forEach(b=>this.gl.deleteBuffer(b));this.buffers=[];this.streams={};
-    const triangles=r?.model?.objects?.filter(o=>!activeId||String(o.id)===activeId).flatMap(o=>o.triangles)||[];
-    const mesh=triangles.flat(2),shades=[];
-    for(const t of triangles){const [a,b,c]=t,u=b.map((v,i)=>v-a[i]),v=c.map((n,i)=>n-a[i]);
-      const n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
-      const light=.42+.58*Math.abs((.3*n[0]-.4*n[1]+.86*n[2])/Math.max(1e-9,Math.hypot(...n)));
-      shades.push(light,light,light)}
+    const {flat:mesh,shades}=displaySurface(r?.model?.objects?.filter(o=>!activeId||String(o.id)===activeId)||[]);
     this.mesh={flat:mesh,shades,buffer:this.makeBuffer(mesh),shadeBuffer:this.makeBuffer(shades)};
     for(const k of ['original','deformed']){
       const pts=r?.[k+'_points']||[],own=r?.[k+'_layer_ids'];
@@ -624,7 +614,7 @@ class PathView {
     if(this.mesh?.flat.length&&this.layer===''){
       bind(this.mesh.buffer);g.bindBuffer(g.ARRAY_BUFFER,this.mesh.shadeBuffer);
       g.enableVertexAttribArray(this.shade);g.vertexAttribPointer(this.shade,1,g.FLOAT,false,0,0);
-      g.uniform1i(u.point,false);g.uniform4fv(u.color,this.light?[.57,.66,.70,.9]:[.38,.52,.57,.92]);
+      g.uniform1i(u.point,false);g.uniform4fv(u.color,this.light?[.57,.66,.70,1]:[.38,.52,.57,1]);
       g.enable(g.POLYGON_OFFSET_FILL);g.polygonOffset(1,1);g.drawArrays(g.TRIANGLES,0,this.mesh.flat.length/3);
       g.disable(g.POLYGON_OFFSET_FILL);g.disableVertexAttribArray(this.shade);g.vertexAttrib1f(this.shade,1);
     }
@@ -977,6 +967,10 @@ function applyState(next){
   if(next.status==='analyzing'&&next.revision===state.revision&&!next.objects?.length&&state.objects?.length)
     next={...next,objects:state.objects};
   if(Number.isFinite(next.sequence)&&next.sequence<hostSequence)return;
+  if(next.model_preview?.unchanged){
+    if(next.model_preview.id!==state.model_preview?.id||!state.model_preview?.objects){send('refresh');return}
+    next={...next,model_preview:state.model_preview};
+  }
   if(Number.isFinite(next.sequence))hostSequence=next.sequence;
   // Polls advance the server sequence even when the visible data is identical.
   // Avoid rebuilding focused object buttons and preset menus on those replies.
@@ -1059,7 +1053,7 @@ function schedulePoll(immediate=false){
     // Re-arm before sending. An onMessage callback can run synchronously, and
     // a lost WebView reply must not stop subsequent updates.
     pollTimer=setTimeout(()=>schedulePoll(true),4000);
-    send('poll',{ui_focused:document.hasFocus()});
+    send('poll',{ui_focused:document.hasFocus(),model_preview_id:state.model_preview?.id});
   },delay);
 }
 document.addEventListener('visibilitychange',()=>schedulePoll(!document.hidden));

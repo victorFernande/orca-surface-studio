@@ -1,6 +1,6 @@
 """Resolve screen rays against original geometry, then make native modifiers.
 
-The display mesh is deliberately simplified. It must never be the authority
+The display mesh uses GPU float32 precision. It must never be the authority
 for the surface that a click selects or for the generated printing geometry.
 """
 from __future__ import annotations

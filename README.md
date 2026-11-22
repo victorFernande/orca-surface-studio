@@ -2,6 +2,11 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A **0.15.1** preserva todas as faces na visualização do modelo, com iluminação
+suave nas curvas, arestas vivas e superfície opaca. O Benchy de referência é
+exibido com seus 225.154 triângulos, em vez da redução anterior a 3.209.
+Veja a [comparação e os testes da prévia](docs/VISUALIZACAO_MODELO_V0151.md).
+
 A **0.15.0 experimental** acrescenta giro da cópia e cadastro visual do
 cabeçote por impressora, preservando o motor de trajetórias. O usuário aprovou
 o formato do Benchy, mas relatou contato da carcaça traseira com a proa no

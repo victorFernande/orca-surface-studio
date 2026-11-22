@@ -27,6 +27,7 @@ function placementModel(model){
   return {...model,objects:model.objects.map(o=>{
     if(String(o.id)!==activeId)return o;
     const x=(o.bounds[0][0]+o.bounds[1][0])/2,y=(o.bounds[0][1]+o.bounds[1][1])/2;
+    if(o.mesh)return {...o,display_rotation:{radians:a,center:[x,y]}};
     return {...o,triangles:o.triangles.map(t=>t.map(p=>[x+c*(p[0]-x)-s*(p[1]-y),y+s*(p[0]-x)+c*(p[1]-y),p[2]]))};
   })};
 }

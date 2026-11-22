@@ -939,6 +939,7 @@ class StudioController:
                         and self._result.get("report",{}).get("print_allowed",True))}
 
     def handle(self, message: Any) -> dict:
+        payload=None
         try:
             payload=json.loads(message) if isinstance(message,str) else message
             if not isinstance(payload,dict):
@@ -1035,4 +1036,9 @@ class StudioController:
                 self._status="error"
                 self._message=str(exc)
                 self.event("action_failed",action=str(message.get("action")) if isinstance(message,dict) else "message",error=str(exc))
-        return {"type":"state","state":self.state()}
+        response=self.state()
+        preview=response.get('model_preview')
+        if (isinstance(payload,dict) and payload.get('action')=='poll' and preview
+                and payload.get('model_preview_id')==preview.get('id')):
+            response['model_preview']={'id':preview['id'],'unchanged':True}
+        return {"type":"state","state":response}
