@@ -131,5 +131,3 @@ def assess_phase_field(grid,regions,profile,minimum,maximum,status,anchor,cap,*,
         'emitted_profile_audit_required':not require_global_profile_bounds,
         'physical_validation':False,'print_allowed':False}
     return grid,regrid,audit
-
-
