@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-22",
+  "application": "OrcaSlicer on Windows",
+  "plugin_version": "0.15.1",
+  "installed_bundle_sha256": "ec395e86554b81d41b1e8ec4032035514508dbedac2c67708af1c153017bfc8b",
+  "source_sha256": "74ec6ee3dba54a4973bad319c13e4d7df20a860ef82209912adceedeb8e8e643",
+  "source_triangles": 225154,
+  "printer_profile": "Sovol SV06 0.4 nozzle -3DPrinter",
+  "nozzle_mm": 0.4,
+  "layer_height_mm": 0.2,
+  "native_orca_test": true,
+  "load": true,
+  "orbit": true,
+  "zoom": true,
+  "paint_selection": true,
+  "final_state": "Surface Studio open; whole model selected, test paint cleared, camera fitted",
+  "physical_print_tested": false,
+  "gcode_generation_tested": false,
+  "pending_settings_preserved_as": "0.20mm Standard @Sovol SV06 - Surface preview backup 2026-11-22",
+  "captures": [
+    "01-native-model.png",
+    "02-native-orbit.png",
+    "03-native-selection.png",
+    "04-native-final.png"
+  ]
+}

@@ -39,6 +39,7 @@ partir de outra revisão. Execute `scripts/check_model_preview_ui.cjs` com os
 dois HTMLs e a pasta de evidências. `WAVE_PLAYWRIGHT` seleciona a instalação
 local do Playwright. Os modelos e capturas locais ficam fora do Git.
 
-A versão instalada entra em uso após fechar e reabrir o OrcaSlicer. A conferência
-nativa desta revisão ainda depende desse reinício. A alteração não libera
-impressão física nem a publicação no OrcaCloud.
+A versão instalada entra em uso após fechar e reabrir o OrcaSlicer. A
+[conferência direta no Orca Windows](TESTE_ORCA_VISUALIZACAO_V0151.md) foi
+concluída em 22/11/2026, incluindo carregamento, giro, zoom e seleção por clique.
+A alteração não libera impressão física nem a publicação no OrcaCloud.
