@@ -9,8 +9,18 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 
+def check_publication_policy(root):
+    try:
+        policy=json.loads((Path(root)/'publication-policy.json').read_text(encoding='utf-8'))
+    except (OSError,ValueError):
+        raise SystemExit('Publicação no Orca Cloud bloqueada: falta uma autorização explícita no projeto.')
+    if not isinstance(policy,dict) or policy.get('orca_cloud_enabled') is not True:
+        raise SystemExit('Publicação no Orca Cloud bloqueada: validação física e autorização de liberação pendentes.')
+
+
 def main():
     root=Path(__file__).resolve().parents[1]
+    check_publication_policy(root)
     expected=tomllib.loads((root/"pyproject.toml").read_text())["project"]["version"]
     version=os.environ["GITHUB_REF_NAME"].removeprefix("v")
     if version!=expected:

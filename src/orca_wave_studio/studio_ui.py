@@ -5,6 +5,7 @@ import json
 
 from .branding import ICON_SVG
 from .controller import BUILTIN_PRESETS
+from .placement_ui import MARKUP as PLACEMENT_MARKUP,SCRIPT as PLACEMENT_SCRIPT
 
 
 def get_studio_html(initial_state: dict | None = None, *, dock: bool = False) -> str:
@@ -14,6 +15,7 @@ def get_studio_html(initial_state: dict | None = None, *, dock: bool = False) ->
     factory = json.dumps(BUILTIN_PRESETS, ensure_ascii=False).replace("<", "\\u003c")
     return (_HTML.replace("__LAYOUT__", "dock" if dock else "page")
             .replace("__BRAND_ICON__", ICON_SVG.replace('<svg ', '<svg class="brandmark" role="img" aria-label="Trajetória subindo a 30 graus" ', 1))
+            .replace("__PLACEMENT_MARKUP__",PLACEMENT_MARKUP).replace("__PLACEMENT_SCRIPT__",PLACEMENT_SCRIPT)
             .replace("__PRESET_DATA__", factory).replace("__STATE__", payload))
 
 
@@ -40,11 +42,14 @@ body button{color:var(--text-main);background:var(--bg-card);border:1px solid va
 .panel-help{margin:8px 0;color:var(--text-muted);font-size:11px}.panel-help summary{font-size:11px}
 body.compact header:has(#panel-action:not([hidden])){height:auto;min-height:46px;flex-wrap:wrap;padding-top:5px;padding-bottom:5px}
 .study-modes{display:grid;grid-template-columns:1fr 1fr}.study-modes button{min-width:0;font-size:12px}.surface-mode .wave-only,.surface-mode #suggest,.surface-mode #analyze,.surface-mode #prepare-capture,.combined-mode #suggest{display:none!important}.surface-info{color:var(--text-muted);font-size:12px;margin:10px 0}.surface-mode .object:has(input:checked){background:var(--bg-input);border-color:var(--border-subtle)}.surface-mode .object:has(.pick-object[aria-pressed=true]){background:var(--bg-input);border-color:var(--border-subtle)}
+.safety-warning{flex-shrink:0;padding:8px 16px;background:#382b13;color:#ffdd91;border-bottom:1px solid #8a661f;font-size:12px;overflow-wrap:anywhere}#placement-tools .row input{min-width:0;width:72px}#placement-tools label{display:block;margin:7px 0;color:var(--text-muted);font-size:12px}#placement-tools input{display:block;width:100%;padding:6px;background:var(--bg-input);border:1px solid var(--border-strong);border-radius:var(--radius-sm)}#head-map-editor{margin-top:12px}
 </style></head>
 <body data-mode="__LAYOUT__">
+<div class="safety-warning" role="alert" id="safety-warning"><strong>WARNING — Use at your own risk.</strong> Do not print unattended until you are 100% sure the toolpaths are safe for your printer.</div>
 <header><div class="brand">__BRAND_ICON__<h1>Orca <b>Surface</b> <span>Studio</span></h1></div><div class="row"><i id="link-dot" class="dot"></i><span id="connection" class="connection"></span><button id="theme" class="iconbtn" aria-label="Alternar tema" title="Alternar tema" data-icon="sun"></button></div></header>
 <nav class="docktabs" aria-label="Painel do Studio"><button id="tab-config" aria-selected="true">Configuração</button><button id="tab-review" aria-selected="false">Diagnóstico e saída</button></nav>
 <main class="work"><aside class="side left shown" id="config"><div class="scroll">
+__PLACEMENT_MARKUP__
 <section class="section"><div class="sectionhead"><h3><i data-icon="box"></i> Objetos da mesa</h3><button class="iconbtn outline" id="refresh" aria-label="Atualizar mesa" title="Atualizar mesa" data-icon="refresh"></button></div><div id="objects" class="objects"></div><button id="analyze" class="wide"><i data-icon="scan"></i>Analisar seleção</button></section>
 <section class="section"><div class="sectionhead"><h3><i data-icon="wave"></i> Parâmetros da trajetória</h3><span class="badge">mm</span></div><fieldset class="fieldset" id="params"><div class="segments study-modes" aria-label="Tipo de trajetória"><button id="mode-xy" aria-pressed="false">Onda XY</button><button id="mode-z" aria-pressed="true">Onda Z</button><button id="mode-surface" aria-pressed="false">Superfície curva</button></div><div id="primary-fields"></div><div class="field twocol wave-only"><label>Início em Z (mm)<input id="start_height_mm" type="number" min="0" step="any"></label><label>Fim em Z (mm)<input id="end_height_mm" type="number" min="0" step="any" placeholder="Até o topo"></label></div><details class="field wave-only"><summary>Ajustes avançados</summary><div id="advanced-fields"></div></details></fieldset><p id="validation" class="message" aria-live="polite" hidden></p><button class="wide outline" id="suggest"><i data-icon="sliders"></i> Aplicar sugestão do objeto</button></section>
 <section class="section wave-only"><div class="sectionhead"><h3><i data-icon="library"></i> Presets</h3></div><label class="smallcap" for="presets">Perfil da onda</label><select id="presets" class="presets"></select><div class="presetops"><button id="save"><i data-icon="plus"></i> Salvar</button><button id="delete"><i data-icon="trash"></i> Excluir</button></div><form id="preset-editor" class="preset-editor" hidden><label for="preset-name">Nome do preset</label><input id="preset-name" maxlength="64" required><div class="row"><button type="submit">Confirmar</button><button type="button" id="cancel-preset">Cancelar</button></div></form></section>
@@ -98,6 +103,7 @@ const surfaceSettings=()=>{
     selection_mode:'all',selection_revision:null,wall_selection:[],...surfaceByObject.get(activeId)};
   // A rejected reduced-adaptation trial must not become the guided default.
   delete value.adaptation_strength;
+  if(!value.placement_degrees)delete value.placement_degrees;
   if(!['native_local','continuous_layers'].includes(value.backend))for(const key of ['selection_mode','selection_revision','wall_selection'])delete value[key];
   return value;
 };
@@ -804,8 +810,9 @@ function render(){
   profileDetails.textContent=state.printer_profile?.issue||
     (state.printer_profile?.nozzle_mm?'Bico '+numberFormat(state.printer_profile.nozzle_mm)+' mm · camada '+numberFormat(state.printer_profile.layer_mm)+' mm · '+state.printer_profile.firmware:'O perfil acompanha a seleção feita no Orca.');
   cancelBuild.hidden=!(state.status==='processing'&&!stage);cancelBuild.disabled=false;
-  const tag=[current?state.result.sha256:'model',state.model_preview?.id,activeId].join('/');
-  if(sceneTag!==tag){stop();sceneTag=tag;viewer.load({...current?state.result:{},model:state.model_preview});$('scrub').value=0;setLayers()}
+  renderPlacement(active,busy,current);
+  const tag=[current?state.result.sha256:'model',state.model_preview?.id,activeId,surfaceSettings().placement_degrees||0].join('/');
+  if(sceneTag!==tag){stop();sceneTag=tag;viewer.load({...current?state.result:{},model:placementModel(state.model_preview)});$('scrub').value=0;setLayers()}
   else viewer.draw();
   const modes=document.querySelectorAll('[data-view]');
   for(const b of modes){
@@ -824,7 +831,7 @@ function render(){
     (current?'A trajetória desta visualização não contém pontos.':'Gere uma trajetória para inspecionar o percurso do bico.'))));
   for(const id of ['fit','zoom-in','zoom-out'])$(id).disabled=!viewer.available||(!n&&!hasModel);
   timeline();
-  if(hasModel&&!n)$('point-label').textContent='Modelo original · '+(busy?'calculando trajetórias…':'arraste para girar');
+  if(hasModel&&!n)$('point-label').textContent=(surfaceSettings().placement_degrees?'Cópia girada '+surfaceSettings().placement_degrees+'°':'Modelo')+' · '+(busy?'calculando trajetórias…':'arraste para mudar a vista');
   renderGuide(active,current,busy);
 }
 const profileBox=node('section','section'),profileCard=node('strong'),profileDetails=node('p','muted');
@@ -976,7 +983,7 @@ function applyState(next){
   const stamp=JSON.stringify([next.native,next.demo,next.status,next.message,next.revision,
     next.capture?.capture_id,next.capture?.sha256,next.capture_setup_required,next.objects,
     next.presets,next.parameters,next.parameters_by_object,next.selected_object_ids,next.conformal,next.model_preview?.id,
-    next.result?.sha256,next.result?.study_kind,next.result?.object_id,next.result?.settings,next.result?.package_path,next.send_preview_available]);
+    next.result?.sha256,next.result?.study_kind,next.result?.object_id,next.result?.settings,next.result?.package_path,next.send_preview_available,next.head_map]);
   if(!pending&&stamp===stateStamp){state=next;schedulePoll();return}
   stateStamp=stamp;
   const first=!Object.keys(state).length,priorRev=state.revision;
@@ -1020,7 +1027,7 @@ function applyState(next){
         retain_native_short_edges:Boolean(r.settings.retain_native_short_edges),
         backend:r.settings.backend||'legacy_top',region_id:r.settings.region_id??null,
         selection_mode:r.settings.selection_mode??'all',selection_revision:r.settings.selection_revision??null,
-        wall_selection:r.settings.wall_selection||[]};
+        wall_selection:r.settings.wall_selection||[],...(r.settings.placement_degrees?{placement_degrees:r.settings.placement_degrees}:{})};
       if(settings.backend==='native_local'&&settings.selection_mode==='all')settings.backend='continuous_layers';
       if(!['native_local','continuous_layers'].includes(settings.backend))for(const key of ['selection_mode','selection_revision','wall_selection'])delete settings[key];
       if(!resultIdentity&&!generation){
@@ -1072,6 +1079,7 @@ function listen(){
   const webview=window.chrome?.webview;
   if(webview!==wiredWebView&&typeof webview?.addEventListener==='function'){wiredWebView=webview;webview.addEventListener('message',e=>receive(e.data))}
 }
+__PLACEMENT_SCRIPT__
 listen();syncParams();applyState(JSON.parse($('initial-state').textContent));
 function start(){
   let lastBridge;

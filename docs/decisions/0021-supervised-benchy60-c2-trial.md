@@ -1,7 +1,9 @@
 # ADR-0021 — Ensaio supervisionado do Benchy C2 de 60 mm
 
 Status: início aceito pela SV06 em **22/11/2026, 00:36 (America/Sao_Paulo)**.
-Resultado físico e acabamento ainda não avaliados. Complementa o ADR-0020;
+Depois, o usuário relatou contato da carcaça traseira com a proa; essa posição
+e a hipótese de folga não qualificaram o cabeçote real. O usuário aprovou
+o formato e os cálculos das trajetórias. Complementa o ADR-0020;
 não libera o produto para impressão geral.
 
 ## Autorização e hipóteses
@@ -92,6 +94,13 @@ erro sinalizado, e a posição no arquivo havia avançado de 147 para 17.153
 bytes. Essa leitura confirma aquecimento final e avanço do arquivo; não
 substitui a observação da deposição e da adesão pelo operador.
 
-Registrar separadamente avanço e observação física do operador.
+Após o relato de contato, às 01:12:58, a consulta encontrou a SV06 já em
+`Operational`, sem impressão ativa e com ambos os alvos de aquecimento em
+zero. Não foi enviado cancelamento, e não se atribui a parada ao assistente.
+O diário foi marcado `REJECTED_PHYSICAL_HEAD_CONTACT_INACTIVE`, sem repetição
+automática. O próximo trabalho preserva os cálculos e trata do mapa e da
+posição: [ADR-0022](0022-study-copy-placement-and-head-map.md).
+
+Registrar separadamente qualquer novo avanço e observação física do operador.
 Uma impressão concluída ou uma avaliação positiva desse Benchy não aprova
 automaticamente outras geometrias, cabeçotes ou impressoras.

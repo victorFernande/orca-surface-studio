@@ -2,11 +2,19 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A **0.15.0 experimental** acrescenta giro da cópia e cadastro visual do
+cabeçote por impressora, preservando o motor de trajetórias. O usuário aprovou
+o formato do Benchy, mas relatou contato da carcaça traseira com a proa no
+ensaio anterior. Novo ensaio e verificação nativa continuam pendentes.
+**A publicação no Orca Cloud está bloqueada por solicitação do usuário.**
+Veja o [uso, aviso e limites do mapa](docs/MAPEAMENTO_CABECOTE_V0150.md).
+
 A **0.14.0 em estudo** substitui os campos sequenciais por um campo suave
 conjunto, com verificação do interior das faces, material pelo perfil e
 invalidação dos resultados antigos. O Benchy de 60 mm recebeu um ensaio
-supervisionado específico com início aceito na SV06; resultado físico e
-liberação geral continuam pendentes. Veja o [registro e o uso em quatro passos](docs/CAMADAS_SUAVES_V0140.md)
+supervisionado específico com início aceito na SV06 e posterior relato de
+contato da carcaça traseira com a proa. A liberação física dessa posição foi
+reprovada. Veja o [registro e o uso em quatro passos](docs/CAMADAS_SUAVES_V0140.md)
 e os [limites desse ensaio](docs/decisions/0021-supervised-benchy60-c2-trial.md).
 
 A **0.13.0 experimental foi reprovada no Preview pelo usuário**: a redução

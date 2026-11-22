@@ -147,7 +147,11 @@ física de sua carcaça. A conferência inicial terminou sem impressão.
 Posteriormente, com nova confirmação de presença e preparação da máquina,
 o ensaio supervisionado de 60 mm teve seu início aceito em 22/11/2026,
 00:36 (America/Sao_Paulo), usando a hipótese de 4 mm informada pelo operador.
-O resultado físico permanece pendente. Transporte, reconciliação dos
+Posteriormente, o usuário relatou contato da carcaça traseira com a proa,
+aprovando o formato e os cálculos das trajetórias. A posição e o mapa de
+cabeçote usados não ficaram qualificados. O ajuste seguinte está no
+[manual de mapeamento e giro](MAPEAMENTO_CABECOTE_V0150.md).
+Transporte, reconciliação dos
 comentários do servidor e limites estão no [ADR-0021](decisions/0021-supervised-benchy60-c2-trial.md).
 
 ## Alcance dos testes
