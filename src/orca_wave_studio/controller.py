@@ -86,6 +86,9 @@ class StudioController:
 
     def state(self) -> dict:
         with self.lock:
+            from .placement import HeadMapStore
+            try:head_map=HeadMapStore(self.storage).load(self._profile_summary)
+            except WaveError:head_map=None
             if self.snapshot is not self._state_revision_snapshot:
                 self._state_revision_snapshot=self.snapshot
                 self._state_revision_value=self.snapshot.revision if self.snapshot else None
@@ -101,7 +104,7 @@ class StudioController:
                     "parameters_by_object":self._parameters,"conformal":conformal,
                     "surface_rejection":self._surface_rejection,
                     "model_preview":self._model_preview,"printer_profile":self._profile_summary,
-                    "send_preview_available":self._send_preview_available}
+                    "send_preview_available":self._send_preview_available,"head_map":head_map}
 
     def invalidate(self, reason: str, *, preserve_conformal: bool=False) -> None:
         with self.lock:
@@ -944,6 +947,12 @@ class StudioController:
             selected=[str(x) for x in payload.get("object_ids",[])]
             if action=="refresh":
                 self.refresh()
+            elif action=='save_head_map':
+                from .placement import HeadMapStore
+                if self._job:raise WaveError('Aguarde o estudo terminar antes de salvar o mapa.')
+                if self.host:self.refresh()
+                HeadMapStore(self.storage).save(self._profile_summary,payload.get('profile_key'),payload.get('components'))
+                self._message='Mapa do cabeçote salvo para este perfil. Conferência física ainda necessária.'
             elif action=="analyze":
                 self.analyze(selected)
             elif action=="prepare_capture":

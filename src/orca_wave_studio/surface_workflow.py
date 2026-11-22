@@ -5,6 +5,7 @@ No upload, printer API, preset mutation or shell command is part of this module.
 from __future__ import annotations
 
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -97,6 +98,31 @@ def _slice_locked(executable,model,folder,cancelled,workspace):
 
 
 def build_surface(snapshot,object_id,backup,folder,executable,settings=None,*,progress=lambda message:None,
+                  cancelled=lambda:False,slicer=slice_project,workspace=None):
+    options=dict(settings or {});angle=options.pop('placement_degrees',0.)
+    if cancelled():raise WaveError('Geração cancelada.')
+    if type(angle) not in (int,float) or not math.isfinite(angle) or not -360<=angle<=360:
+        raise WaveError('PLACEMENT_ANGLE: informe um ângulo válido.')
+    original=snapshot;placement=None
+    if angle:
+        from .placement import rotate_study_copy
+        profile=PrinterProfile.from_settings(exported_settings(Path(backup),active_profile=True))
+        if options.get('selection_revision') and options['selection_revision']!=snapshot.revision:
+            raise WaveError('PLACEMENT_STALE: selecione as áreas novamente.')
+        snapshot,placement=rotate_study_copy(snapshot,object_id,angle,profile)
+        if options.get('selection_revision'):options['selection_revision']=snapshot.revision
+        progress(f'Girando a cópia {angle:g}° em Z e refazendo o estudo nessa posição…')
+    result=_build_surface_at_pose(snapshot,object_id,backup,folder,executable,options,
+        progress=progress,cancelled=cancelled,slicer=slicer,workspace=workspace)
+    if placement:
+        path=Path(folder)/'report.json';report=json.loads(path.read_text(encoding='utf-8'))
+        report.update(placement=placement,processing_revision=snapshot.revision,original_revision=original.revision)
+        result=_result(original,object_id,Path(folder),{**result['settings'],**(settings or {})},report,
+            Path(result['gcode_path']),Path(result['package_path']),result['settings']['backend'])
+    return result
+
+
+def _build_surface_at_pose(snapshot,object_id,backup,folder,executable,settings=None,*,progress=lambda message:None,
                   cancelled=lambda:False,slicer=slice_project,workspace=None):
     folder=Path(folder);folder.mkdir(parents=True,exist_ok=True);options=dict(settings or {})
     if set(options)-{'step_mm','max_slope_deg','retain_native_short_edges','backend','region_id',
