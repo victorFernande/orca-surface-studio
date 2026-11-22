@@ -96,6 +96,8 @@ const surfaceByObject=new Map();
 const surfaceSettings=()=>{
   const value={step_mm:.4,max_slope_deg:30,retain_native_short_edges:true,backend:'continuous_layers',region_id:null,
     selection_mode:'all',selection_revision:null,wall_selection:[],...surfaceByObject.get(activeId)};
+  // A rejected reduced-adaptation trial must not become the guided default.
+  delete value.adaptation_strength;
   if(!['native_local','continuous_layers'].includes(value.backend))for(const key of ['selection_mode','selection_revision','wall_selection'])delete value[key];
   return value;
 };
@@ -178,7 +180,8 @@ function canCapture(){
 }
 function presentResult(){
   const result=state.result,source=result?.report?.source_sha256;
-  if(result?.settings?.backend==='continuous_layers'&&result.report?.warp?.transition_kernel!=='hermite_c1_xyz_v4')return false;
+  if(result?.settings?.backend==='continuous_layers'&&
+     (result.report?.warp?.transition_kernel!=='cubic_spline_phase_v1'||result.report?.warp?.reference_certificate_version!==2))return false;
   return Boolean(result?.sha256)&&state.status==='ready'&&!pending&&
     surfaceMode===(['surface','conformal'].includes(result.study_kind))&&
     (!result.revision||result.revision===state.revision)&&

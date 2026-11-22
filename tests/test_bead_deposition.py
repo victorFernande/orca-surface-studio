@@ -99,6 +99,13 @@ class BeadDepositionTests(unittest.TestCase):
         with self.assertRaisesRegex(WaveError,'cancelada'):
             process_conformal_gcode(code(),VerticalWarp(),{0:'part',1:'control'},'part',cancelled=lambda:True)
 
+    def test_minimum_gate_rejects_finite_bead_without_changing_profile_limits(self):
+        warp=VerticalWarp()
+        warp.deposition_model={**warp.deposition_model,'profile_minimum_mm':.25,'reject_below_profile_minimum':True}
+        with self.assertRaisesRegex(WaveError,'BEAD_MINIMUM'):
+            process_conformal_gcode(code(),warp,{0:'part',1:'control'},'part')
+        self.assertEqual(warp.deposition_model['profile_minimum_mm'],.25)
+
     def test_normal_gap_and_tilt_both_contribute_to_extrusion(self):
         class Tilt:
             def map_point(self,p):return p[0],p[1],p[2]+.3*p[0]

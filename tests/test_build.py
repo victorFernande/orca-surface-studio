@@ -6,6 +6,8 @@ import io
 import json
 from pathlib import Path
 import tempfile
+import tomllib
+from email.parser import Parser
 import unittest
 import zipfile
 
@@ -68,6 +70,13 @@ class BuildTests(unittest.TestCase):
         bundle,wheel=build_module.build()
         self.assertEqual(bundle.read_bytes(),(ROOT/"dist"/"orca_wave_generator_any.py").read_bytes())
         with zipfile.ZipFile(wheel) as archive:
+            project=tomllib.loads((ROOT/'pyproject.toml').read_text())['project']
+            metadata_name=next(name for name in archive.namelist() if name.endswith('.dist-info/METADATA'))
+            metadata=Parser().parsestr(archive.read(metadata_name).decode())
+            self.assertEqual(metadata['Name'],project['name'])
+            self.assertEqual(metadata.get_all('Requires-Dist'),project['dependencies'])
+            self.assertTrue(wheel.name.startswith(project['name'].replace('-','_')+'-'))
+            self.assertTrue(metadata_name.startswith(project['name'].replace('-','_')+'-'))
             records=[name for name in archive.namelist() if name.endswith(".dist-info/RECORD")]
             self.assertEqual(len(records),1)
             for name,value,size in csv.reader(io.StringIO(archive.read(records[0]).decode())):

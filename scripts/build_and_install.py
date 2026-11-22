@@ -7,6 +7,7 @@ import hashlib
 import io
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -35,7 +36,9 @@ def renamed_page_state(content:bytes) -> bytes:
 
 
 def build() -> tuple[Path,Path]:
-    version=tomllib.loads((ROOT/"pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+    project=tomllib.loads((ROOT/"pyproject.toml").read_text(encoding="utf-8"))["project"]
+    version=project["version"]
+    dependencies=project.get("dependencies",[])
     modules={"orca_wave_studio"+("" if p.stem=="__init__" else "."+p.stem):p.read_text(encoding="utf-8")
              for p in sorted(PACKAGE.glob("*.py"))}
     for name,source in modules.items():
@@ -43,7 +46,7 @@ def build() -> tuple[Path,Path]:
     payload=base64.b64encode(zlib.compress(json.dumps(modules).encode(),9)).decode()
     header=f'''# /// script
 # requires-python = ">=3.12"
-# dependencies = ["numpy>=1.26"]
+# dependencies = {json.dumps(dependencies)}
 #
 # [tool.orcaslicer.plugin]
 # name = "Orca Surface Studio"
@@ -79,8 +82,10 @@ from orca_wave_studio.plugin import *
     content=header+"\n_WAVE_PAYLOAD = "+repr(payload)+"\n"+loader
     bundle.write_text(content,encoding="utf-8",newline="\n")
     (dist/"orca_wave_generator_any.py").write_bytes(bundle.read_bytes())
-    info=f"orca_wave_generator-{version}.dist-info"
-    metadata=f"Metadata-Version: 2.1\nName: Orca Wave Studio\nVersion: {version}\nSummary: Offline wave studio integration study\nAuthor: Orca Wave Studio\nLicense: MIT\nRequires-Python: >=3.12\nRequires-Dist: numpy>=1.26\nImport-Name: orca_wave_studio\n"
+    distribution=re.sub(r"[-_.]+","_",project['name']).lower()
+    info=f"{distribution}-{version}.dist-info"
+    requirements=''.join(f'Requires-Dist: {dependency}\n' for dependency in dependencies)
+    metadata=f"Metadata-Version: 2.1\nName: {project['name']}\nVersion: {version}\nSummary: Orca Surface Studio integration study\nAuthor: Orca Surface Studio\nLicense: MIT\nRequires-Python: >=3.12\n{requirements}Import-Name: orca_wave_studio\n"
     entries={f"orca_wave_studio/{p.name}":p.read_bytes() for p in sorted(PACKAGE.glob("*.py"))}
     for p in (PACKAGE/"assets").glob("*"):
         if p.is_file(): entries[f"orca_wave_studio/assets/{p.name}"]=p.read_bytes()
@@ -95,7 +100,7 @@ from orca_wave_studio.plugin import *
         writer.writerow([name,"sha256="+sha,str(len(data))])
     writer.writerow([f"{info}/RECORD","",""])
     entries[f"{info}/RECORD"]=record.getvalue().encode()
-    wheel=dist/f"orca_wave_generator-{version}-py3-none-any.whl"
+    wheel=dist/f"{distribution}-{version}-py3-none-any.whl"
     with zipfile.ZipFile(wheel,"w",compression=zipfile.ZIP_DEFLATED) as archive:
         for name,data in entries.items():
             item=zipfile.ZipInfo(name,(2026,1,1,0,0,0))

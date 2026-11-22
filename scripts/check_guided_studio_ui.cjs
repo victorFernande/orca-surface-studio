@@ -81,10 +81,11 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       const whole=await page.evaluate(()=>window.commands.findLast(m=>m.action==='build_surface'));
       assert.equal(whole.open_preview,false);assert.equal(whole.settings.selection_mode,'all');
       assert.equal(whole.settings.backend,'continuous_layers');
+      assert.equal(whole.settings.adaptation_strength,undefined);
       assert.deepEqual(whole.settings.wall_selection,[]);
       const wholeResult=structuredClone(result);wholeResult.settings=whole.settings;
       wholeResult.report.wall_selection={mode:'all',areas:[],wall_speed_factor:1};
-      wholeResult.report.warp={...wholeResult.report.warp,transition_kernel:'hermite_c1_xyz_v4'};
+      wholeResult.report.warp={...wholeResult.report.warp,transition_kernel:'cubic_spline_phase_v1',reference_certificate_version:2};
       wholeResult.report.bead_deposition={model:'logical_pitch_finite_bead_v1',minimum_supported_height_mm:.04,
         maximum_supported_height_mm:.25,below_profile_minimum_occurrences:1};
       await page.evaluate(({state,result})=>window.orcaWaveReceive({type:'state',state:{...state,
@@ -97,7 +98,7 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       await page.locator('#send-review').click();
       assert.equal(await page.evaluate(()=>window.commands.findLast(m=>m.action==='open_send_dialog').sha256),wholeResult.sha256);
       assert.equal(await page.evaluate(()=>window.commands.some(m=>m.action==='send_file')),false);
-      const oldKernel=structuredClone(wholeResult);oldKernel.report.warp.transition_kernel='hermite_c1_xyz_v3';
+      const oldKernel=structuredClone(wholeResult);oldKernel.report.warp.transition_kernel='hermite_c1_xyz_v4';
       await page.evaluate(({state,result})=>window.orcaWaveReceive({type:'state',state:{...state,
         sequence:36,status:'ready',result}}),{state,result:oldKernel});
       assert.equal(await page.evaluate(()=>presentResult()),false,'an older transition kernel is stale');
