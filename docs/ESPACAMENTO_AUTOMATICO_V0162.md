@@ -116,8 +116,29 @@ ou início de impressão foi realizado neste ciclo.
 A conferência inicial da reprodução offline, com todas as faces da carcaça
 inferior e sem deslocar o CAD para a hipótese de 4 mm, ficou **inconclusiva**.
 Os limites conservativos se sobrepõem ao material; isso não prova contato.
-Está em execução uma revisão mais detalhada, com subdivisões analíticas das
-faces inferiores do duto e da carcaça, sobre o arquivo nativo novo.
-O registro do cabeçote instalado continua sem medição independente.
+Uma revisão mais detalhada preservou todas as 109 faces do duto e 677 faces
+da carcaça inferior. As faces analíticas inferiores foram divididas em
+retângulos UV completos, com limites inflados em 0,02 mm e intersectados com
+o limite da face original. Faces não analíticas mantiveram seus limites
+conservativos completos. Não foi aplicado o deslocamento hipotético de 4 mm.
+
+No arquivo nativo novo, a linha **664.373**, durante extrusão, apresentou
+limite inferior de folga de **−3,790458 mm** para uma dessas regiões da
+carcaça. Ponta do bico: início `(110,812; 136,802; 12,239021)` e fim
+`(110,855; 137,104; 12,237802)` mm. Nesse envelope, a borda inferior fica
+em Z 16,987421 mm e o limite superior do material anterior em Z 20,777879 mm.
+
+Esse valor é **um limite conservativo inconclusivo, não uma penetração medida
+nem prova de colisão real**. O diagnóstico reconstruiu o material até esse
+movimento e avaliou todos os envelopes nesse trecho. Como esse único resultado
+já impede aprovação pelo critério de folga, a varredura longa restante foi
+interrompida. Não se declara uma auditoria completa aprovada. O registro do
+cabeçote instalado continua sem medição independente.
+
+**Resultado físico deste ciclo: não liberado; nenhum arquivo enviado e nenhuma
+impressão iniciada.** A orientação para SOVOL foi mantida. O arquivo permanece
+com prefixo `REVISAR`, disponível para inspeção, sem ser apresentado como
+pronto para impressão. A próxima correção necessária é conferir o mapa e o
+registro do cabeçote real em relação ao bico e a essa posição da peça.
 
 Não há liberação física, publicação no Orca Cloud ou início inferido dos testes.
