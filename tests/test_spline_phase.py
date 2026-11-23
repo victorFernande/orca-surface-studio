@@ -13,6 +13,35 @@ from orca_wave_studio.contracts import WaveError
 
 
 class SplinePhaseTests(unittest.TestCase):
+    def test_cached_bounds_are_identical_at_knots_and_outside_domain(self):
+        f=self.field();rng=np.random.default_rng(218)
+        def legacy(points,domains,arrays,hessian=False):
+            lo=np.min(points,axis=0);hi=np.max(points,axis=0);out=[]
+            for values,(knots,degrees) in zip(arrays,domains):
+                slices=tuple(slice(max(0,int(np.searchsorted(t,lo[k],side='right'))-degree-1),
+                                   min(values.shape[k],int(np.searchsorted(t,hi[k],side='right'))))
+                             for k,(t,degree) in enumerate(zip(knots,degrees)))
+                region=values[slices]
+                if hessian:out.append(float(abs(region).max()) if region.size else 0.)
+                else:out.append((min(0.,float(region.min())),max(0.,float(region.max()))) if region.size else (0.,0.))
+            return out
+        boxes=list(rng.uniform(-5,16,(250,2,3)))
+        for axis,knots in enumerate(f._support_knots):
+            for value in knots:
+                for edge in (np.nextafter(value,-np.inf),value,np.nextafter(value,np.inf)):
+                    points=np.array([[3.,4.,5.],[3.2,4.2,5.2]])
+                    points[:,axis]=edge;boxes.append(points)
+        for points in boxes:
+            h=legacy(points,list(f.hessian_domains.values()),list(f.hessian.values()),True)
+            self.assertEqual(f.hessian_bounds(points),dict(zip(f.hessian,h)))
+            d=legacy(points,f.first_domains,f.first)
+            expected=(1+d[2][0],1+d[2][1],tuple(max(abs(a),abs(b)) for a,b in d[:2]))
+            self.assertEqual(f.derivative_bounds(points),expected)
+            self.assertEqual(f.derivative_bounds(points),expected)
+        bounds=f.hessian_bounds(boxes[0]);bounds.clear()
+        self.assertTrue(f.hessian_bounds(boxes[0]),'callers must not mutate cached certificates')
+        self.assertGreater(f._derivative_query.cache_info().hits,len(boxes))
+
     def field(self):
         axes=[np.arange(0.,11.),np.arange(0.,11.),np.arange(-2.5,11.)]
         x,y,z=np.meshgrid(*axes,indexing='ij');coeff=.025*np.sin(x*.4)*np.cos(y*.3)*(z-.5)*(9-z)/10

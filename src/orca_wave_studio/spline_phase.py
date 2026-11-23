@@ -69,6 +69,14 @@ class SplinePhase:
         self.bounds={'minimum_phase_z_derivative':self.cmin,'maximum_phase_z_derivative':self.cmax,
             'maximum_phase_xy_derivative':self.gmax,'maximum_slope':math.hypot(*self.gmax)/self.cmin,
             'certificate':'nonnegative B-spline derivative basis and complete coefficient differences'}
+        # Bounds depend on the active knot supports, not the exact coordinates
+        # inside a support cell. Use searchsorted's exact closed-box convention;
+        # no rounding, looser tolerance or sampled certificate is introduced.
+        domains=[*self.first_domains,*self.hessian_domains.values()]
+        self._support_knots=tuple(np.unique(np.concatenate([knots[k] for knots,_ in domains])) for k in range(3))
+        self._support_coordinates=tuple(np.r_[-np.inf,knots] for knots in self._support_knots)
+        self._hessian_query=lru_cache(maxsize=32768)(self._hessian_for_cells)
+        self._derivative_query=lru_cache(maxsize=32768)(self._derivative_for_cells)
         self._map=lru_cache(maxsize=120000)(self._map_point)
         self._differential=lru_cache(maxsize=120000)(self._at_differential)
         self._prepared_points={};self._prepared_differentials={}
@@ -155,6 +163,18 @@ class SplinePhase:
     def surface_heights(self,x,y):return None
 
     def hessian_bounds(self,points):
+        return dict(self._hessian_query(self._support_key(points)))
+
+    def _support_key(self,points):
+        p=np.asarray(points);lo=p.min(axis=0);hi=p.max(axis=0)
+        return tuple(int(i) for k,knots in enumerate(self._support_knots)
+                     for i in np.searchsorted(knots,[lo[k],hi[k]],side='right'))
+
+    def _support_points(self,key):
+        return np.array([[self._support_coordinates[k][key[2*k+j]] for k in range(3)] for j in range(2)])
+
+    def _hessian_for_cells(self,key):
+        points=self._support_points(key)
         p=np.asarray(points);lo=p.min(axis=0);hi=p.max(axis=0);result={}
         # A degree-p basis i is nonzero only on [t_i,t_(i+p+1)].
         # Include the complete active support over the closed query box.
@@ -166,9 +186,13 @@ class SplinePhase:
                 right=min(values.shape[k],int(np.searchsorted(t,hi[k],side='right')))
                 selector.append(slice(left,right))
             region=values[tuple(selector)];result[i,j]=float(abs(region).max()) if region.size else 0.
-        return result
+        return tuple(result.items())
 
     def derivative_bounds(self,points):
+        return self._derivative_query(self._support_key(points))
+
+    def _derivative_for_cells(self,key):
+        points=self._support_points(key)
         p=np.asarray(points);lo=p.min(axis=0);hi=p.max(axis=0);ranges=[]
         for values,(knots,degrees) in zip(self.first,self.first_domains):
             selector=[]
