@@ -1,0 +1,37 @@
+{
+  "scope": "exact local coefficient-bound queries only; not end-to-end slicing",
+  "baseline_ref": "032c8e8",
+  "source_sha256": "3cf831bded5e4e1454e126ac4d97b744d77821162716aa8d8993dae6c1b68375",
+  "source_faces": 225154,
+  "query_boxes": 24000,
+  "repeats": 3,
+  "baseline_seconds": [
+    4.695504500064999,
+    4.656851099920459,
+    4.7234521000646055
+  ],
+  "optimized_seconds": [
+    2.618827800033614,
+    2.787877199938521,
+    2.7436119000194594
+  ],
+  "baseline_median_seconds": 4.695504500064999,
+  "optimized_median_seconds": 2.7436119000194594,
+  "speedup": 1.7114317444211753,
+  "identical_certificates": true,
+  "cache": {
+    "_hessian_query": {
+      "hits": 16113,
+      "misses": 7887,
+      "maxsize": 32768,
+      "currsize": 7887
+    },
+    "_derivative_query": {
+      "hits": 16113,
+      "misses": 7887,
+      "maxsize": 32768,
+      "currsize": 7887
+    }
+  },
+  "printer_contacted": false
+}

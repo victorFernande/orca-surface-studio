@@ -38,7 +38,7 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       await page.mouse.click(target.x,target.y);
       assert.equal(await page.evaluate(()=>surfaceSettings().wall_selection.length),0,'step 1 must not paint');
       await page.screenshot({path:path.join(output,`${width}-${fallback}-1-model.png`),fullPage:true});
-      await page.locator('#guide-next').click();assert.equal(await step(),'2');
+      await page.locator('.pick-object').first().click();assert.equal(await step(),'2');
       assert.equal(await page.locator('#wall-all').getAttribute('aria-pressed'),'true');
       await page.locator('#wall-paint').click();
       assert.equal(await page.locator('#guide-next').isDisabled(),true);
@@ -46,18 +46,30 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       assert.equal(await page.locator('#guide-next').isEnabled(),true);
       await page.screenshot({path:path.join(output,`${width}-${fallback}-2-areas.png`),fullPage:true});
       await page.locator('#guide-next').click();assert.equal(await step(),'3');
-      assert.equal(await page.locator('#guide-next').innerText(),'Estudar movimento');
+      assert.equal(await page.locator('#guide-next').innerText(),'Calculando…');
       assert.equal(await page.locator('#wall-selection').isVisible(),false);
-      await page.locator('#guide-next').click();
       const build=await page.evaluate(()=>window.commands.findLast(m=>m.action==='build_surface'));
       assert.equal(build.open_preview,false);assert.equal(build.settings.wall_selection.length,1);
       assert.equal(await page.evaluate(()=>window.commands.some(m=>m.action==='open_preview')),false);
       assert.equal(await page.locator('#guide-next').isDisabled(),true);
+      // A delayed reply to an earlier poll must not unlock the new command.
+      await page.evaluate(state=>window.orcaWaveReceive({type:'state',state:{...state,sequence:19}}),state);
+      assert.equal(await page.locator('#guide-next').isDisabled(),true);
+      await page.evaluate(()=>document.querySelector('#guide-next').click());
+      await page.evaluate(state=>window.orcaWaveReceive({type:'state',state:{...state,sequence:20,
+        build_client_request_id:window.commands.findLast(m=>m.action==='build_surface').client_request_id,
+        status:'processing',message:'Refinando as camadas…',calculation:{phase:'Refinando as camadas…',elapsed_seconds:73}}}),state);
+      assert.equal(await page.locator('#guide-progress').isVisible(),true);
+      assert.match(await page.locator('#guide-progress').innerText(),/1 min 13 s/);
+      assert.equal(await page.locator('#cancel-build').isVisible(),true);
+      assert.equal(await page.evaluate(()=>window.commands.filter(m=>m.action==='build_surface').length),1);
+      await page.screenshot({path:path.join(output,`${width}-${fallback}-3-calculation.png`),fullPage:true});
       const result=structuredClone(fixture);result.object_id=String(state.objects[0].id);
       result.revision=state.revision;result.settings=build.settings;
       await page.evaluate(({state,result})=>window.orcaWaveReceive({type:'state',state:{...state,
+        build_client_request_id:window.commands.findLast(m=>m.action==='build_surface').client_request_id,
         sequence:30,status:'ready',result,message:'Estudo concluído.'}}),{state,result});
-      assert.equal(await step(),'4');assert.equal(await page.locator('#guide-next').innerText(),'Mandar para a bandeja');
+      assert.equal(await step(),'4');assert.equal(await page.locator('#guide-next').innerText(),'Ver no Preview do Orca');
       assert.equal(await page.locator('#guide-warning').isVisible(),true);
       assert.equal(await page.evaluate(()=>window.commands.some(m=>m.action==='open_preview')),false);
       await page.screenshot({path:path.join(output,`${width}-${fallback}-4-result.png`),fullPage:true});
@@ -65,7 +77,7 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       const transfer=await page.evaluate(()=>window.commands.findLast(m=>m.action==='open_preview'));
       assert.equal(transfer.sha256,result.sha256);
       assert.equal(await page.evaluate(()=>window.commands.some(m=>/print|upload|send_file/.test(m.action))),false);
-      await page.locator('#guide-back').click();await page.locator('#guide-back').click();
+      await page.locator('#guide-back').click();
       assert.equal(await step(),'2');await page.getByRole('button',{name:'Remover área 1',exact:true}).click();
       assert.equal(await page.locator('#guide-next').isDisabled(),true);
       assert.equal(await page.locator('#guide-step-4').isDisabled(),true);
@@ -78,7 +90,7 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       await page.locator('#guide-back').click();assert.equal(await step(),'1');
       await page.locator('#guide-next').click();assert.equal(await step(),'2');
       assert.equal(await page.locator('#wall-all').getAttribute('aria-pressed'),'true');
-      await page.locator('#guide-next').click();await page.locator('#guide-next').click();
+      await page.locator('#guide-next').click();
       const whole=await page.evaluate(()=>window.commands.findLast(m=>m.action==='build_surface'));
       assert.equal(whole.open_preview,false);assert.equal(whole.settings.selection_mode,'all');
       assert.equal(whole.settings.backend,'continuous_layers');
@@ -90,6 +102,7 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       wholeResult.report.bead_deposition={model:'logical_pitch_finite_bead_v1',minimum_supported_height_mm:.04,
         maximum_supported_height_mm:.25,below_profile_minimum_occurrences:1};
       await page.evaluate(({state,result})=>window.orcaWaveReceive({type:'state',state:{...state,
+        build_client_request_id:window.commands.findLast(m=>m.action==='build_surface').client_request_id,
         sequence:35,status:'ready',result,message:'Estudo da peça inteira concluído.'}}),{state,result:wholeResult});
       assert.equal(await step(),'4');
       assert.match(await page.locator('#guide-summary').innerText(),/Peça inteira/);
@@ -99,6 +112,15 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       await page.locator('#send-review').click();
       assert.equal(await page.evaluate(()=>window.commands.findLast(m=>m.action==='open_send_dialog').sha256),wholeResult.sha256);
       assert.equal(await page.evaluate(()=>window.commands.some(m=>m.action==='send_file')),false);
+      await page.locator('#guide-send').click();
+      assert.equal(await page.evaluate(()=>window.commands.findLast(m=>m.action==='open_send_dialog').sha256),wholeResult.sha256);
+      // Returning to unchanged areas uses the existing result without another build.
+      const builds=await page.evaluate(()=>window.commands.filter(m=>m.action==='build_surface').length);
+      await page.locator('#guide-back').click();
+      assert.equal(await step(),'2');
+      assert.equal(await page.locator('#guide-next').innerText(),'Ver resultado já calculado');
+      await page.locator('#guide-next').click();assert.equal(await step(),'4');
+      assert.equal(await page.evaluate(()=>window.commands.filter(m=>m.action==='build_surface').length),builds);
       const oldKernel=structuredClone(wholeResult);oldKernel.report.warp.transition_kernel='hermite_c1_xyz_v4';
       await page.evaluate(({state,result})=>window.orcaWaveReceive({type:'state',state:{...state,
         sequence:36,status:'ready',result}}),{state,result:oldKernel});
@@ -106,10 +128,26 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       await page.evaluate(state=>window.orcaWaveReceive({type:'state',state:{...state,sequence:40,
         revision:'changed-project',result:null}}),state);
       assert.equal(await step(),'1');
+      await page.locator('#guide-next').click();await page.locator('#wall-all').click();await page.locator('#guide-next').click();
+      await page.evaluate(state=>window.orcaWaveReceive({type:'state',state:{...state,sequence:41,
+        build_client_request_id:window.commands.findLast(m=>m.action==='build_surface').client_request_id,
+        revision:'changed-project',status:'error',message:'BEAD_HEIGHT: 0.29 > 0.28',result:null}}),state);
+      assert.equal(await step(),'3');assert.match(await page.locator('#guide-help').innerText(),/área menor/);
+      assert.equal(await page.locator('#guide-next').innerText(),'Tentar novamente');
+      await page.locator('#guide-next').click();
+      assert.equal(await page.locator('#guide-next').isDisabled(),true);
+      await page.evaluate(state=>window.orcaWaveReceive({type:'state',state:{...state,sequence:42,
+        objects:[],model_preview:null,status:'idle',send_preview_available:true,result:null,revision:'preview-only'}}),state);
+      assert.match(await page.locator('#guide-help').innerText(),/G-code aberto no Preview/);
+      assert.match(await page.locator('#empty-msg').innerText(),/trajetória já está no Preview/);
+      assert.equal(await page.locator('#guide-send').isVisible(),true);
+      await page.locator('#guide-send').click();
+      assert.equal(await page.evaluate(()=>window.commands.some(m=>m.action==='send_file')),false);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no horizontal overflow');
       assert.deepEqual(errors,[]);outcomes.push({fallback,width,height,errors,four_steps:true,
         study_does_not_open_orca:true,explicit_transfer_only:true,stale_selection_invalidated:true,
-        whole_model_in_guided_step:true,legacy_layout_removed:true,scope_survives_guided_navigation:true});
+        whole_model_in_guided_step:true,legacy_layout_removed:true,scope_survives_guided_navigation:true,
+        single_calculate_click:true,visible_progress:true,unchanged_result_reused:true,error_retry:true,sliced_only_send_review:true});
       await page.close();
     }
   }finally{await browser.close()}

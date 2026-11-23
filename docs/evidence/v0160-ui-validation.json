@@ -1,0 +1,61 @@
+{
+  "status": "PASS_GUIDED_COMPONENT",
+  "native_orca_controlled": false,
+  "printer_contacted": false,
+  "outcomes": [
+    {
+      "fallback": false,
+      "width": 1580,
+      "height": 1000,
+      "errors": [],
+      "four_steps": true,
+      "study_does_not_open_orca": true,
+      "explicit_transfer_only": true,
+      "stale_selection_invalidated": true,
+      "whole_model_in_guided_step": true,
+      "legacy_layout_removed": true,
+      "scope_survives_guided_navigation": true,
+      "single_calculate_click": true,
+      "visible_progress": true,
+      "unchanged_result_reused": true,
+      "error_retry": true,
+      "sliced_only_send_review": true
+    },
+    {
+      "fallback": true,
+      "width": 1580,
+      "height": 1000,
+      "errors": [],
+      "four_steps": true,
+      "study_does_not_open_orca": true,
+      "explicit_transfer_only": true,
+      "stale_selection_invalidated": true,
+      "whole_model_in_guided_step": true,
+      "legacy_layout_removed": true,
+      "scope_survives_guided_navigation": true,
+      "single_calculate_click": true,
+      "visible_progress": true,
+      "unchanged_result_reused": true,
+      "error_retry": true,
+      "sliced_only_send_review": true
+    },
+    {
+      "fallback": false,
+      "width": 390,
+      "height": 844,
+      "errors": [],
+      "four_steps": true,
+      "study_does_not_open_orca": true,
+      "explicit_transfer_only": true,
+      "stale_selection_invalidated": true,
+      "whole_model_in_guided_step": true,
+      "legacy_layout_removed": true,
+      "scope_survives_guided_navigation": true,
+      "single_calculate_click": true,
+      "visible_progress": true,
+      "unchanged_result_reused": true,
+      "error_retry": true,
+      "sliced_only_send_review": true
+    }
+  ]
+}

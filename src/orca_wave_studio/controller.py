@@ -73,6 +73,9 @@ class StudioController:
         self._state_revision_snapshot=None
         self._state_revision_value=None
         self._send_preview_available=False
+        self._build_started=None
+        self._build_request=None
+        self._build_client_request_id=None
 
     def event(self, name: str, **details: Any) -> None:
         with self.lock:
@@ -112,7 +115,10 @@ class StudioController:
                     "parameters_by_object":self._parameters,"conformal":conformal,
                     "surface_rejection":self._surface_rejection,
                     "model_preview":self._model_preview,"printer_profile":self._profile_summary,
-                    "send_preview_available":self._send_preview_available,"head_map":head_map}
+                    "send_preview_available":self._send_preview_available,"head_map":head_map,
+                    "build_client_request_id":self._build_client_request_id,
+                    "calculation":({"elapsed_seconds":int(time.monotonic()-self._build_started),
+                                    "phase":self._message} if self._build_started is not None and self._job else None)}
 
     def invalidate(self, reason: str, *, preserve_conformal: bool=False) -> None:
         with self.lock:
@@ -122,6 +128,8 @@ class StudioController:
             self._surface_rejection=None
             self._analysis_job=None
             self._result=None
+            self._build_request=None
+            self._build_started=None
             self._preview_verified=False
             self._opening_preview=False
             self._importing_preview=False
@@ -183,9 +191,8 @@ class StudioController:
                     if self._analysis_job!=job:return
                     self._model_preview=preview
                 objects=analyze_snapshot(snapshot)
-                from .roof_regions import roof_region_catalog
-                for obj in objects:
-                    obj['roof_regions']=roof_region_catalog(snapshot,str(obj['id']))
+                # Guided selection uses click rays or the whole mesh. Legacy
+                # roof catalogs are constructed on demand by their own workflow.
                 with self.lock:
                     if self._analysis_job!=job:
                         return
@@ -423,13 +430,28 @@ class StudioController:
             original=self.snapshot
             if not original or len(selected)!=1 or selected[0] not in {str(o['id']) for o in original.objects}:
                 raise WaveError('Selecione um modelo da placa para estudar o movimento.')
-            if self._job:raise WaveError('Aguarde ou cancele o cálculo atual.')
+            if self._job:
+                self.event('integrated_surface_already_processing',printer_contacted=False)
+                return
+            request=json.dumps([original.revision,selected[0],settings],sort_keys=True,allow_nan=False)
+            if self._build_request==request and self._result:
+                result=self._result
+                try:
+                    intact=(digest(Path(result['gcode_path']).read_bytes())==result['sha256'] and
+                            digest(extract_plate_gcode(Path(result['package_path']),result['plate_index']))==result['sha256'])
+                except (OSError,ValueError,KeyError):
+                    intact=False
+                if intact:
+                    self._status='ready';self._pending_open=open_after_study
+                    self._message='Resultado atual reaproveitado. Confira no Preview antes do envio.'
+                    self.event('integrated_surface_reused',sha256=result['sha256'],printer_contacted=False)
+                    return
             executable=self.host.slicer_executable()
             workspace=self.host.slicer_workspace()
             job=uuid.uuid4().hex;folder=self.storage/'surface-jobs'/job;backup=folder/'original.3mf'
             self.host.export_project(backup)
             self.invalidate('Preparando a peça com o perfil selecionado…')
-            self._job=job;self._status='processing'
+            self._job=job;self._status='processing';self._build_started=time.monotonic()
         def cancelled():
             with self.lock:return self._job!=job
         def progress(message):
@@ -443,13 +465,14 @@ class StudioController:
                 with self.lock:
                     if cancelled() or not self.snapshot or self.snapshot.revision!=original.revision:return
                     self._result=result;self._status='ready';self._job=None;self._pending_open=open_after_study
+                    self._build_request=request;self._build_started=None
                     self._message=('Superfície gerada com o perfil ativo. Abrindo o Preview para conferência.'
-                                   if open_after_study else 'Estudo concluído. Confira o movimento e mande para a bandeja.')
+                                   if open_after_study else 'Cálculo concluído. Confira o Preview antes do envio.')
                     self.event('integrated_surface_generated',sha256=result['sha256'],printer_contacted=False)
             except Exception as exc:
                 with self.lock:
                     if not cancelled():
-                        self._job=None;self._status='error';self._message=str(exc)
+                        self._job=None;self._status='error';self._message=str(exc);self._build_started=None
                         self.event('integrated_surface_failed',reason=str(exc))
         threading.Thread(target=work,name='OrcaSurface-Build',daemon=True).start()
 
@@ -995,6 +1018,9 @@ class StudioController:
             elif action=="prepare_conformal":
                 self.prepare_conformal(selected,payload.get("settings",{}))
             elif action=='build_surface':
+                request_id=payload.get('client_request_id')
+                if isinstance(request_id,str) and 0<len(request_id)<=100:
+                    self._build_client_request_id=request_id
                 self.build_surface(selected,payload.get('settings',{}),open_after_study=payload.get('open_preview',True))
             elif action=='cancel_build':
                 self.invalidate('Cálculo cancelado. A peça original foi preservada.')

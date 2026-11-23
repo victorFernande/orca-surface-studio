@@ -2,6 +2,11 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A **0.16.0 experimental** inicia o cálculo diretamente na escolha de áreas,
+mostra operação e tempo decorrido e separa **Preview** de **Conferir envio**.
+Evita verificações repetidas sem alterar a precisão do campo C2.
+Veja o [fluxo simples e a medição com o Benchy](docs/FLUXO_SIMPLES_V0160.md).
+
 A **0.15.3** remove o menu **Mais opções** e a interface antiga, mantendo o
 fluxo de quatro etapas. Acrescenta um seletor persistente com sete idiomas
 para o banner e os avisos de Preview. Veja o [uso e os testes](docs/INTERFACE_AVISOS_V0153.md).

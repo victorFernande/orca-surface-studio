@@ -1,0 +1,35 @@
+{
+  "status": "PASS_FAITHFUL_MODEL_PREVIEW",
+  "cases": [
+    {
+      "label": "before",
+      "triangles": 225154,
+      "webgl": true,
+      "sourceTriangles": 225154,
+      "gpuError": 0,
+      "buffers": 5,
+      "loadMilliseconds": 637.4781999999999,
+      "errors": []
+    },
+    {
+      "label": "after",
+      "triangles": 225154,
+      "webgl": true,
+      "sourceTriangles": 225154,
+      "gpuError": 0,
+      "buffers": 5,
+      "loadMilliseconds": 752.1492000000001,
+      "integrity": {
+        "cachePreserved": true,
+        "missingReferenceRecovered": true,
+        "pickable": true,
+        "pickMilliseconds": 5.399999976158142,
+        "buffers": 5,
+        "gpuError": 0
+      },
+      "errors": []
+    }
+  ],
+  "nativeOrcaControlled": false,
+  "printerContacted": false
+}

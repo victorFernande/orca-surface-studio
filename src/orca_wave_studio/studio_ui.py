@@ -105,7 +105,7 @@ function icon(name){return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="tru
 document.querySelectorAll('[data-icon]').forEach(e=>{e.innerHTML=icon(e.dataset.icon)});
 function activeBridge(){return [window.orca,window.chrome?.webview,window.webkit?.messageHandlers?.orca].find(b=>typeof b?.postMessage==='function')}
 let linked=Boolean(activeBridge());
-let state={},selection=new Set(),pending=null,activeId=null;
+let state={},selection=new Set(),pending=null,activeId=null,pendingBuildId=null;
 const surfaceMode=true,guidedMode=true;
 let guideStep=1,guideModelId=null,guideAwaitStudy=false;
 const surfaceByObject=new Map();
@@ -177,7 +177,7 @@ function presentResult(){
 const primary=$('primary-fields');
 const wallBox=node('div','field');wallBox.id='wall-selection';
 wallBox.append(node('h3','','Paredes a suavizar'));
-const wallModes=node('div','segments'),wallPaint=node('button','','Escolher na peça'),wallAll=node('button','','Peça inteira');
+const wallModes=node('div','segments'),wallPaint=node('button','','Pintar áreas'),wallAll=node('button','','Peça inteira');
 wallPaint.id='wall-paint';wallAll.id='wall-all';wallModes.append(wallPaint,wallAll);wallBox.append(wallModes);
 const brushRow=node('label','fieldtop','Raio da área'),brushInput=node('input');
 brushInput.type='number';brushInput.min='1';brushInput.max='15';brushInput.step='1';brushInput.value='6';brushInput.id='wall-radius';
@@ -187,7 +187,7 @@ brushInput.onchange=()=>{if(!brushInput.checkValidity()||!Number.isFinite(brushI
 const wallHint=node('small','','Clique para acrescentar áreas; arraste para girar. A área inclui a espessura e pode alcançar paredes próximas. Velocidade nas áreas: 80% do perfil.'),wallList=node('div');
 wallList.id='wall-areas';wallList.setAttribute('aria-live','polite');
 const wallClear=node('button','outline','Limpar seleção');wallClear.id='wall-clear';
-const wallAllHint=node('small','','Alinha as camadas ao teto e às bordas compatíveis da peça inteira. O modelo original é preservado.');wallBox.append(wallHint,wallAllHint,wallList,wallClear);primary.append(wallBox);
+const wallAllHint=node('small','','Alinha as camadas ao teto e às bordas compatíveis da peça inteira. Esse cálculo pode levar vários minutos. Para limitar a região, escolha Pintar áreas.');wallBox.append(wallHint,wallAllHint,wallList,wallClear);primary.append(wallBox);
 wallPaint.onclick=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),backend:'native_local',selection_mode:'paint'});render()};
 wallAll.onclick=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),backend:'continuous_layers',selection_mode:'all',wall_selection:[],selection_revision:null});wallMarks.delete(activeId);render()};
 wallClear.onclick=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),wall_selection:[],selection_revision:null});wallMarks.delete(activeId);render()};
@@ -203,12 +203,14 @@ function pickWall(ray,point){
 }
 function objects(){
   const list=$('objects');list.replaceChildren();
-  if(!state.objects?.length){list.append(node('p','message','Nenhum objeto disponível nesta mesa.'));return}
+  if(!state.objects?.length){list.append(node('p','message',state.status==='analyzing'?'Carregando os modelos da bandeja…':'Nenhum objeto disponível nesta mesa.'));return}
   for(const obj of state.objects){
     const item=node('div','object'),info=node('button','pick-object');
     const id=String(obj.id);
     info.disabled=controlsBusy();info.setAttribute('aria-pressed',String(id===activeId));
-    info.title='Editar parâmetros de '+(obj.name||id);info.onclick=()=>{activate(id);render()};
+    info.title='Escolher áreas de '+(obj.name||id);info.onclick=()=>{
+      activate(id);guideModelId=id;guideStep=2;render()
+    };
     const dims=obj.dimensions_mm||(obj.bounds?.length===2?obj.bounds[1].map((v,i)=>v-obj.bounds[0][i]):[]);
     info.append(node('strong','',obj.name||'Objeto'),node('small','','ID '+id+' · '+(obj.instances??'—')+' cópia(s)'));
     if(dims.length===3)info.append(node('small','',dims.map(n=>numberFormat(n,1)).join(' × ')+' mm'));
@@ -587,7 +589,8 @@ function render(){
   $('legend-original').hidden=!n||view==='deformed';$('legend-modified').hidden=!n||view==='original';
   const hasModel=Boolean(viewer.mesh?.flat.length);
   $('empty').hidden=viewer.available&&(n>0||hasModel);
-  $('empty-msg').textContent=!viewer.available?'WebGL 2 indisponível. A trajetória 3D precisa de aceleração gráfica neste visor.':
+  $('empty-msg').textContent=state.send_preview_available&&!active?'A trajetória já está no Preview do Orca. Confira o movimento nessa aba e use Conferir envio aqui no Studio.':
+    !viewer.available?'WebGL 2 indisponível. A trajetória 3D precisa de aceleração gráfica neste visor.':
     (busy?'Analisando a trajetória atual…':(surfaceMode&&!current?'Estude a superfície da peça para visualizar seu percurso.':
     (state.result&&!current?'Configuração alterada. Gere novamente para visualizar.':
     (current?'A trajetória desta visualização não contém pontos.':'Gere uma trajetória para inspecionar o percurso do bico.'))));
@@ -604,23 +607,27 @@ $('study-actions').append(cancelBuild);cancelBuild.onclick=()=>send('cancel_buil
 function request(action,extra={}){
   if(!linked||controlsBusy())return;
   notice('');pending=action;
+  if(action==='build_surface'){
+    pendingBuildId=globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+    extra={...extra,client_request_id:pendingBuildId};
+  }
   if(['generate','surface_study','generate_conformal','build_surface'].includes(action))generation=signature();
   render();
-  if(!send(action,extra)){pending=null;generation=null;render()}
+  if(!send(action,extra)){pending=null;pendingBuildId=null;generation=null;render()}
 }
 $('refresh').onclick=()=>request('refresh');
 $('theme').onclick=()=>{viewer.light=!viewer.light;document.documentElement.dataset.theme=viewer.light?'light':'dark';viewer.draw()};
 function compact(){document.body.classList.toggle('compact',document.body.dataset.mode==='dock'||window.innerWidth<=840)}
 window.addEventListener('resize',compact);compact();
 const guideSteps=node('nav','guide-steps');guideSteps.id='guide-steps';guideSteps.setAttribute('aria-label','Passos do estudo');
-const guideLabels=['Selecionar modelo','Selecionar áreas','Estudar movimento','Mandar para a bandeja'];
+const guideLabels=['Modelo','Áreas a suavizar','Cálculo','Preview e envio'];
 const guideStepButtons=guideLabels.map((label,i)=>{
   const b=node('button');b.id='guide-step-'+(i+1);b.setAttribute('aria-label','Passo '+(i+1)+': '+label);
   b.append(node('b','',String(i+1)),node('span','',label));
   b.onclick=()=>{if(i+1<=guideStep&&!controlsBusy()){guideStep=i+1;guideAwaitStudy=false;render()}};
   guideSteps.append(b);return b;
 });document.querySelector('header').after(guideSteps);
-const sendReviewButton=node('button','outline','Enviar para impressora…');sendReviewButton.id='send-review';$('theme').before(sendReviewButton);
+const sendReviewButton=node('button','outline','Conferir envio');sendReviewButton.id='send-review';$('theme').before(sendReviewButton);
 sendReviewButton.setAttribute('aria-label','Conferir envio para impressora');sendReviewButton.title='Abrir a conferência de envio sem iniciar impressão';
 sendReviewButton.onclick=()=>send('open_send_dialog',state.result?.sha256?{sha256:state.result.sha256}:{});
 $('objects').closest('section').id='model-section';$('params').closest('section').id='area-section';profileBox.id='profile-card';
@@ -628,29 +635,35 @@ const guideSummary=node('section','section guide-summary');guideSummary.id='guid
 guideSummary.append(node('h3','','Seu estudo'));const guideModelName=node('strong'),guideAreaCount=node('p','message'),guideFinish=node('p','message'),guideSpeed=node('small');guideSummary.append(guideModelName,guideAreaCount,guideFinish,guideSpeed);profileBox.after(guideSummary);
 const guideHelp=node('section','section guide-help');guideHelp.id='guide-help';
 const guideHeading=node('h2'),guideText=node('p'),guideWarning=node('p','guide-warning');guideWarning.id='guide-warning';guideHelp.append(guideHeading,guideText,guideWarning);
+const guideProgress=node('div','guide-progress');guideProgress.id='guide-progress';guideProgress.setAttribute('role','status');
+const guidePhase=node('p'),guideElapsed=node('small');guideProgress.append(guidePhase,guideElapsed);guideHelp.append(guideProgress);
+const guideSelection=node('p');guideSelection.id='guide-selection';guideSelection.setAttribute('aria-live','polite');guideHelp.append(guideSelection);
 const reviewScroll=document.querySelector('#review>.scroll');reviewScroll.prepend(guideHelp);
 const guideDetails=node('details');guideDetails.id='guide-details';guideDetails.append(node('summary','','Detalhes do estudo'));
 guideDetails.append($('status').closest('section'),$('metrics').closest('section'));reviewScroll.append(guideDetails);
 const guideControls=node('div','guide-controls'),guideNext=node('button','wide positive'),guideBack=node('button','wide outline','Voltar'),guideFootNote=node('small');
-guideControls.id='guide-controls';guideNext.id='guide-next';guideBack.id='guide-back';guideFootNote.id='guide-foot-note';guideControls.append(guideNext,guideBack,guideFootNote);$('study-actions').prepend(guideControls);
-guideBack.onclick=()=>{if(!controlsBusy()){guideStep=Math.max(1,guideStep-1);guideAwaitStudy=false;render()}};
+const guideSend=node('button','wide outline','Conferir envio');guideSend.id='guide-send';guideSend.onclick=()=>sendReviewButton.click();
+guideControls.id='guide-controls';guideNext.id='guide-next';guideBack.id='guide-back';guideFootNote.id='guide-foot-note';guideControls.append(guideNext,guideSend,guideBack,guideFootNote);$('study-actions').prepend(guideControls);
+guideBack.onclick=()=>{if(!controlsBusy()){guideStep=guideStep===4?2:Math.max(1,guideStep-1);guideAwaitStudy=false;render()}};
 guideNext.onclick=()=>{
   if(guideNext.disabled)return;
   if(guideStep===1){guideModelId=activeId;guideStep=2;render()}
-  else if(guideStep===2){guideStep=3;render()}
-  else if(guideStep===3){guideAwaitStudy=true;request('build_surface',{open_preview:false})}
+  else if(guideStep===2||guideStep===3){
+    if(presentResult()){guideStep=4;render();return}
+    guideStep=3;guideAwaitStudy=true;request('build_surface',{open_preview:false})
+  }
   else if(presentResult())send('open_preview',{sha256:state.result.sha256});
 };
 function renderGuide(active,current,busy){
   sendReviewButton.hidden=!(state.native&&(state.send_preview_available||current));
   sendReviewButton.disabled=busy;
-  sendReviewButton.textContent=window.innerWidth<=840?'Enviar…':'Enviar para impressora…';
+  sendReviewButton.textContent='Conferir envio';
   const on=guidedMode&&surfaceMode;document.body.classList.toggle('guided',on);
   guideSteps.hidden=guideControls.hidden=guideHelp.hidden=guideSummary.hidden=!on;
   $('model-section').querySelector('h3').textContent=on?'Modelos na bandeja':'Objetos da mesa';
   $('area-section').querySelector('h3').textContent=on?'Áreas da peça':'Parâmetros da trajetória';
   guideDetails.hidden=on?guideStep<3:false;
-  if(current&&!busy&&(guideAwaitStudy||guideModelId===null)){guideModelId=activeId;guideStep=4;guideAwaitStudy=false}
+  if(current&&!busy&&(guideAwaitStudy||guideStep===3||guideModelId===null)){guideModelId=activeId;guideStep=4;guideAwaitStudy=false}
   if(state.status==='error'&&!pending)guideAwaitStudy=false;
   if(guideStep>1&&guideModelId!==activeId){guideStep=1;guideAwaitStudy=false}
   if(guideStep===4&&!current){guideStep=3;guideAwaitStudy=false}
@@ -658,26 +671,42 @@ function renderGuide(active,current,busy){
   document.body.dataset.studyReady=String(current);
   guideDetails.hidden=guideStep<3;
   guideStepButtons.forEach((button,i)=>{button.disabled=busy||i+1>guideStep;button.toggleAttribute('aria-current',i+1===guideStep);if(i+1===guideStep)button.setAttribute('aria-current','step')});
-  guideHeading.textContent=guideLabels[guideStep-1];
+  const previewOnly=!active&&state.send_preview_available;
+  guideHeading.textContent=previewOnly?'G-code aberto no Preview':guideLabels[guideStep-1];
   const choices=surfaceSettings(),areaCount=choices.wall_selection?.length||0,
     count=choices.selection_mode==='all'?'Peça inteira · superfícies compatíveis':areaCount+(areaCount===1?' área selecionada':' áreas selecionadas');
   guideModelName.textContent=active?.name||'Escolha um modelo';guideAreaCount.textContent=count;guideSpeed.textContent=choices.selection_mode==='all'?'Velocidades do perfil selecionado.':'Velocidade nas áreas: 80% do perfil.';
   const finish=current?state.result?.report?.finishing:null;
   const beads=current?state.result?.report?.bead_deposition:null;
   guideFinish.textContent=beads?.maximum_supported_height_mm?'Altura efetiva do cordão: '+numberFormat(beads.minimum_supported_height_mm,3)+'–'+numberFormat(beads.maximum_supported_height_mm,3)+' mm. Material calculado automaticamente.':finish&&choices.backend==='continuous_layers'?'Camadas alinhadas às superfícies da peça.':finish?'Acabamento: camadas de '+numberFormat(finish.finishing_layer_mm,3)+' mm nas faixas escolhidas.':'Acabamento ajustado automaticamente ao perfil.';
-  guideText.textContent=guideStep===1?(active?'Escolha o modelo na lista e avance.':'Adicione um modelo à placa do Orca e atualize a lista.'):
-    guideStep===2?(choices.selection_mode==='all'?'A peça inteira será estudada, incluindo teto e bordas compatíveis. Clique em Continuar.':'Clique nas áreas da peça ou escolha Peça inteira. Arraste para girar.'):
-    guideStep===3?(busy?'Estudando o movimento…':state.status==='error'?state.message:'Clique em Estudar movimento. O resultado aparece aqui no Studio.'):
-    state.result?.native_preview?'Resultado conferido e aberto no Preview do Orca.':'Use ▶ para conferir o movimento. Depois mande o resultado para a bandeja do Orca.';
+  guideText.textContent=previewOnly?'Este arquivo já está fatiado. Use Conferir envio para revisar a impressora e as verificações pendentes. Para mudar as áreas, abra o projeto original.':
+    guideStep===1?(busy?'Carregando a peça da bandeja. Aguarde a lista de modelos aparecer.':active?'Clique no modelo da lista para escolher suas áreas. Se ele já está destacado, use Escolher áreas.':'Adicione um modelo à placa do Orca e clique em Atualizar.'):
+    guideStep===2?(choices.selection_mode==='all'?'Peça inteira selecionada. Para limitar o cálculo, escolha Pintar áreas e clique na peça.':'Clique nas áreas que quer suavizar. As marcas mostram o que será calculado. Arraste para girar.'):
+    guideStep===3?(busy?'Pode acompanhar o cálculo aqui. O modelo original será preservado.':state.status==='error'?friendlyStudyError(state.message):'O cálculo foi interrompido. Tente novamente ou volte para ajustar as áreas.'):
+    state.result?.native_preview?'Resultado aberto no Preview do Orca. Confira o movimento antes do envio.':'Confira o movimento com ▶ e abra o Preview do Orca. Depois use Conferir envio.';
+  guideProgress.hidden=guideStep!==3||!busy;
+  guidePhase.textContent=pendingBuildId?'Preparando o cálculo no Orca…':state.calculation?.phase||state.message||'Preparando o cálculo…';
+  const seconds=state.calculation?.elapsed_seconds;
+  guideElapsed.textContent=Number.isFinite(seconds)?'Tempo decorrido: '+Math.floor(seconds/60)+' min '+seconds%60+' s · você pode cancelar abaixo.':'Aguardando o Orca…';
+  guideSelection.hidden=guideStep!==2;
+  guideSelection.textContent=surfaceError()||count+' · pronto para calcular.';
   guideWarning.hidden=guideStep!==4||Boolean(state.result?.report?.print_allowed);
   guideWarning.textContent=warning(beads?.below_profile_minimum_occurrences?'warning_bead':'warning_preview');
-  guideNext.textContent=guideStep===1?'Selecionar áreas':guideStep===2?'Continuar':guideStep===3?(busy?'Estudando movimento…':'Estudar movimento'):'Mandar para a bandeja';
+  guideNext.textContent=guideStep===1?'Escolher áreas':guideStep===2?(current?'Ver resultado já calculado':'Calcular e preparar Preview'):guideStep===3?(busy?'Calculando…':'Tentar novamente'):'Ver no Preview do Orca';
   guideNext.disabled=!linked||busy||!active||(guideStep===2&&Boolean(surfaceError()))||(guideStep===3&&Boolean(surfaceError()))||(guideStep===4&&!current);
   guideBack.hidden=guideStep===1;guideBack.disabled=busy;
-  guideFootNote.textContent=guideStep===2?(choices.selection_mode==='all'?'Peça inteira selecionada.':'Selecione uma área ou escolha Peça inteira.'):guideStep===3?'O estudo fica no plugin até você mandar para a bandeja.':guideStep===4?'Abre no Preview do Orca. Não inicia impressão.':'';
+  guideSend.hidden=!(previewOnly||guideStep===4&&current&&state.native);guideSend.disabled=busy;
+  guideNext.hidden=previewOnly;
+  guideFootNote.textContent=guideStep===2?(choices.selection_mode==='all'?'Peça inteira exige mais cálculo. O perfil do Orca será usado automaticamente.':'Seleção pronta? Um clique calcula e prepara o resultado.'):guideStep===3?'Nenhum arquivo é enviado à impressora durante o cálculo.':guideStep===4?'Conferir envio abre a revisão. A impressão exige uma ação separada.':'';
   $('action-note').hidden=!$('action-note').textContent;
   $('validation').hidden=true;
   document.querySelector('.vhead h2').textContent=guideStep<3?'Seu modelo':'Movimento da peça';
+}
+function friendlyStudyError(message=''){
+  if(/BEAD_HEIGHT|altura.*(?:cordão|mínima)|espaçamento/i.test(message))return 'O espaçamento ficou fora dos limites do perfil. Volte e escolha uma área menor para testar. O original foi preservado; veja o motivo em Detalhes do estudo.';
+  if(/cancelad/i.test(message))return 'Cálculo cancelado. Você pode tentar novamente ou voltar para ajustar as áreas.';
+  if(/permiss|access|acesso|audit/i.test(message))return 'O cálculo precisa de uma autorização no Orca. Confira a janela de permissão e tente novamente.';
+  return 'Não foi possível concluir o cálculo. Volte para conferir as áreas e o perfil. O motivo completo está em Detalhes do estudo.';
 }
 function applyState(next){
   if(!next||typeof next!=='object'||Array.isArray(next))return;
@@ -699,12 +728,14 @@ function applyState(next){
     next.language,next.selected_object_ids,next.conformal,next.model_preview?.id,
     next.result?.sha256,next.result?.study_kind,next.result?.object_id,next.result?.settings,next.result?.package_path,
     next.result?.report?.print_allowed,next.result?.report?.bead_deposition?.below_profile_minimum_occurrences,
-    next.send_preview_available,next.head_map]);
+    next.send_preview_available,next.head_map,next.calculation,next.build_client_request_id]);
   if(!pending&&stamp===stateStamp){state=next;schedulePoll();return}
   stateStamp=stamp;
   const first=!Object.keys(state).length,priorRev=state.revision;
   const oldIds=new Set((state.objects||[]).map(o=>String(o.id)));
-  state=next;language=resolveLanguage(next.language||language);pending=null;linked=Boolean(activeBridge())&&!state.demo;notice('');
+  const waitingForBuild=pendingBuildId&&next.build_client_request_id!==pendingBuildId&&next.status!=='processing'&&priorRev===next.revision;
+  if(!waitingForBuild){pending=null;pendingBuildId=null}
+  state=next;language=resolveLanguage(next.language||language);linked=Boolean(activeBridge())&&!state.demo;notice('');
   const ids=(state.objects||[]).map(o=>String(o.id));
   selection=new Set([...selection].filter(id=>ids.includes(id)));
   if((first||!oldIds.size)&&Array.isArray(state.selected_object_ids))
