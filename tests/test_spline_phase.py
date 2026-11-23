@@ -3,6 +3,7 @@ import json
 import unittest
 import numpy as np
 from scipy.interpolate import NdBSpline
+from scipy.optimize import brentq
 from orca_wave_studio.spline_phase import SplinePhase
 from orca_wave_studio.surface_coordinates import SurfaceCoordinates
 from orca_wave_studio.continuous_layers import LayerGridStage
@@ -98,6 +99,31 @@ class SplinePhaseTests(unittest.TestCase):
         f=self.field();points=np.random.default_rng(49).uniform([-2.,-2.,-.1],[12.,12.,12.],(500,3))
         points=np.vstack((points,[4.,4.,.24],[4.,4.,.5]))
         np.testing.assert_allclose(f.map_points(points),[f.map_point(p) for p in points],atol=2e-9,rtol=0.)
+
+    def test_benchy_inverse_stall_converges_without_relaxing_residual(self):
+        # Reduced vertical section of the native Benchy failure (logical layer
+        # 76). Positive derivative bounds still allowed Newton to oscillate
+        # inside its bracket for more than the previous 40-iteration limit.
+        line=np.array([0.,0.,0.,0.,-.9197208832642783,2.9441539216509023,
+            6.1514008214413485,4.4665241195462615,2.8781713271418154,
+            1.9420191951239243,1.3548896629110891,.9751274502588885,
+            .7249343990323606,.5562649194873959,.43707596689502864,
+            .34564357681782426,.2684908489575099,.1983440327053416,
+            .13140156553939292,.06559825184768547,0.,0.,0.])
+        axes=[np.arange(13.),np.arange(13.),np.arange(-5.5,60.6,3.)]
+        coefficients=np.zeros((13,13,len(line)));coefficients[3:-3,3:-3,:]=line
+        f=SplinePhase(axes,coefficients);self.assertGreater(f.cmin,.45)
+        points=np.array([[6.,6.,15.404204040573156+d] for d in (-.001,0.,.001)])
+        unchanged=points.copy()
+        expected=[brentq(lambda z:z+f.evaluate(np.array([[p[0],p[1],z]]))[0]-p[2],
+                         *f.domain[2],xtol=1e-13) for p in points]
+        for mapped in (f.map_points(points),np.array([f.map_point(p) for p in points])):
+            np.testing.assert_array_equal(mapped[:,:2],points[:,:2])
+            np.testing.assert_allclose(mapped[:,2],expected,atol=2e-9,rtol=0.)
+            self.assertLess(abs(f.flatten_points(mapped)[:,2]-points[:,2]).max(),1e-9)
+        f.prepare_points(points)
+        np.testing.assert_allclose([f.map_point(p)[2] for p in points],expected,atol=2e-9,rtol=0.)
+        np.testing.assert_array_equal(points,unchanged)
 
 
 if __name__=='__main__':unittest.main()
