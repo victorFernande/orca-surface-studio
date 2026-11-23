@@ -65,7 +65,21 @@ Estas imagens usam um perfil de teste, sem conexão com uma impressora real.
 
 A 0.16.3 foi instalada preservando ativação e permissões existentes. O Orca foi
 reiniciado e o Benchy de 60 mm reaberto com a proa para SOVOL. A preparação do
-Preview e a conferência da janela nativa estão em andamento. Nenhuma impressão
-real será iniciada para testar esse aviso.
+Preview terminou. G-code, pacote e cache carregado no Orca têm conteúdo idêntico,
+com SHA-256
+`91938874f5a62d6c0954153085a5659a4de09e2d9ac2dd0deb8cb18b8c488e02`.
+
+**Conferir envio** abriu o aviso amarelo com a conexão da SV06 preservada e
+**Entendi os riscos, enviar arquivo** habilitado, mesmo com os campos de
+validação física do estudo ainda falsos. A janela foi fechada pelo X sem
+transferência. O botão **Cancelar** foi exercitado no teste de componente;
+a transferência confirmada foi testada somente no simulador.
+
+Nenhum arquivo foi enviado à impressora real nem houve início de impressão
+nesta conferência. Veja o [recibo da conferência nativa](evidence/risk-send-native-v0163.json).
+
+![Aviso real no Orca com envio habilitado](images/risk-send-v0163/nativo-aviso.jpg)
+
+![Contexto do Benchy e da revisão de envio](images/risk-send-v0163/nativo-contexto.jpg)
 
 Detalhes da decisão: [ADR-0025](decisions/0025-explicit-risk-acknowledged-upload.md).

@@ -51,5 +51,8 @@ duplo clique, mudança de conexão/pacote e upload ao simulador com bytes idênt
 incluindo cores sob o tema injetado pelo Orca, um único aviso e nenhum acesso
 de rede durante a abertura. Os sete idiomas passaram nas páginas e no painel.
 
-Conferência nativa da versão instalada em andamento; nenhuma impressão real
-será iniciada para testar a janela.
+Conferência nativa concluída: Preview do Benchy confirmado por bytes/hash,
+conexão da SV06 preservada, aviso amarelo e botão de confirmação habilitado,
+sem mudar os campos de validação física. A janela foi fechada pelo X sem envio;
+a confirmação com transferência foi exercitada somente no simulador.
+Veja o [manual com capturas e recibos](../ENVIO_POR_CONTA_RISCO_V0163.md).

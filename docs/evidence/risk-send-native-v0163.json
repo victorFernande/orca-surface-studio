@@ -1,0 +1,19 @@
+{
+  "version": "0.16.3",
+  "native_orca_controlled": true,
+  "printer_profile": "Sovol SV06 0.4 nozzle -3DPrinter",
+  "gcode_sha256": "91938874f5a62d6c0954153085a5659a4de09e2d9ac2dd0deb8cb18b8c488e02",
+  "bytes": 38477402,
+  "package_and_native_preview_byte_identical": true,
+  "physical_validation": false,
+  "print_allowed_diagnostic": false,
+  "yellow_warning_observed": true,
+  "risk_confirmation_button_enabled_observed": true,
+  "connection_preserved_observed": true,
+  "technical_rejection_reasons_observed": [],
+  "window_closed_without_send": true,
+  "native_cancel_method": "native window close X; Cancel button exercised in component tests",
+  "real_upload_attempted": false,
+  "real_print_started": false,
+  "scope": "Native warning opening and enabled state. Full upload and acknowledgement exercised only against loopback simulator."
+}
