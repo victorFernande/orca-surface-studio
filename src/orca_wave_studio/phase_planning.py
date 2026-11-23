@@ -78,7 +78,7 @@ def assess_phase_field(grid,regions,profile,minimum,maximum,status,anchor,cap,*,
         if triangles is None:
             raise WaveError('SPLINE_REFERENCE_COVERAGE: faltam os interiores das faces de referência.')
         mapped=grid.flatten_points(triangles)[:,:,2]
-        errors=np.array([grid.phase_triangle_error(triangle) for triangle in triangles])
+        errors=grid.phase_triangle_errors(triangles) if hasattr(grid,'phase_triangle_errors') else np.array([grid.phase_triangle_error(triangle) for triangle in triangles])
         enclosures.append(np.stack((mapped.min(axis=1)-errors,mapped.max(axis=1)+errors),axis=-1))
     choices=[];first=profile.initial_layer_mm
     pitch_low=max(minimum,pitch_floor or minimum) if pitch_ceiling is not None else max(minimum,profile.layer_mm*.8)

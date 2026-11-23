@@ -151,6 +151,12 @@ def _gap_and_scale(warp, p, h):
     x, y, z = p
     if z <= warp.anchor_z:
         return h, 1.0
+    paired=getattr(warp,'gap_and_scale',None)
+    if callable(paired):
+        gap,scale=paired(x,y,z,h)
+        if not math.isfinite(gap) or not math.isfinite(scale) or min(gap,scale)<=0:
+            raise WaveError("Altura normal ou jacobiano da célula inválido.")
+        return gap,scale
     gap = warp.normal_gap(x, y, z, h)
     # The layer cell can straddle the anchor. Only its fraction above the
     # anchor undergoes vertical dilation; the part below retains unit Jacobian.
@@ -231,7 +237,7 @@ def _joined_geometry(first, second, warp, step, minimum, tolerance, extra=()):
 def _join_short_edges(parsed, selected, warp, step, minimum, tolerance,*,progress=lambda message:None,cancelled=lambda:False):
     moves = list(parsed.moves.values())
     skipped, plans = set(), {}
-    prepare_layer=getattr(warp,'prepare_layer',None);prepared_layer=None;layer_moves={}
+    prepare_layer=getattr(warp,'prepare_short_edges',getattr(warp,'prepare_layer',None));prepared_layer=None;layer_moves={}
     if callable(prepare_layer):
         for move in moves:
             if move.obj==selected and move.deposits:layer_moves.setdefault(move.layer,[]).append(move)
@@ -242,6 +248,9 @@ def _join_short_edges(parsed, selected, warp, step, minimum, tolerance,*,progres
                 or None in m.start or None in m.end or m.end[2] <= warp.anchor_z):
             continue
         field = _role_warp(warp, m)
+        shortcut=getattr(field,'can_skip_short_edge_join',None)
+        if callable(shortcut) and shortcut(m.start,m.end,minimum,tolerance,getattr(warp.settings,'retain_native_short_edges',False)):
+            continue
         if callable(prepare_layer) and m.layer!=prepared_layer:
             prepare_layer(layer_moves.get(m.layer,()),m.h or .2);prepared_layer=m.layer
         p, q = _point(field, m.start, True), _point(field, m.end, True)
@@ -360,7 +369,7 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
     prepare_layer=getattr(warp,'prepare_layer',None);prepared_layer=None;layer_moves={}
     if callable(prepare_layer):
         for move in parsed.moves.values():
-            if move.obj==selected_object_id and move.deposits:layer_moves.setdefault(move.layer,[]).append(move)
+            if any(owners.get(move.i,(False,False))):layer_moves.setdefault(move.layer,[]).append(move)
     report = {
         "study_type": "conformal_full_part", "bench_only": True, "print_allowed": False,
         "physical_validation": False, "native_preview_validated": False,
@@ -480,9 +489,10 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
 
         # The 0.15 mm minimum applies to recreated deposition segments. Travel
         # can use smaller steps to cross the local field and layer transitions.
-        if dep and callable(prepare_layer) and m.layer!=prepared_layer:
+        if callable(prepare_layer) and m.layer!=prepared_layer:
             if cancelled():raise WaveError('Geração cancelada.')
-            prepare_layer(layer_moves.get(m.layer,()),pitches[m.layer] if bead_policy else m.h)
+            pitch=pitches.get(m.layer,m.h or warp.settings.nominal_layer_height_mm) if bead_policy else m.h or warp.settings.nominal_layer_height_mm
+            prepare_layer(layer_moves.get(m.layer,()),pitch)
             prepared_layer=m.layer
         geometry = plan[1][0] if plan else _geometry(m, own, warp, step, minimum if dep else .01, tolerance)
         points, error, shortest, longest = geometry
