@@ -6,8 +6,8 @@
   "order": 5,
   "translations": {
     "language": "Sprache der Warnhinweise",
-    "warning_title": "WARNUNG — Verwendung auf eigene Gefahr.",
-    "warning_body": "Drucken Sie nicht unbeaufsichtigt, bis Sie zu 100 % sicher sind, dass die Werkzeugwege für Ihren Drucker sicher sind.",
+    "warning_title": "WARNUNG — KOLLISIONSGEFAHR UND MÖGLICHE DRUCKERSCHÄDEN",
+    "warning_body": "Nichtplanare Druckbahnen können Kollisionen des Druckkopfs verursachen, den Drucker beschädigen und das Bauteil ruinieren. Verwendung auf eigene Gefahr. Prüfen Sie die Freiräume und beaufsichtigen Sie den gesamten Druck. Lassen Sie den Drucker niemals unbeaufsichtigt.",
     "warning_preview": "Nur Vorschau. Vor dem Drucken müssen die Übergänge und der Druckkopf noch überprüft werden.",
     "warning_bead": "Nur Vorschau. Einige Extrusionsbahnen liegen unter der Mindestschichthöhe des Profils. Vor dem Drucken müssen Materialauftrag und Druckkopffreiraum überprüft werden."
   }

@@ -6,8 +6,8 @@
   "order": 2,
   "translations": {
     "language": "Idioma de los avisos",
-    "warning_title": "ADVERTENCIA — Úselo bajo su responsabilidad.",
-    "warning_body": "No imprima sin supervisión hasta tener un 100 % de certeza de que las trayectorias son seguras para su impresora.",
+    "warning_title": "ADVERTENCIA — RIESGO DE COLISIÓN Y DAÑOS A LA IMPRESORA",
+    "warning_body": "Las trayectorias no planas pueden causar colisiones del cabezal, dañar la impresora y arruinar la pieza. Úselo bajo su responsabilidad. Compruebe las holguras y supervise toda la impresión. Nunca deje la impresora sin supervisión.",
     "warning_preview": "Solo vista previa. La impresión aún requiere verificar las transiciones y el cabezal.",
     "warning_bead": "Solo vista previa. Algunos cordones están por debajo de la altura mínima del perfil. La impresión requiere validar la deposición y el espacio libre del cabezal."
   }

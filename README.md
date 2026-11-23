@@ -2,6 +2,10 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A **0.16.1 experimental** destaca o aviso de risco, com título maior e texto
+explícito sobre colisões, danos à impressora e supervisão durante toda a impressão.
+Veja o [aviso e as capturas](docs/AVISO_RISCO_V0161.md).
+
 A **0.16.0 experimental** inicia o cálculo diretamente na escolha de áreas,
 mostra operação e tempo decorrido e separa **Preview** de **Conferir envio**.
 Evita verificações repetidas sem alterar a precisão do campo C2.
