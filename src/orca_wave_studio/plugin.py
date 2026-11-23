@@ -24,6 +24,7 @@ except ImportError:
 CAPTURE_NAME="Orca Wave Studio Capture"
 _controller=None
 _last_settings={}
+_native_storage=None
 
 
 def preview_cache_read_targets(environment=None) -> list[str]:
@@ -41,8 +42,14 @@ def preview_cache_read_targets(environment=None) -> list[str]:
 
 
 def _storage() -> Path:
+    global _native_storage
     if orca is not None:
-        return Path(orca.host.plugin.storage())
+        # Dock WebView callbacks do not retain the SDK plugin callback context.
+        # Resolve the plugin-owned path once during capability/controller setup;
+        # subsequent dock messages and workers reuse it, without changing grants.
+        if _native_storage is None or _native_storage[0] is not orca:
+            _native_storage=(orca,Path(orca.host.plugin.storage()))
+        return _native_storage[1]
     return Path(__file__).resolve().parent/"standalone-data"
 
 
