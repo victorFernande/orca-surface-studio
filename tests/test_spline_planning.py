@@ -8,6 +8,7 @@ from orca_wave_studio.printer_profile import PrinterProfile
 from orca_wave_studio.regional_shell import RegionalShellSettings
 from orca_wave_studio.spline_planning import prepare_spline_warp
 from orca_wave_studio.phase_planning import _references
+from orca_wave_studio.bead_deposition import BeadHeightError
 
 
 def wedge():
@@ -43,6 +44,17 @@ class SplinePlanningTests(unittest.TestCase):
         a,b=(1.,3.,4.1),(5.,3.,4.5)
         self.assertLess(abs(warp.flatten_point(a)[2]-warp.flatten_point(b)[2]),.06)
         self.assertEqual(warp.map_point((2.,2.,.24)),(2.,2.,.24))
+        old_field=warp.grid;old_pitch=warp.nominal_slice_height_mm
+        record=warp.replan_spacing(profile,.07,.28,BeadHeightError(12078,.28188,.28))
+        self.assertEqual(record['profile_maximum_mm'],.28)
+        self.assertLess(warp.nominal_slice_height_mm,old_pitch)
+        self.assertEqual(warp.nominal_slice_height_mm,round(warp.nominal_slice_height_mm,3))
+        self.assertIs(warp.grid,old_field)
+        self.assertTrue(all(r['core_in_one_band'] and r['certified_reference_area_fraction']>=.9
+                            for r in warp.summary['reference_alignment']))
+        self.assertEqual(source.to_dict(),before)
+        self.assertEqual(warp.map_point((2.,2.,.24)),(2.,2.,.24))
+        self.assertFalse(warp.summary['print_allowed'])
 
     def test_cancellation_precedes_planning_or_slicing(self):
         with self.assertRaisesRegex(WaveError,'cancelada'):

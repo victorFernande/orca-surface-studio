@@ -18,6 +18,7 @@ from .printer_profile import number
 from .project_io import write_model_project
 from .regional_shell import RegionalShellSettings
 from .surface_finishing import verify_finishing_ranges,audit_finishing
+from .bead_deposition import BeadHeightError,BeadMinimumError
 
 
 def build_continuous(snapshot,object_id,backup,folder,executable,resolved,profile,slicer,workspace,cancelled,progress,options,verify):
@@ -52,8 +53,9 @@ def build_continuous(snapshot,object_id,backup,folder,executable,resolved,profil
         'scope':'continuous surface coordinates on the copied solid; physical output restored once'}
     model=folder/'prepared.3mf'
     warp.settings=replace(settings,tolerance_mm=max(.001,.02-mesh_error-1e-7))
-    spacing_runs=[];spacing_enabled=getattr(warp,'spacing_enabled',False)
-    for attempt in range(3):
+    spacing_runs=[];spacing_enabled=getattr(warp,'spacing_enabled',False);spacing_retries=[]
+    enforce_height_limits=warp.summary.get('enforce_height_limits',warp.summary.get('partial_adaptation'))
+    for attempt in range(4):
         if cancelled():raise WaveError('Geração cancelada.')
         atomic_write(folder/'surface-coordinates.json',json.dumps(warp.summary,ensure_ascii=False).encode())
         flat=copy.deepcopy(warp.flattened_snapshot)
@@ -72,23 +74,40 @@ def build_continuous(snapshot,object_id,backup,folder,executable,resolved,profil
         labels={int(m) for m in re.findall(rb'(?mi)^;\s*printing object\s+.*?\bid:(\d+)\s+copy\s+0\s*$',data)}
         if len(labels)!=1:raise WaveError('LAYERS_LABELS: a fatia precisa identificar uma única peça.')
         mapping={next(iter(labels)):str(object_id)}
-        if not spacing_enabled:break
-        from .spacing_plan import plan_spacing
-        progress('Conferindo a altura efetiva dos cordões e o material necessário…')
-        grid,spacing=plan_spacing(data,warp,mapping,str(object_id),maximum,profile.initial_layer_mm,profile.height_mm)
-        spacing_runs.append(spacing)
-        if not spacing['extra_slice_intervals']:break
-        if warp.summary.get('partial_adaptation'):
-            raise WaveError('BEAD_ADAPTATION: reduza a adaptação para respeitar a altura máxima dos cordões.')
-        if attempt==2:raise WaveError('BEAD_ITERATIONS: o espaçamento ainda exige outra distribuição; o resultado foi recusado.')
-        warp.regrid_spacing(grid,spacing,progress=progress,cancelled=cancelled,initial_layer_mm=profile.initial_layer_mm)
-    finite_beads=getattr(warp,'finite_beads',spacing_enabled)
-    enforce_height_limits=warp.summary.get('enforce_height_limits',warp.summary.get('partial_adaptation'))
-    if finite_beads:
-        warp.deposition_model={'model':'logical_pitch_finite_bead_v1','profile_minimum_mm':minimum,'profile_maximum_mm':maximum,
-                               'reject_below_profile_minimum':bool(enforce_height_limits)}
-    progress('Restaurando o formato, a extrusão e as transições em XYZ…')
-    result=process_conformal_gcode(data,warp,mapping,str(object_id),printer_profile=profile,progress=progress,cancelled=cancelled)
+        if spacing_enabled:
+            from .spacing_plan import plan_spacing
+            progress('Conferindo a altura efetiva dos cordões e o material necessário…')
+            grid,spacing=plan_spacing(data,warp,mapping,str(object_id),maximum,profile.initial_layer_mm,profile.height_mm)
+            spacing_runs.append(spacing)
+            if spacing['extra_slice_intervals']:
+                if warp.summary.get('partial_adaptation'):
+                    raise WaveError('BEAD_ADAPTATION: reduza a adaptação para respeitar a altura máxima dos cordões.')
+                if attempt>=2:raise WaveError('BEAD_ITERATIONS: o espaçamento ainda exige outra distribuição; o resultado foi recusado.')
+                warp.regrid_spacing(grid,spacing,progress=progress,cancelled=cancelled,initial_layer_mm=profile.initial_layer_mm)
+                continue
+        if getattr(warp,'finite_beads',spacing_enabled):
+            warp.deposition_model={'model':'logical_pitch_finite_bead_v1','profile_minimum_mm':minimum,'profile_maximum_mm':maximum,
+                                   'reject_below_profile_minimum':bool(enforce_height_limits)}
+        progress('Restaurando o formato, a extrusão e as transições em XYZ…')
+        feedback=None
+        try:
+            if callable(getattr(warp,'replan_spacing',None)) and callable(getattr(warp,'normal_gaps',None)):
+                from .spacing_feedback import sampled_supported_heights
+                progress('Conferindo o espaçamento ao longo de toda a peça antes da restauração final…')
+                feedback=sampled_supported_heights(data,warp,mapping,str(object_id),cancelled=cancelled,progress=progress)
+                warp.summary.setdefault('spacing_preflights',[]).append(feedback)
+                if feedback['maximum_mm']>maximum+2e-5:
+                    raise BeadHeightError(feedback['maximum_line_1based'],feedback['maximum_mm'],maximum)
+                if enforce_height_limits and feedback['minimum_mm']<minimum-2e-5:
+                    raise BeadMinimumError(feedback['minimum_line_1based'],feedback['minimum_mm'],minimum)
+            result=process_conformal_gcode(data,warp,mapping,str(object_id),printer_profile=profile,progress=progress,cancelled=cancelled)
+            break
+        except (BeadHeightError,BeadMinimumError) as failure:
+            retry=getattr(warp,'replan_spacing',None)
+            if not callable(retry) or attempt>=3:raise
+            spacing_retries.append(retry(profile,minimum,maximum,failure,feedback=feedback,progress=progress,cancelled=cancelled))
+            flat_height=warp.nominal_slice_height_mm
+            plan.update(finishing_layer_mm=flat_height,sampling_reduction_percent=100*(1-flat_height/profile.layer_mm))
     if enforce_height_limits:
         beads=result.report.get('bead_deposition',{})
         if not beads or beads['below_profile_minimum_occurrences'] or beads['above_profile_maximum_occurrences']:
@@ -108,6 +127,8 @@ def build_continuous(snapshot,object_id,backup,folder,executable,resolved,profil
                                'within_study_limit':True,'head_clearance_certified':False},
         'physical_gate':'CONTINUOUS_LAYERS_HEAD_AND_DEPOSITION_VALIDATION_REQUIRED',
         'physical_validation':False,'print_allowed':False,'printer_contacted':False}
+    if spacing_retries:report['automatic_spacing']={'attempts':spacing_retries,'profile_bounds_unchanged':True,
+                                                  'successful_native_slice_attempt':attempt+1,'physical_validation':False}
     if spacing_enabled:report['deposition_planning']={'passes':spacing_runs,'complete_cell_upper_bound_checked':True,
         'minimum_height_and_physical_bonding_qualified':False,
         'minimum_height_checked':bool(warp.summary.get('partial_adaptation')),

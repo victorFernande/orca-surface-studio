@@ -5,6 +5,17 @@ import numpy as np
 
 
 class SurfaceCoordinates:
+    def normal_gaps(self,points,pitches):
+        """Batch the same finite-height model used by normal_gap."""
+        p=np.asarray(points,dtype=float).copy();bottom=p.copy();bottom[:,2]-=np.asarray(pitches)
+        for a in (p,bottom):
+            z=a[:,2].copy();grid=self.layer_grid
+            a[:,2]=np.where((z<=grid.flat[0])|(z>=grid.flat[-1]),z,np.interp(z,grid.flat,grid.physical))
+        top=self.grid.map_points(p);low=self.grid.map_points(bottom)
+        dz=1+self.grid.evaluate(top,(0,0,1))
+        gx=self.grid.evaluate(top,(1,0,0))/dz;gy=self.grid.evaluate(top,(0,1,0))/dz
+        return (top[:,2]-low[:,2])/np.sqrt(1+gx*gx+gy*gy)
+
     def prepare_layer(self,moves,pitch):
         """Batch numerical queries; missed adaptive queries use scalar fallback."""
         if not hasattr(self.grid,'prepare_points'):return

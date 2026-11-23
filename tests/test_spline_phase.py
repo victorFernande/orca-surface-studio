@@ -129,6 +129,16 @@ class SplinePhaseTests(unittest.TestCase):
         points=np.vstack((points,[4.,4.,.24],[4.,4.,.5]))
         np.testing.assert_allclose(f.map_points(points),[f.map_point(p) for p in points],atol=2e-9,rtol=0.)
 
+    def test_batch_spacing_matches_scalar_across_grid_knots_without_mutating_points(self):
+        warp=SurfaceCoordinates();warp.grid=self.field()
+        warp.layer_grid=LayerGridStage([.5,3.6,8.5],[.5,3.5,8.5])
+        points=np.random.default_rng(519).uniform([1,1,.24],[9,9,8],(200,3))
+        points=np.vstack((points,[4,4,.24],[4,4,.5],[4,4,3.6],[4,4,8.5]))
+        before=points.copy();pitches=np.full(len(points),.2);pitches[-4]=.24
+        expected=[warp.normal_gap(*p,h) for p,h in zip(points,pitches)]
+        np.testing.assert_allclose(warp.normal_gaps(points,pitches),expected,atol=3e-9,rtol=0.)
+        np.testing.assert_array_equal(points,before)
+
     def test_benchy_inverse_stall_converges_without_relaxing_residual(self):
         # Reduced vertical section of the native Benchy failure (logical layer
         # 76). Positive derivative bounds still allowed Newton to oscillate
