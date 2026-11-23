@@ -84,4 +84,3 @@ class PreparedCoordinateTests(unittest.TestCase):
         self.assertTrue(all(len(call.args)==1 or call.args[1]==(0,0,1) for call in evaluate.call_args_list))
         np.testing.assert_allclose([w.map_point(p) for p in (a,b)],expected,rtol=0,atol=2e-9)
         self.assertFalse(w.grid._prepared_differentials)
-
