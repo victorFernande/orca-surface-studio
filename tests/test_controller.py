@@ -216,7 +216,10 @@ class ControllerTests(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
-        self.root = Path(directory.name)
+        # Native readers canonicalize paths before audited reads. CI temporary
+        # roots may use /var aliases on macOS or short user paths on Windows;
+        # permission mocks must compare the same canonical filesystem path.
+        self.root = Path(directory.name).resolve()
         self.controller = StudioController(self.root / "state")
         self.source = self.root / "source.gcode"
         self.data = cylinder_gcode(layers=6, two_objects=True)

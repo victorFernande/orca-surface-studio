@@ -1,0 +1,39 @@
+name: Verify Surface Studio
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: surface-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Install calculation dependencies
+        run: python -m pip install "numpy>=1.26" "scipy>=1.14" "osqp>=1.0"
+      - name: Verify geometry, UI, native bridge and isolated distribution
+        env:
+          PYTHONPATH: src
+        run: python -B -W error -m unittest discover -s tests -v
+      - name: Build locally without installing or publishing
+        run: python -B -W error scripts/build_and_install.py
