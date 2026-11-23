@@ -1,0 +1,64 @@
+{
+  "source_sha256": "91938874f5a62d6c0954153085a5659a4de09e2d9ac2dd0deb8cb18b8c488e02",
+  "trial_sha256": "4366a753d154a3f7d2283b087d5bf79b0868ed104e8c96a6f321995c29419a0e",
+  "commands_sha256": "bb0b9818d0876c2b923516cd3f9e49ae8535f8c6881ffa2c21aa4ebff2203726",
+  "server_sha256": "7d0ab1bf2f20816940aa8c4dcbf900b60272ec31f5d99cbb5164dbd95bbbc05e",
+  "server_bytes": 28910019,
+  "executable_commands_identical_to_preview": true,
+  "server_commands_identical": true,
+  "server_inert_footer_only": true,
+  "user_authorized_start": true,
+  "user_supervising": true,
+  "orientation": "bow toward SOVOL front / -Y; unchanged from reviewed native Preview",
+  "physical_validation": false,
+  "print_allowed_diagnostic": false,
+  "nominal_unregistered_cad_interference_witness": true,
+  "installed_head_registration_verified": false,
+  "upload_attempted": true,
+  "select_attempted": true,
+  "start_attempted": true,
+  "automatic_retry": false,
+  "start_accepted": "2026-11-23T13:06:23.800579+00:00",
+  "last_status": {
+    "timestamp_utc": "2026-11-23T13:19:33.632549+00:00",
+    "state": "Printing",
+    "flags": {
+      "cancelling": false,
+      "closedOrError": false,
+      "error": false,
+      "finishing": false,
+      "operational": true,
+      "paused": false,
+      "pausing": false,
+      "printing": true,
+      "ready": false,
+      "resuming": false,
+      "sdReady": true
+    },
+    "temperature": {
+      "bed": {
+        "actual": 65.01,
+        "offset": 0,
+        "target": 65.0
+      },
+      "tool0": {
+        "actual": 194.85,
+        "offset": 0,
+        "target": 195.0
+      }
+    },
+    "job_file": "SurfaceStudio_Benchy60_PROA_SOVOL_4366a753d154.gcode",
+    "progress": {
+      "completion": 6.580151330927869,
+      "filepos": 1902323,
+      "printTime": 789,
+      "printTimeLeft": 12461,
+      "printTimeLeftOrigin": "genius"
+    },
+    "target_trial": "SurfaceStudio_Benchy60_PROA_SOVOL_4366a753d154.gcode"
+  },
+  "source_plugin_version": "0.16.3",
+  "new_curve_limit_applied_to_this_existing_file": false,
+  "physical_completion_observed": false,
+  "printer_display_name": "Sovol SV06 0.4 nozzle -3DPrinter"
+}

@@ -1,0 +1,102 @@
+{
+  "version": "0.16.4",
+  "unit_tests": {
+    "passed": 311,
+    "warnings_as_errors": true
+  },
+  "component": {
+    "status": "PASS_GUIDED_COMPONENT",
+    "native_orca_controlled": false,
+    "printer_contacted": false,
+    "outcomes": [
+      {
+        "fallback": false,
+        "width": 1580,
+        "height": 1000,
+        "errors": [],
+        "four_steps": true,
+        "curve_height_range_mm": [
+          0.1,
+          5
+        ],
+        "curve_height_step_mm": 0.1,
+        "curve_height_default_mm": 5,
+        "invalid_curve_height_blocks_next": true,
+        "curve_height_change_invalidates_result": true,
+        "study_does_not_open_orca": true,
+        "explicit_transfer_only": true,
+        "stale_selection_invalidated": true,
+        "whole_model_in_guided_step": true,
+        "legacy_layout_removed": true,
+        "scope_survives_guided_navigation": true,
+        "single_calculate_click": true,
+        "visible_progress": true,
+        "unchanged_result_reused": true,
+        "error_retry": true,
+        "sliced_only_send_review": true
+      },
+      {
+        "fallback": true,
+        "width": 1580,
+        "height": 1000,
+        "errors": [],
+        "four_steps": true,
+        "curve_height_range_mm": [
+          0.1,
+          5
+        ],
+        "curve_height_step_mm": 0.1,
+        "curve_height_default_mm": 5,
+        "invalid_curve_height_blocks_next": true,
+        "curve_height_change_invalidates_result": true,
+        "study_does_not_open_orca": true,
+        "explicit_transfer_only": true,
+        "stale_selection_invalidated": true,
+        "whole_model_in_guided_step": true,
+        "legacy_layout_removed": true,
+        "scope_survives_guided_navigation": true,
+        "single_calculate_click": true,
+        "visible_progress": true,
+        "unchanged_result_reused": true,
+        "error_retry": true,
+        "sliced_only_send_review": true
+      },
+      {
+        "fallback": false,
+        "width": 390,
+        "height": 844,
+        "errors": [],
+        "four_steps": true,
+        "curve_height_range_mm": [
+          0.1,
+          5
+        ],
+        "curve_height_step_mm": 0.1,
+        "curve_height_default_mm": 5,
+        "invalid_curve_height_blocks_next": true,
+        "curve_height_change_invalidates_result": true,
+        "study_does_not_open_orca": true,
+        "explicit_transfer_only": true,
+        "stale_selection_invalidated": true,
+        "whole_model_in_guided_step": true,
+        "legacy_layout_removed": true,
+        "scope_survives_guided_navigation": true,
+        "single_calculate_click": true,
+        "visible_progress": true,
+        "unchanged_result_reused": true,
+        "error_retry": true,
+        "sliced_only_send_review": true
+      }
+    ]
+  },
+  "additional_observed_bounded_wedge": {
+    "limit_mm": 2.0,
+    "coefficient_hull_bound_mm": 1.9999000038237873,
+    "elapsed_seconds": 118.53442050004378,
+    "physical_validation": false
+  },
+  "installed": true,
+  "bundle_sha256": "ed8a0f1bc74c7a621ce75fdd946a0c9a6d794e21e97c6642a7717e72d9ae840b",
+  "native_new_control_verified": false,
+  "native_pending_reason": "Input/capture unavailable: GetCursorPos access denied, then CreateForMonitor capture failure; no forced restart."
+}

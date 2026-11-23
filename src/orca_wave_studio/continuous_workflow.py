@@ -23,6 +23,7 @@ from .bead_deposition import BeadHeightError,BeadMinimumError
 
 def build_continuous(snapshot,object_id,backup,folder,executable,resolved,profile,slicer,workspace,cancelled,progress,options,verify):
     from .surface_workflow import _result
+    options={**options,'max_curve_height_mm':options.get('max_curve_height_mm',5.)}
     if options.get('selection_mode','all')!='all' or options.get('wall_selection'):
         raise WaveError('LAYERS_SELECTION: o planejamento contínuo requer Peça inteira nesta versão.')
     slope=options.get('max_slope_deg',30)
@@ -31,6 +32,7 @@ def build_continuous(snapshot,object_id,backup,folder,executable,resolved,profil
     flat_height=min(profile.layer_mm,max(minimum,round(profile.layer_mm*.6,3)))
     if not minimum<=flat_height<=maximum:raise WaveError('LAYERS_PROFILE: confira os limites de camada do perfil selecionado.')
     settings=RegionalShellSettings(step_mm=options.get('step_mm',.4),max_slope_deg=slope,
+        max_curve_height_mm=options.get('max_curve_height_mm',5.),
         nominal_layer_height_mm=flat_height,tolerance_mm=.01,
         retain_native_short_edges=options.get('retain_native_short_edges',True))
     warp=prepare_spline_warp(snapshot,object_id,settings,profile,resolved,progress=progress,cancelled=cancelled,
@@ -115,8 +117,11 @@ def build_continuous(snapshot,object_id,backup,folder,executable,resolved,profil
     if not sum(result.report['nonplanar_extrusion_segments_by_role'].values()):
         raise WaveError('LAYERS_NO_EFFECT: a fatia não confirmou camadas com movimento contínuo em Z.')
     audit=audit_finishing(result.gcode,mapping,plan,slope)
+    from .curve_height import audit_curve_height
+    curve_height=audit_curve_height(result.report['deformed_points'],result.report['layer_ids'],settings.max_curve_height_mm)
     if cancelled():raise WaveError('Geração cancelada.')
     report={**result.report,'study_type':'continuous_surface_layers','warp':warp.summary,
+        'curve_height':curve_height,
         'coordinate_error_budget_mm':{'total':.02,'mesh':mesh_error,'path_chords':warp.settings.tolerance_mm},
         'workflow':'integrated','profile_preview_only':False,'profile_preserved':True,
         'original_revision':snapshot.revision,'original_backup_sha256':digest(Path(backup).read_bytes()),

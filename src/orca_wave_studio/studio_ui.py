@@ -109,9 +109,11 @@ let state={},selection=new Set(),pending=null,activeId=null,pendingBuildId=null;
 const surfaceMode=true,guidedMode=true;
 let guideStep=1,guideModelId=null,guideAwaitStudy=false;
 const surfaceByObject=new Map();
+const curveHeightByObject=new Map();
 const surfaceSettings=()=>{
-  const value={step_mm:.4,max_slope_deg:30,retain_native_short_edges:true,backend:'continuous_layers',region_id:null,
+  const value={step_mm:.4,max_slope_deg:30,max_curve_height_mm:curveHeightByObject.get(activeId)??5,retain_native_short_edges:true,backend:'continuous_layers',region_id:null,
     selection_mode:'all',selection_revision:null,wall_selection:[],...surfaceByObject.get(activeId)};
+  // A loaded legacy result is inspectable, but cannot silently claim this limit.
   // A rejected reduced-adaptation trial must not become the guided default.
   delete value.adaptation_strength;
   if(!value.placement_degrees)delete value.placement_degrees;
@@ -120,7 +122,8 @@ const surfaceSettings=()=>{
 };
 const wallMarks=new Map();let brushRadius=6;
 function surfaceError(){
-  const {step_mm,max_slope_deg,backend,selection_mode,wall_selection,selection_revision}=surfaceSettings();
+  const {step_mm,max_slope_deg,max_curve_height_mm,backend,selection_mode,wall_selection,selection_revision}=surfaceSettings();
+  if(!Number.isFinite(max_curve_height_mm)||max_curve_height_mm<.1||max_curve_height_mm>5||Math.abs(max_curve_height_mm*10-Math.round(max_curve_height_mm*10))>1e-8)return 'Use uma altura de curva de 0,1 a 5,0 mm, em passos de 0,1 mm.';
   if(!Number.isFinite(step_mm)||step_mm<.15||step_mm>2)return 'Use um passo entre 0,15 e 2 mm.';
   if(!Number.isFinite(max_slope_deg)||max_slope_deg<5||max_slope_deg>45)return 'Use uma inclinação entre 5° e 45°.';
   if(backend==='native_local'&&selection_mode==='paint'){
@@ -167,6 +170,7 @@ function record(list,label,value,title=''){
 function controlsBusy(){return Boolean(pending)||['processing','analyzing'].includes(state.status)}
 function presentResult(){
   const result=state.result,source=result?.report?.source_sha256;
+  if(result?.settings?.backend==='continuous_layers'&&result.settings.max_curve_height_mm!==surfaceSettings().max_curve_height_mm)return false;
   if(result?.settings?.backend==='continuous_layers'&&
      (result.report?.warp?.transition_kernel!=='cubic_spline_phase_v1'||result.report?.warp?.reference_certificate_version!==2))return false;
   return Boolean(result?.sha256)&&state.status==='ready'&&!pending&&
@@ -209,7 +213,7 @@ function objects(){
     const id=String(obj.id);
     info.disabled=controlsBusy();info.setAttribute('aria-pressed',String(id===activeId));
     info.title='Escolher áreas de '+(obj.name||id);info.onclick=()=>{
-      activate(id);guideModelId=id;guideStep=2;render()
+      activate(id);guideModelId=id;guideStep=surfaceError().startsWith('Use uma altura')?1:2;render()
     };
     const dims=obj.dimensions_mm||(obj.bounds?.length===2?obj.bounds[1].map((v,i)=>v-obj.bounds[0][i]):[]);
     info.append(node('strong','',obj.name||'Objeto'),node('small','','ID '+id+' · '+(obj.instances??'—')+' cópia(s)'));
@@ -602,6 +606,26 @@ function render(){
 const profileBox=node('section','section'),profileCard=node('strong'),profileDetails=node('p','muted');
 profileBox.append(node('h3','','Perfil selecionado no Orca'),profileCard,profileDetails);
 document.querySelector('#config .section').after(profileBox);
+const curveBox=node('section','section');curveBox.id='curve-height-section';
+const curveLabel=node('label','','Altura máxima da curva (mm)');curveLabel.htmlFor='curve-height-number';
+const curveRange=node('input'),curveNumber=node('input'),curveNote=node('p','muted'),curveError=node('p','message');
+curveRange.id='curve-height-range';curveRange.type='range';curveRange.setAttribute('aria-label','Altura máxima da curva em milímetros');
+curveNumber.id='curve-height-number';curveNumber.type='number';
+for(const input of [curveRange,curveNumber]){input.min='0.1';input.max='5';input.step='0.1';input.value='5'}
+curveNote.textContent='De 0,1 a 5,0 mm, em passos de 0,1 mm. Padrão: 5,0 mm. Diferença máxima de Z dentro de uma camada curva. Não mede a folga real do cabeçote.';
+curveNote.id='curve-height-help';curveNumber.setAttribute('aria-describedby','curve-height-help curve-height-error');
+curveError.id='curve-height-error';curveError.setAttribute('role','status');
+curveBox.append(curveLabel,curveNumber,curveRange,curveNote,curveError);profileBox.before(curveBox);
+function changeCurveHeight(input){
+  if(!activeId||controlsBusy())return;
+  const value=input.value===''?null:Number(input.value);
+  curveHeightByObject.set(activeId,value);
+  surfaceByObject.set(activeId,{...surfaceSettings(),max_curve_height_mm:value});
+  if(input===curveRange)curveNumber.value=input.value;
+  else if(Number.isFinite(value))curveRange.value=input.value;
+  generation=null;guideAwaitStudy=false;notice('');render();
+}
+curveRange.oninput=()=>changeCurveHeight(curveRange);curveNumber.oninput=()=>changeCurveHeight(curveNumber);
 const cancelBuild=node('button','wide outline','Cancelar cálculo');cancelBuild.id='cancel-build';cancelBuild.hidden=true;
 $('study-actions').append(cancelBuild);cancelBuild.onclick=()=>send('cancel_build');
 function request(action,extra={}){
@@ -655,6 +679,13 @@ guideNext.onclick=()=>{
   else if(presentResult())send('open_preview',{sha256:state.result.sha256});
 };
 function renderGuide(active,current,busy){
+  curveBox.hidden=!guidedMode||guideStep!==1;
+  const curveHeight=surfaceSettings().max_curve_height_mm;
+  if(document.activeElement!==curveNumber)curveNumber.value=curveHeight??'';
+  if(Number.isFinite(curveHeight))curveRange.value=String(curveHeight);
+  curveNumber.disabled=curveRange.disabled=busy||!active;
+  curveError.textContent=surfaceError().startsWith('Use uma altura')?surfaceError():'';
+  curveNumber.setAttribute('aria-invalid',String(Boolean(curveError.textContent)));
   sendReviewButton.hidden=!(state.native&&(state.send_preview_available||current));
   sendReviewButton.disabled=busy;
   sendReviewButton.textContent='Conferir envio';
@@ -693,7 +724,7 @@ function renderGuide(active,current,busy){
   guideWarning.hidden=guideStep!==4||Boolean(state.result?.report?.print_allowed);
   guideWarning.textContent=warning(beads?.below_profile_minimum_occurrences?'warning_bead':'warning_preview');
   guideNext.textContent=guideStep===1?'Escolher áreas':guideStep===2?(current?'Ver resultado já calculado':'Calcular e preparar Preview'):guideStep===3?(busy?'Calculando…':'Tentar novamente'):'Ver no Preview do Orca';
-  guideNext.disabled=!linked||busy||!active||(guideStep===2&&Boolean(surfaceError()))||(guideStep===3&&Boolean(surfaceError()))||(guideStep===4&&!current);
+  guideNext.disabled=!linked||busy||!active||([1,2,3].includes(guideStep)&&Boolean(surfaceError()))||(guideStep===4&&!current);
   guideBack.hidden=guideStep===1;guideBack.disabled=busy;
   guideSend.hidden=!(previewOnly||guideStep===4&&current&&state.native);guideSend.disabled=busy;
   guideNext.hidden=previewOnly;
@@ -703,6 +734,7 @@ function renderGuide(active,current,busy){
   document.querySelector('.vhead h2').textContent=guideStep<3?'Seu modelo':'Movimento da peça';
 }
 function friendlyStudyError(message=''){
+  if(/CURVE_HEIGHT/i.test(message))return 'Esta superfície não coube na altura máxima da curva. Volte ao passo 1 para ajustar o limite em mm ou escolha outra área. O original foi preservado.';
   if(/BEAD_HEIGHT|altura.*(?:cordão|mínima)|espaçamento/i.test(message))return 'O espaçamento ficou fora dos limites do perfil. Volte e escolha uma área menor para testar. O original foi preservado; veja o motivo em Detalhes do estudo.';
   if(/cancelad/i.test(message))return 'Cálculo cancelado. Você pode tentar novamente ou voltar para ajustar as áreas.';
   if(/permiss|access|acesso|audit/i.test(message))return 'O cálculo precisa de uma autorização no Orca. Confira a janela de permissão e tente novamente.';
@@ -743,6 +775,7 @@ function applyState(next){
   else if(!selection.size&&ids.length===1&&!oldIds.has(ids[0]))selection.add(ids[0]);
   const idSet=new Set(ids);
   for(const id of surfaceByObject.keys())if(!idSet.has(id))surfaceByObject.delete(id);
+  for(const id of curveHeightByObject.keys())if(!idSet.has(id))curveHeightByObject.delete(id);
   for(const id of wallMarks.keys())if(!idSet.has(id))wallMarks.delete(id);
   if(!idSet.has(activeId))activate(ids.find(id=>selection.has(id))??ids[0]??null);
   if(state.conformal){
@@ -763,6 +796,7 @@ function applyState(next){
         backend:r.settings.backend||'legacy_top',region_id:r.settings.region_id??null,
         selection_mode:r.settings.selection_mode??'all',selection_revision:r.settings.selection_revision??null,
         wall_selection:r.settings.wall_selection||[],...(r.settings.placement_degrees?{placement_degrees:r.settings.placement_degrees}:{})};
+      settings.max_curve_height_mm=r.settings.max_curve_height_mm;
       if(settings.backend==='native_local'&&settings.selection_mode==='all')settings.backend='continuous_layers';
       if(!['native_local','continuous_layers'].includes(settings.backend))for(const key of ['selection_mode','selection_revision','wall_selection'])delete settings[key];
       if(!resultIdentity&&!generation){

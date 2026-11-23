@@ -30,6 +30,7 @@ class RegionalShellSettings:
     anchor_z_mm: float | None = None
     retain_native_short_edges: bool = False
     align_layer_grid_to_anchor: bool = False
+    max_curve_height_mm: float | None = None
 
     def __post_init__(self):
         numeric = {k:v for k,v in asdict(self).items()
@@ -43,6 +44,9 @@ class RegionalShellSettings:
                 and 0 < self.nominal_layer_height_mm <= 1
                 and (self.anchor_z_mm is None or self.anchor_z_mm >= 0)):
             raise WaveError('REGIONAL_SETTINGS: limites de amostragem, camada ou inclinação inválidos.')
+        h=self.max_curve_height_mm
+        if h is not None and (not .1<=h<=5. or abs(h*10-round(h*10))>1e-8):
+            raise WaveError('CURVE_HEIGHT: use de 0,1 a 5,0 mm, em passos de 0,1 mm.')
 
 
 def _plane(face):
