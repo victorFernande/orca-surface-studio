@@ -1,0 +1,16 @@
+{
+  "date": "2026-11-22",
+  "application": "OrcaSlicer 2.5.1",
+  "native_preview_opened": true,
+  "native_process_id": 31388,
+  "window_title": "REVISAR_Benchy60_Surface_C2_SV06_180_v0152.gcode - OrcaSlicer",
+  "generated_sha256": "63c3aead340be99d8c69533c7f52040baa8e6a507ecfccd18beb1ec5e5a1a7b5",
+  "native_cache_sha256": "63c3aead340be99d8c69533c7f52040baa8e6a507ecfccd18beb1ec5e5a1a7b5",
+  "cache_session_matches_native_process": true,
+  "generated_equals_loaded": true,
+  "native_layer_count": 254,
+  "displayed_max_z_mm": 48.07,
+  "user_input_detected_then_automation_stopped": true,
+  "printer_contacted": false,
+  "physical_print_started": false
+}

@@ -6,6 +6,9 @@ import numpy as np
 from scipy.interpolate import NdBSpline,BSpline
 from .contracts import WaveError
 
+_INVERSE_TOLERANCE=1e-9
+_INVERSE_NEWTON_STEPS=8
+
 
 class SplinePhase:
     def __init__(self,axes,displacement,anchor=.5):
@@ -56,6 +59,13 @@ class SplinePhase:
         self.cmin=1+float(self.first[2].min());self.cmax=1+float(self.first[2].max())
         self.gmax=tuple(float(abs(a).max()) for a in self.first[:2])
         if self.cmin<=0:raise WaveError('SPLINE_FOLD: os controles não preservam a ordem vertical.')
+        # Newton can oscillate while technically staying inside the bracket.
+        # Keep its fast initial steps, then guarantee bracket contraction by
+        # bisection. The certified derivative upper bound translates bracket
+        # width into the original phase residual; no tolerance is relaxed.
+        residual_bound=(self.domain[2][1]-self.domain[2][0])*self.cmax
+        self._inverse_iterations=_INVERSE_NEWTON_STEPS+math.ceil(math.log2(
+            max(1.,residual_bound/_INVERSE_TOLERANCE)))+2
         self.bounds={'minimum_phase_z_derivative':self.cmin,'maximum_phase_z_derivative':self.cmax,
             'maximum_phase_xy_derivative':self.gmax,'maximum_slope':math.hypot(*self.gmax)/self.cmin,
             'certificate':'nonnegative B-spline derivative basis and complete coefficient differences'}
@@ -97,14 +107,17 @@ class SplinePhase:
         p=source[indices].copy();target=p[:,2].copy()
         lo=np.full(len(p),self.domain[2][0]);hi=np.full(len(p),self.domain[2][1])
         active=np.ones(len(p),dtype=bool)
-        for _ in range(40):
+        for iteration in range(self._inverse_iterations):
             chosen=np.flatnonzero(active)
             if not len(chosen):break
             q=p[chosen];error=q[:,2]+self.evaluate(q)-target[chosen]
-            converged=abs(error)<1e-9;active[chosen[converged]]=False
+            converged=abs(error)<_INVERSE_TOLERANCE;active[chosen[converged]]=False
             chosen=chosen[~converged];error=error[~converged]
             if not len(chosen):continue
             q=p[chosen];lo[chosen]=np.where(error<0,q[:,2],lo[chosen]);hi[chosen]=np.where(error>0,q[:,2],hi[chosen])
+            if iteration>=_INVERSE_NEWTON_STEPS:
+                p[chosen,2]=(lo[chosen]+hi[chosen])/2
+                continue
             derivative=1+self.evaluate(q,(0,0,1));trial=q[:,2]-error/derivative
             p[chosen,2]=np.where((trial>lo[chosen])&(trial<hi[chosen]),trial,(lo[chosen]+hi[chosen])/2)
         if active.any():raise WaveError('SPLINE_INVERSE: a inversão em lote não atingiu a tolerância.')
@@ -116,11 +129,14 @@ class SplinePhase:
         lo,hi=self.domain[2]
         if s<=lo or s>=hi:return p
         z=min(hi,max(lo,s))
-        for _ in range(40):
+        for iteration in range(self._inverse_iterations):
             q=np.array([[x,y,z]]);error=z+float(self.evaluate(q)[0])-s
-            if abs(error)<1e-9:return x,y,z
+            if abs(error)<_INVERSE_TOLERANCE:return x,y,z
             if error<0:lo=z
             else:hi=z
+            if iteration>=_INVERSE_NEWTON_STEPS:
+                z=(lo+hi)/2
+                continue
             j=1+float(self.evaluate(q,(0,0,1))[0]);trial=z-error/j
             z=trial if lo<trial<hi else (lo+hi)/2
         raise WaveError('SPLINE_INVERSE: a inversão não atingiu a tolerância.')
