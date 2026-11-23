@@ -811,6 +811,7 @@ class StudioController:
         generated_profile=report.get('printer_profile',{}).get('name')
         same_profile=not generated_profile or generated_profile==connection.profile
         state=review(identity,connection,report,verified=matched and self._preview_verified,same_profile=same_profile)
+        state['language']=self._language
         def validate():
             return (self._result is result and matched and self._preview_verified
                     and Path(self.host.project_path()).resolve()==current
@@ -951,7 +952,7 @@ class StudioController:
             self._opening_preview=False
             self._preview_request=None
             self._result["native_preview"]=receipt
-            self._message="Preview do Orca confirmado com o mesmo G-code. Somente simulação."
+            self._message="Preview do Orca confirmado com o mesmo G-code. Leia e confirme o aviso antes do envio."
             self.event("preview_package_verified",sha256=digest(data),valid=self._preview_verified)
             return self._preview_verified
 

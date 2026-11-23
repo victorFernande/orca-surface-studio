@@ -13,7 +13,7 @@ class WarningLanguageTests(unittest.TestCase):
         packs,errors=load_language_packs(strict=True)
         self.assertFalse(errors)
         self.assertEqual(set(packs),{'pt','en','es','it','fr','de','ja'})
-        keys={'language','warning_title','warning_body','warning_preview','warning_bead'}
+        keys={'language','warning_title','warning_body','warning_preview','warning_bead','warning_send'}
         for code,pack in packs.items():
             with self.subTest(code=code):
                 self.assertEqual(set(pack['translations']),keys)

@@ -1,7 +1,7 @@
 """Host-owned send review. Connections remain in Python, never in the WebView.
 
-Opening this dialog performs no network request. Physical authorization is
-separate from file/Preview identity and cannot be supplied by the page.
+Opening this dialog performs no network request. The operator acknowledges
+physical uncertainty for this file; technical identity checks remain required.
 """
 from __future__ import annotations
 
@@ -90,17 +90,19 @@ def review(identity, connection, report=None, *, verified=False, same_profile=Tr
         reasons.append('Configure a conexão neste perfil de impressora no Orca.')
     if not verified:
         reasons.append('Este Preview não tem uma conferência vigente do Studio para envio.')
-    if report.get('print_allowed') is not True or report.get('physical_validation') is not True:
-        reasons.append('Somente Preview: a deposição, as transições e o cabeçote ainda precisam de validação.')
     if bead.get('below_profile_minimum_occurrences', 0):
         reasons.append('Há cordões abaixo da altura mínima do perfil selecionado.')
+    if bead.get('above_profile_maximum_occurrences', 0):
+        reasons.append('Há cordões acima da altura máxima do perfil selecionado.')
     protocol = connection.settings.get('host_type', '').lower()
     if protocol != 'octoprint' or connection.settings.get('printer_agent'):
         reasons.append('Esta conexão requer o adaptador nativo do Orca; o envio direto do Studio ainda não o suporta.')
     elif not connection.settings.get('printhost_apikey'):
         reasons.append('A chave da conexão OctoPrint não está configurada no perfil.')
     return {**identity, 'connection': connection.public(), 'send_allowed': not reasons,
-            'reasons': reasons, 'action': 'Enviar arquivo sem iniciar impressão'}
+            'reasons': reasons, 'risk_confirmation_required': True,
+            'physical_validation': report.get('physical_validation') is True,
+            'action': 'Confirmar os riscos e enviar arquivo sem iniciar impressão'}
 
 
 def dialog_html(state):
@@ -108,6 +110,10 @@ def dialog_html(state):
     c = state['connection']
     text = lambda v: escape(str(v), quote=True)
     reasons = ''.join('<li>'+text(r)+'</li>' for r in state['reasons'])
+    from .language_packs import load_language_packs,resolve_language
+    packs=load_language_packs()[0];language=resolve_language(state.get('language'),packs)
+    warning={**packs['en']['translations'],**packs[language]['translations']}
+    token=json.dumps(state.get('confirmation_token','')).replace('<','\\u003c')
     connection = ('Conexão preservada · credencial '+('disponível' if c['credential_present'] else 'não informada')) if c['configured'] else 'Conexão não configurada'
     return '''<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -115,17 +121,20 @@ def dialog_html(state):
 :root{color-scheme:dark;--accent:#00a896}*{box-sizing:border-box}body{margin:0;background:#191d23;color:#edf1f4;font:14px/1.5 "Segoe UI",sans-serif}main{padding:26px 28px}header{border-bottom:1px solid #39414b;padding-bottom:18px;margin-bottom:20px}small{color:#a9b6c2}h1{font-size:23px;line-height:1.2;margin:8px 0}h2{font-size:16px;margin:0 0 6px}.destination{border-left:3px solid var(--accent);padding:0 16px;margin:22px 0}dl{display:grid;grid-template-columns:80px 1fr;gap:9px 12px}dt{color:#a9b6c2}dd{margin:0;overflow-wrap:anywhere}code{font:11px/1.5 Consolas,monospace}.notice{padding:14px 16px;background:#252a31;border:1px solid #765e37;border-radius:6px}ul{padding-left:20px;margin:8px 0 0}.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}button{font:inherit;padding:10px 16px;border-radius:5px;border:1px solid #48535e;background:#252b33;color:#edf1f4;cursor:pointer}button.primary{background:var(--accent);border-color:var(--accent);color:white}button:disabled{background:#30363d!important;color:#9ca7b1!important;border-color:#414950;cursor:default}#status{min-height:22px;color:#c7d1da;margin-top:12px}@media(max-width:480px){main{padding:18px}dl{grid-template-columns:1fr;gap:4px}dd{margin-bottom:8px}.actions button{width:100%}}
 /* Orca injects its own theme after plugin styles, including body and headings. */
 html body,html body main{background:#191d23!important;color:#edf1f4!important}html body h1,html body h2,html body dd,html body .notice,html body .notice *{color:#edf1f4!important}html body small,html body dt{color:#b7c3ce!important}html body .notice{background:#252a31!important}html body button{background:#252b33!important;color:#edf1f4!important}html body button.primary{background:#008f80!important}html body button:disabled{background:#30363d!important;color:#aeb9c3!important}
+html body .risk-warning,html body .risk-warning *{background:#fff0ad!important;color:#3c2900!important}html body .risk-warning{padding:18px;border:2px solid #e6ad00;border-left-width:6px;border-radius:6px;margin:18px 0;font-size:16px;line-height:1.5}html body .risk-warning strong{display:block;font-size:20px;line-height:1.3;font-weight:800}html body .risk-warning p{margin:10px 0 0}.risk-icon{float:left;margin-right:9px;font-size:25px}.technical-block{margin-top:16px}
 </style></head><body><main><header><small>SURFACE STUDIO · CONFERÊNCIA DE ENVIO</small><h1>Enviar para impressora</h1><small>Abrir esta janela não conecta, envia ou inicia impressão.</small></header>
 <section class="destination"><h2>'''+text(c['profile'])+'''</h2><div>'''+text(c['protocol'])+'''</div><small>'''+text(connection)+'''</small><br><small>'''+text(c['source'])+'''</small></section>
 <dl><dt>Arquivo</dt><dd>'''+text(state['file'])+'''</dd><dt>Bandeja</dt><dd>'''+text(state['plate_index']+1)+'''</dd><dt>SHA-256</dt><dd><code>'''+text(state['sha256'])+'''</code></dd></dl>
-<section class="notice"><strong>'''+('Envio disponível' if state['send_allowed'] else 'Envio bloqueado para este estudo')+'''</strong><ul>'''+reasons+'''</ul></section><div id="status" role="status"></div><div class="actions"><button id="close">Fechar</button><button id="send" class="primary" '''+('' if state['send_allowed'] else 'disabled')+'''>Enviar arquivo</button></div><small>O envio, quando liberado, apenas armazena o arquivo. Não inicia a impressão.</small></main>
-<script>document.getElementById('close').onclick=()=>window.orca.close();document.getElementById('send').onclick=()=>{document.getElementById('send').disabled=true;window.orca.postMessage({action:'send_file'})};window.orca.onMessage(m=>{if(typeof m==='string')m=JSON.parse(m);document.getElementById('status').textContent=m.message||''});</script></body></html>'''
+<section class="risk-warning" role="alert" aria-labelledby="risk-title"><span class="risk-icon" aria-hidden="true">⚠</span><strong id="risk-title">'''+text(warning['warning_title'])+'''</strong><p>'''+text(warning['warning_body'])+'''</p><p><b>'''+text(warning['warning_send'])+'''</b></p></section>'''+('' if state['send_allowed'] else '<section class="notice technical-block"><strong>Corrija antes de enviar</strong><ul>'+reasons+'</ul></section>')+'''<div id="status" role="status"></div><div class="actions"><button id="close">Cancelar</button><button id="send" class="primary" '''+('' if state['send_allowed'] else 'disabled')+'''>Entendi os riscos, enviar arquivo</button></div><small>Esta ação envia o arquivo ao OctoPrint. Não inicia a impressão automaticamente.</small></main>
+<script>let attempted=false;document.getElementById('close').onclick=()=>window.orca.close();document.getElementById('send').onclick=()=>{const button=document.getElementById('send');if(attempted||button.disabled)return;attempted=true;button.disabled=true;window.orca.postMessage({action:'send_file',risk_acknowledged:true,confirmation_token:'''+token+'''})};window.orca.onMessage(m=>{if(typeof m==='string')m=JSON.parse(m);document.getElementById('status').textContent=m.message||''});</script></body></html>'''
 
 
-def send_reviewed_file(path, identity, connection, fresh_connection, state, *, transport_factory=None, cancelled=None):
-    """A single explicit upload; a forged page message cannot lift any gate."""
+def send_reviewed_file(path, identity, connection, fresh_connection, state, *, risk_acknowledged=False, transport_factory=None, cancelled=None):
+    """One acknowledged upload, preserving the technical file/destination checks."""
     if state.get('send_allowed') is not True:
-        raise WaveError('Envio bloqueado: este estudo continua somente para Preview.')
+        raise WaveError('Corrija as verificações de arquivo e conexão antes do envio.')
+    if risk_acknowledged is not True:
+        raise WaveError('Confirme o aviso de uso por sua conta e risco antes de enviar este arquivo.')
     if fresh_connection != connection:
         raise WaveError('A conexão selecionada mudou. Feche e confira o envio novamente.')
     checked = preview_identity(path, identity['sha256'], identity['plate_index'])

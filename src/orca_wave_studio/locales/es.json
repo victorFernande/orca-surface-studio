@@ -8,7 +8,8 @@
     "language": "Idioma de los avisos",
     "warning_title": "ADVERTENCIA — RIESGO DE COLISIÓN Y DAÑOS A LA IMPRESORA",
     "warning_body": "Las trayectorias no planas pueden causar colisiones del cabezal, dañar la impresora y arruinar la pieza. Úselo bajo su responsabilidad. Compruebe las holguras y supervise toda la impresión. Nunca deje la impresora sin supervisión.",
-    "warning_preview": "Solo vista previa. La impresión aún requiere verificar las transiciones y el cabezal.",
-    "warning_bead": "Solo vista previa. Algunos cordones están por debajo de la altura mínima del perfil. La impresión requiere validar la deposición y el espacio libre del cabezal."
+    "warning_preview": "Envío bajo su responsabilidad. Lea y confirme la advertencia amarilla antes de enviar el archivo.",
+    "warning_bead": "Algunos cordones están por debajo de la altura mínima del perfil. Vuelva a calcular la trayectoria antes de enviar.",
+    "warning_send": "La holgura del cabezal, la deposición y las transiciones pueden no estar validadas para su impresora. Al continuar, asume los riesgos de este archivo."
   }
 }
