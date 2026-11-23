@@ -1,3 +1,4 @@
+// Historical advanced-UI fixture only (before 0.15.3). Current UI: check_guided_studio_ui.cjs.
 // Own local HTML component test. No native Orca control or printer/network IO.
 const assert=require('node:assert/strict');
 const fs=require('node:fs');

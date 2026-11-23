@@ -15,8 +15,9 @@ Isso **não equivale a eliminar todos os degraus do Benchy**.
 O cálculo usa o perfil selecionado e preserva a primeira camada. No estudo da
 SV06, o acabamento da peça inteira usa 0,07 mm acima da primeira camada de
 0,24 mm. As velocidades são as do perfil; o fator de 80% pertence apenas à
-seleção localizada por áreas. Alternar Mais opções e voltar mantém a escolha
-Peça inteira. Mudar a seleção invalida o resultado anterior.
+seleção localizada por áreas. A escolha Peça inteira permanece ao voltar
+entre etapas. Desde a 0.15.3, o menu Mais opções foi removido.
+Mudar a seleção invalida o resultado anterior.
 
 ![Peça inteira disponível no passo 2](images/whole-v0101/01-whole-model-selected.png)
 

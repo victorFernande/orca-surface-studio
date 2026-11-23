@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "orca-wave-studio"
-version = "0.15.2"
+version = "0.15.3"
 description = "OrcaSlicer surface and sinusoidal toolpath studio using the active printer profile"
 requires-python = ">=3.12"
 dependencies = ["numpy>=1.26", "scipy>=1.14", "osqp>=1.0"]
@@ -15,4 +15,4 @@ authors = [{name = "Orca Surface Studio"}]
 where = ["src"]
 
 [tool.setuptools.package-data]
-orca_wave_studio = ["assets/*"]
+orca_wave_studio = ["assets/*", "locales/*.json"]

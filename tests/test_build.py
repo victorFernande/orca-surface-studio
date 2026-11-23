@@ -6,6 +6,8 @@ import io
 import json
 from pathlib import Path
 import tempfile
+import subprocess
+import sys
 import tomllib
 from email.parser import Parser
 import unittest
@@ -70,6 +72,7 @@ class BuildTests(unittest.TestCase):
         bundle,wheel=build_module.build()
         self.assertEqual(bundle.read_bytes(),(ROOT/"dist"/"orca_wave_generator_any.py").read_bytes())
         with zipfile.ZipFile(wheel) as archive:
+            self.assertEqual(len([n for n in archive.namelist() if '/locales/' in n and n.endswith('.json')]),7)
             project=tomllib.loads((ROOT/'pyproject.toml').read_text())['project']
             metadata_name=next(name for name in archive.namelist() if name.endswith('.dist-info/METADATA'))
             metadata=Parser().parsestr(archive.read(metadata_name).decode())
@@ -86,3 +89,16 @@ class BuildTests(unittest.TestCase):
                 expected=base64.urlsafe_b64encode(hashlib.sha256(content).digest()).rstrip(b"=").decode()
                 self.assertEqual(value,"sha256="+expected)
                 self.assertEqual(int(size),len(content))
+        # Exercise the installed data path in fresh processes, without the source tree.
+        for artifact in (bundle,ROOT/'dist'/'orca_wave_generator_any.py',wheel):
+            with self.subTest(artifact=artifact.name),tempfile.TemporaryDirectory() as folder:
+                if artifact.suffix=='.whl':
+                    with zipfile.ZipFile(artifact) as archive:
+                        archive.extractall(folder)
+                setup=(f'import runpy; runpy.run_path({str(artifact)!r});'
+                       if artifact.suffix=='.py' else f'import sys;sys.path.insert(0,{folder!r});')
+                script=setup+('from orca_wave_studio.language_packs import load_language_packs;'
+                    'from orca_wave_studio.studio_ui import get_studio_html;'
+                    'packs,errors=load_language_packs(strict=True);assert len(packs)==7 and not errors;'
+                    'assert "日本語" in get_studio_html({"language":"ja"});')
+                subprocess.run([sys.executable,'-B','-W','error','-c',script],cwd=folder,check=True,capture_output=True)

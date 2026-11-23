@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "code": "es",
+  "native_name": "Español",
+  "direction": "ltr",
+  "order": 2,
+  "translations": {
+    "language": "Idioma de los avisos",
+    "warning_title": "ADVERTENCIA — Úselo bajo su responsabilidad.",
+    "warning_body": "No imprima sin supervisión hasta tener un 100 % de certeza de que las trayectorias son seguras para su impresora.",
+    "warning_preview": "Solo vista previa. La impresión aún requiere verificar las transiciones y el cabezal.",
+    "warning_bead": "Solo vista previa. Algunos cordones están por debajo de la altura mínima del perfil. La impresión requiere validar la deposición y el espacio libre del cabezal."
+  }
+}

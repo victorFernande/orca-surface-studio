@@ -2,6 +2,10 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A **0.15.3** remove o menu **Mais opções** e a interface antiga, mantendo o
+fluxo de quatro etapas. Acrescenta um seletor persistente com sete idiomas
+para o banner e os avisos de Preview. Veja o [uso e os testes](docs/INTERFACE_AVISOS_V0153.md).
+
 A **0.15.1** preserva todas as faces na visualização do modelo, com iluminação
 suave nas curvas, arestas vivas e superfície opaca. O Benchy de referência é
 exibido com seus 225.154 triângulos, em vez da redução anterior a 3.209.

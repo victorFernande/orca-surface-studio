@@ -16,6 +16,7 @@ from .geometry import analyze_snapshot
 from .package import build_sliced_package, extract_plate_gcode
 from .prepared_model import PreparedMesh, exported_settings
 from .project_io import write_model_project
+from .language_packs import load_language_packs, resolve_language
 
 
 BUILTIN_PRESETS = [
@@ -34,6 +35,13 @@ BUILTIN_PRESETS = [
 class StudioController:
     def __init__(self, storage: Path, host: Any = None) -> None:
         self.storage = Path(storage).resolve()
+        self._language_packs = load_language_packs()[0]
+        try:
+            preferences = json.loads((self.storage/'ui_preferences.json').read_text(encoding='utf-8'))
+            language = preferences.get('language') if isinstance(preferences,dict) else None
+        except (OSError,ValueError):
+            language = None
+        self._language = resolve_language(language,self._language_packs)
         self.host = host
         self.captures = CaptureStore(self.storage,host.allowed_source_roots() if host else (),
                                      host.validate_source if host else None)
@@ -95,7 +103,7 @@ class StudioController:
             self._sequence+=1
             session=self._conformal_session
             conformal={k:session[k] for k in ("phase","original_id","native_id","settings","origin_backup","prepared_path","region_catalog") if k in session} if session else None
-            return {"status":self._status,"message":self._message,"objects":self._objects,
+            return {"status":self._status,"message":self._message,"objects":self._objects,"language":self._language,
                     "revision":self._state_revision_value,
                     "capture":self.captures.captured.to_dict() if self.captures.captured else None,
                     "result":self._result,"presets":self._presets(),"bench_only":True,
@@ -946,7 +954,12 @@ class StudioController:
                 raise WaveError("Mensagem inválida.")
             action=payload.get("action")
             selected=[str(x) for x in payload.get("object_ids",[])]
-            if action=="refresh":
+            if action=='set_language':
+                language=resolve_language(payload.get('language'),self._language_packs)
+                with self.lock:
+                    atomic_write(self.storage/'ui_preferences.json',json.dumps({'language':language}).encode('utf-8'))
+                    self._language=language
+            elif action=="refresh":
                 self.refresh()
             elif action=='save_head_map':
                 from .placement import HeadMapStore

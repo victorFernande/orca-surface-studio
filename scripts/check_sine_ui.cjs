@@ -1,3 +1,4 @@
+// Historical wave-UI fixture only (before 0.15.3). Current UI: check_guided_studio_ui.cjs.
 // Headless component check. Never connects to Orca or a printer.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

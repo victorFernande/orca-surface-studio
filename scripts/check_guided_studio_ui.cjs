@@ -74,7 +74,8 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       await page.locator('#wall-all').click();
       assert.equal(await page.locator('#guide-next').isEnabled(),true);
       assert.equal(await page.locator('#wall-radius').isVisible(),false);
-      await page.locator('#guide-toggle').click();await page.locator('#guide-toggle').click();
+      assert.equal(await page.locator('#guide-toggle,#mode-xy,#mode-z,#mode-combined,#presets,#generate,#preview').count(),0);
+      await page.locator('#guide-back').click();assert.equal(await step(),'1');
       await page.locator('#guide-next').click();assert.equal(await step(),'2');
       assert.equal(await page.locator('#wall-all').getAttribute('aria-pressed'),'true');
       await page.locator('#guide-next').click();await page.locator('#guide-next').click();
@@ -108,7 +109,7 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no horizontal overflow');
       assert.deepEqual(errors,[]);outcomes.push({fallback,width,height,errors,four_steps:true,
         study_does_not_open_orca:true,explicit_transfer_only:true,stale_selection_invalidated:true,
-        whole_model_in_guided_step:true,scope_survives_advanced_toggle:true});
+        whole_model_in_guided_step:true,legacy_layout_removed:true,scope_survives_guided_navigation:true});
       await page.close();
     }
   }finally{await browser.close()}

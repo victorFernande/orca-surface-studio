@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "code": "en",
+  "native_name": "English",
+  "direction": "ltr",
+  "order": 1,
+  "translations": {
+    "language": "Warning language",
+    "warning_title": "WARNING — Use at your own risk.",
+    "warning_body": "Do not print unattended until you are 100% sure the toolpaths are safe for your printer.",
+    "warning_preview": "Preview only. Printing still requires verification of the transitions and the print head.",
+    "warning_bead": "Preview only. Some beads are below the profile’s minimum layer height. Printing requires validation of deposition and print head clearance."
+  }
+}
