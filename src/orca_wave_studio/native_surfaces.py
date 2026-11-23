@@ -125,6 +125,9 @@ def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,worksp
     finishing_audit=audit_finishing(data,mapping,finishing,slope_limit)
     progress('Conferindo os caminhos locais e os limites da impressora selecionada…')
     result=contour_result(data,profile,mapping)
+    from .curve_height import audit_curve_height
+    curve_height=audit_curve_height(result.report['deformed_points'],result.report['layer_ids'],
+                                    (options or {}).get('max_curve_height_mm'))
     if not result.report['nonplanar_extrusion_detected']:
         raise WaveError('FINISH_NO_EFFECT: não há contorno em Z compatível nesta região da peça.')
     if cancelled():raise WaveError('Geração cancelada.')
@@ -134,6 +137,7 @@ def build_local(snapshot,backup,folder,executable,resolved,profile,slicer,worksp
                          metadata={'study_kind':'native_local','print_allowed':False})
     if extract_plate_gcode(native,0)!=result.gcode:raise WaveError('LOCAL_PACKAGE: divergência de conteúdo.')
     report={**result.report,'workflow':'integrated','profile_preview_only':False,'profile_preserved':True,
+        'curve_height':curve_height,
         'original_revision':snapshot.revision,'original_backup_sha256':digest(Path(backup).read_bytes()),
         'native_transport_preserved':True,'effective_profile_verification':receipt,
         'physical_gate':'HEAD_AND_LOCAL_DEPOSITION_VALIDATION_REQUIRED',

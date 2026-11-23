@@ -34,6 +34,20 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
             if(viewer.pick(x,y))return {x,y};return null;
       });
       assert.equal(await step(),'1');assert.equal(await page.locator('#wall-selection').isVisible(),false);
+      const curve=page.locator('#curve-height-number'),curveRange=page.locator('#curve-height-range');
+      assert.equal(await curve.isVisible(),true);assert.equal(await curve.inputValue(),'5');
+      for(const input of [curve,curveRange]){
+        assert.equal(await input.getAttribute('min'),'0.1');assert.equal(await input.getAttribute('max'),'5');
+        assert.equal(await input.getAttribute('step'),'0.1');
+      }
+      for(const invalid of ['0','5.1','0.15']){
+        await curve.fill(invalid);assert.equal(await page.locator('#guide-next').isDisabled(),true);
+        await page.locator('.pick-object').first().click();assert.equal(await step(),'1','cannot hide an invalid height by selecting the same object');
+      }
+      await curve.fill('0.1');assert.equal(await curveRange.inputValue(),'0.1');
+      assert.equal(await page.locator('#guide-next').isEnabled(),true);
+      await curve.fill('4.9');await curve.press('ArrowUp');assert.equal(await curve.inputValue(),'5');
+      await curve.blur();
       await page.locator('#canvas').scrollIntoViewIfNeeded();let target=await hit();assert.ok(target);
       await page.mouse.click(target.x,target.y);
       assert.equal(await page.evaluate(()=>surfaceSettings().wall_selection.length),0,'step 1 must not paint');
@@ -94,6 +108,7 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       const whole=await page.evaluate(()=>window.commands.findLast(m=>m.action==='build_surface'));
       assert.equal(whole.open_preview,false);assert.equal(whole.settings.selection_mode,'all');
       assert.equal(whole.settings.backend,'continuous_layers');
+      assert.equal(whole.settings.max_curve_height_mm,5);
       assert.equal(whole.settings.adaptation_strength,undefined);
       assert.deepEqual(whole.settings.wall_selection,[]);
       const wholeResult=structuredClone(result);wholeResult.settings=whole.settings;
@@ -121,6 +136,10 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       assert.equal(await page.locator('#guide-next').innerText(),'Ver resultado já calculado');
       await page.locator('#guide-next').click();assert.equal(await step(),'4');
       assert.equal(await page.evaluate(()=>window.commands.filter(m=>m.action==='build_surface').length),builds);
+      await page.locator('#guide-step-1').click();
+      await curve.fill('4.9');assert.equal(await page.evaluate(()=>presentResult()),false,'curve changes invalidate the result');
+      await curve.fill('5');await curve.blur();assert.equal(await page.evaluate(()=>presentResult()),true);
+      await page.locator('#guide-next').click();await page.locator('#guide-next').click();
       const oldKernel=structuredClone(wholeResult);oldKernel.report.warp.transition_kernel='hermite_c1_xyz_v4';
       await page.evaluate(({state,result})=>window.orcaWaveReceive({type:'state',state:{...state,
         sequence:36,status:'ready',result}}),{state,result:oldKernel});
@@ -145,6 +164,8 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       assert.equal(await page.evaluate(()=>window.commands.some(m=>m.action==='send_file')),false);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no horizontal overflow');
       assert.deepEqual(errors,[]);outcomes.push({fallback,width,height,errors,four_steps:true,
+        curve_height_range_mm:[.1,5],curve_height_step_mm:.1,curve_height_default_mm:5,
+        invalid_curve_height_blocks_next:true,curve_height_change_invalidates_result:true,
         study_does_not_open_orca:true,explicit_transfer_only:true,stale_selection_invalidated:true,
         whole_model_in_guided_step:true,legacy_layout_removed:true,scope_survives_guided_navigation:true,
         single_calculate_click:true,visible_progress:true,unchanged_result_reused:true,error_retry:true,sliced_only_send_review:true});

@@ -2,6 +2,11 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A **0.16.4 experimental** acrescenta **Altura máxima da curva (mm)** no passo 1:
+0,1–5,0 mm, de 0,1 em 0,1 mm, com padrão de 5,0 mm. O valor limita o cálculo
+e os percursos emitidos; não certifica a folga do cabeçote. Veja o
+[controle e o registro do teste supervisionado](docs/ALTURA_CURVA_V0164.md).
+
 A **0.16.3 experimental** permite enviar estudos com validação física pendente
 após confirmar um **aviso amarelo de uso por conta e risco**. Mantém a conferência
 do Preview, do arquivo e da conexão. O envio ao OctoPrint não inicia impressão

@@ -125,10 +125,16 @@ def build_surface(snapshot,object_id,backup,folder,executable,settings=None,*,pr
 def _build_surface_at_pose(snapshot,object_id,backup,folder,executable,settings=None,*,progress=lambda message:None,
                   cancelled=lambda:False,slicer=slice_project,workspace=None):
     folder=Path(folder);folder.mkdir(parents=True,exist_ok=True);options=dict(settings or {})
-    if set(options)-{'step_mm','max_slope_deg','retain_native_short_edges','backend','region_id',
+    if set(options)-{'step_mm','max_slope_deg','max_curve_height_mm','retain_native_short_edges','backend','region_id',
                      'selection_mode','selection_revision','wall_selection'}:
         raise WaveError('Parâmetro de superfície desconhecido.')
     backend=options.pop('backend','roof_bending');region_id=options.pop('region_id',None)
+    if backend=='roof_bending' and 'max_curve_height_mm' in options:
+        raise WaveError('CURVE_HEIGHT: use Peça inteira ou Pintar áreas para limitar a curva em mm.')
+    if backend in ('native_local','continuous_layers'):options.setdefault('max_curve_height_mm',5.)
+    if 'max_curve_height_mm' in options:
+        if options['max_curve_height_mm'] is None:raise WaveError('CURVE_HEIGHT: informe de 0,1 a 5,0 mm.')
+        RegionalShellSettings(max_curve_height_mm=options['max_curve_height_mm'])
     if backend not in ('roof_bending','native_local','continuous_layers'):raise WaveError('Método de superfície desconhecido.')
     resolved=exported_settings(Path(backup),active_profile=True)
     profile=PrinterProfile.from_settings(resolved)
@@ -201,4 +207,5 @@ def _result(snapshot,object_id,folder,settings,report,gcode,package,backend,refe
     return {'sha256':report['processed_sha256'],'gcode_path':str(gcode),'package_path':str(package),
             'plate_index':0,'revision':snapshot.revision,'object_id':str(object_id),'study_kind':'conformal',
             'workflow':'integrated','settings':{'step_mm':.4,'max_slope_deg':30,
+                **({'max_curve_height_mm':5.} if backend in ('native_local','continuous_layers') else {}),
                 'retain_native_short_edges':False,'region_id':None,**(settings or {}),'backend':backend},'report':lightweight,**trace}
