@@ -6,8 +6,8 @@
   "order": 0,
   "translations": {
     "language": "Idioma dos avisos",
-    "warning_title": "AVISO — Use por sua conta e risco.",
-    "warning_body": "Não imprima sem supervisão até ter 100% de certeza de que as trajetórias são seguras para sua impressora.",
+    "warning_title": "ATENÇÃO — RISCO DE COLISÃO E DANOS À IMPRESSORA",
+    "warning_body": "Trajetórias não planares podem causar colisões do cabeçote, danificar a impressora e perder a peça. Use por sua conta e risco. Confira as folgas e acompanhe toda a impressão. Nunca deixe a impressora sem supervisão.",
     "warning_preview": "Somente Preview. A impressão ainda depende da verificação das transições e do cabeçote.",
     "warning_bead": "Somente Preview. Há cordões abaixo da altura mínima do perfil. A impressão exige validar a deposição e o cabeçote."
   }

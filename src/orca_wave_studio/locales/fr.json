@@ -6,8 +6,8 @@
   "order": 4,
   "translations": {
     "language": "Langue des avertissements",
-    "warning_title": "AVERTISSEMENT — Utilisation à vos risques et périls.",
-    "warning_body": "Ne lancez pas d’impression sans surveillance avant d’être certain à 100 % que les trajectoires sont sûres pour votre imprimante.",
+    "warning_title": "ATTENTION — RISQUE DE COLLISION ET DE DÉGÂTS À L’IMPRIMANTE",
+    "warning_body": "Les trajectoires non planes peuvent provoquer des collisions de la tête, endommager l’imprimante et gâcher la pièce. Utilisation à vos risques et périls. Vérifiez les dégagements et surveillez toute l’impression. Ne laissez jamais l’imprimante sans surveillance.",
     "warning_preview": "Aperçu uniquement. L’impression nécessite encore la vérification des transitions et de la tête d’impression.",
     "warning_bead": "Aperçu uniquement. Certains cordons sont inférieurs à la hauteur minimale du profil. L’impression nécessite de vérifier le dépôt et le dégagement de la tête d’impression."
   }

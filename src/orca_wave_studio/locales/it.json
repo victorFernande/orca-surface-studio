@@ -6,8 +6,8 @@
   "order": 3,
   "translations": {
     "language": "Lingua degli avvisi",
-    "warning_title": "ATTENZIONE — Utilizzare a proprio rischio.",
-    "warning_body": "Non stampare senza supervisione finché non si è sicuri al 100% che le traiettorie siano sicure per la propria stampante.",
+    "warning_title": "ATTENZIONE — RISCHIO DI COLLISIONE E DANNI ALLA STAMPANTE",
+    "warning_body": "Le traiettorie non planari possono causare collisioni della testina, danneggiare la stampante e rovinare il pezzo. Utilizzare a proprio rischio. Verificare gli spazi liberi e sorvegliare l’intera stampa. Non lasciare mai la stampante incustodita.",
     "warning_preview": "Solo anteprima. La stampa richiede ancora la verifica delle transizioni e della testina.",
     "warning_bead": "Solo anteprima. Alcuni cordoni sono al di sotto dell’altezza minima del profilo. La stampa richiede la verifica della deposizione e dello spazio libero della testina."
   }
