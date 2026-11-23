@@ -61,5 +61,63 @@ não qualificados para impressão física.
 O Benchy de 60 mm já está com a proa voltada para a frente SOVOL; giro adicional
 do Studio mantido em 0°. Cálculo novo iniciado pelo botão do plugin.
 
-Conferência final do Preview, folga da carcaça traseira e eventual envio físico
-ainda em andamento. Nenhuma dessas aprovações é inferida dos testes locais.
+O novo cálculo pelo plugin terminou em aproximadamente 12 minutos, incluindo
+preservação da malha, duas fatias nativas e restauração completa. O cache
+reaproveitou somente a proposta do campo; suas verificações foram refeitas.
+Esse tempo é uma execução observada, não um benchmark comparativo.
+
+| Verificação do arquivo nativo | Resultado |
+| --- | --- |
+| Limites do perfil | 0,07–0,28 mm, preservados |
+| Cordões apoiados emitidos | 0,071540684–0,265717426 mm |
+| Ocorrências fora desses limites | 0 |
+| Distribuição da cópia | 0,169 mm; segunda fatia aprovada |
+| Maior inclinação emitida | 27,959738°, limite digital 30° |
+| Primeira camada | Plana em Z 0,24 mm |
+| Camada 237, extrusões | 2.745, das quais 2.744 variam Z |
+| Camada 237, Z real | 37,957824–40,099752 mm |
+| G-code final, pacote e temporário do Preview | Bytes idênticos |
+
+SHA-256 do resultado **novo, gerado pelo plugin**:
+`8ac3b0e376a530cffe8fc0fd71dc009ba828098d10374861ce4125c74f10a1d4`.
+Ele é diferente da reprodução offline acima. As trajetórias também não são
+idênticas; a verificação de folga não será herdada dessa reprodução.
+
+No botão **Ver no Preview do Orca**, o host abriu a escolha nativa do pacote.
+Foi necessário marcar **Open as project** e confirmar. O Orca entrou no Preview
+sem refatiar o modelo: processou o G-code existente. A inspeção lateral não
+mostrou a lacuna ampla anterior no casco. A camada 237 foi isolada com `L`
+para conferir o teto inclinado; a variação XYZ foi verificada no arquivo.
+Não se afirma ausência de qualquer defeito físico a partir dessa imagem.
+
+**Conferir envio** abriu a janela com a SV06 selecionada, conexão OctoPrint
+preservada, credencial disponível e hash correto. O botão de enviar continua
+indisponível pela validação física pendente. Nenhum upload, seleção de trabalho
+ou início de impressão foi realizado neste ciclo.
+
+### Capturas do processo
+
+![Cálculo e aviso ampliado no plugin](images/spacing-v0162/01-calculo-no-plugin.jpg)
+
+![Resultado e cordões dentro do perfil](images/spacing-v0162/02-resultado-no-plugin.jpg)
+
+![Inspeção lateral do casco no Preview](images/spacing-v0162/03-preview-casco.jpg)
+
+![Camada 237 vista pela lateral: teto inclinado](images/spacing-v0162/04-teto-camada-237.jpg)
+
+![Camada 237 isolada vista de cima](images/spacing-v0162/05-teto-isolado.jpg)
+
+![Proa voltada para a frente SOVOL](images/spacing-v0162/06-proa-frente-sovol.jpg)
+
+![Revisão do envio com conexão preservada e bloqueio físico](images/spacing-v0162/07-revisao-envio.jpg)
+
+### Cabeçote
+
+A conferência inicial da reprodução offline, com todas as faces da carcaça
+inferior e sem deslocar o CAD para a hipótese de 4 mm, ficou **inconclusiva**.
+Os limites conservativos se sobrepõem ao material; isso não prova contato.
+Está em execução uma revisão mais detalhada, com subdivisões analíticas das
+faces inferiores do duto e da carcaça, sobre o arquivo nativo novo.
+O registro do cabeçote instalado continua sem medição independente.
+
+Não há liberação física, publicação no Orca Cloud ou início inferido dos testes.
