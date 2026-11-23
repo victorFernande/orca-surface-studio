@@ -241,7 +241,7 @@ function diagnostics(current){
     return;
   }
   const r=state.result,rep=r.report||{};
-  $('result-note').textContent=r.workflow==='integrated'?'Prévia gerada com o perfil selecionado. Conferência física do cabeçote e da deposição pendente.':r.study_kind==='conformal'?'Trajetória reconstruída a partir da cópia fatiada no Orca. Impressão indisponível.':surfaceMode?'Percurso da superfície no Studio. Deposição e impressão ainda não validadas.':
+  $('result-note').textContent=r.workflow==='integrated'?'Arquivo gerado com o perfil selecionado. O envio exige confirmar o aviso de uso por sua conta e risco.':r.study_kind==='conformal'?'Trajetória reconstruída a partir da cópia fatiada no Orca. Confira o aviso antes de enviar.':surfaceMode?'Percurso da superfície no Studio. Deposição e impressão ainda não validadas.':
     (state.demo?'Trajetória do exemplo de bancada.':'Trajetória processada para a seleção atual.');
   record(metrics,'SHA-256',r.sha256.slice(0,12),r.sha256);
   if(surfaceMode&&['native_local','continuous_layers'].includes(r.settings?.backend)){

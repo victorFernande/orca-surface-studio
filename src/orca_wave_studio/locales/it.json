@@ -8,7 +8,8 @@
     "language": "Lingua degli avvisi",
     "warning_title": "ATTENZIONE — RISCHIO DI COLLISIONE E DANNI ALLA STAMPANTE",
     "warning_body": "Le traiettorie non planari possono causare collisioni della testina, danneggiare la stampante e rovinare il pezzo. Utilizzare a proprio rischio. Verificare gli spazi liberi e sorvegliare l’intera stampa. Non lasciare mai la stampante incustodita.",
-    "warning_preview": "Solo anteprima. La stampa richiede ancora la verifica delle transizioni e della testina.",
-    "warning_bead": "Solo anteprima. Alcuni cordoni sono al di sotto dell’altezza minima del profilo. La stampa richiede la verifica della deposizione e dello spazio libero della testina."
+    "warning_preview": "Invio a proprio rischio. Leggere e confermare l’avviso giallo prima di inviare il file.",
+    "warning_bead": "Alcuni cordoni sono sotto l’altezza minima del profilo. Ricalcolare il percorso prima dell’invio.",
+    "warning_send": "La distanza dalla testina, la deposizione e le transizioni potrebbero non essere validate per la stampante. Continuando, si accettano i rischi di questo file."
   }
 }

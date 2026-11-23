@@ -1,0 +1,17 @@
+{
+  "status": "PASS_FULL_BENCHY_ACKNOWLEDGED_SIMULATED_UPLOAD",
+  "gcode_sha256": "8ac3b0e376a530cffe8fc0fd71dc009ba828098d10374861ce4125c74f10a1d4",
+  "bytes": 38477402,
+  "missing_ack_requests": 0,
+  "uploads": 1,
+  "captured_sha256": "8ac3b0e376a530cffe8fc0fd71dc009ba828098d10374861ce4125c74f10a1d4",
+  "physical_validation_before_after": [
+    false,
+    false
+  ],
+  "effective_print": false,
+  "effective_select": false,
+  "destination": "literal loopback simulator",
+  "real_printer_contacted": false,
+  "native_orca_controlled": false
+}

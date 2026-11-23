@@ -2,6 +2,14 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A **0.16.3 experimental** permite enviar estudos com validação física pendente
+após confirmar um **aviso amarelo de uso por conta e risco**. Mantém a conferência
+do Preview, do arquivo e da conexão. O envio ao OctoPrint não inicia impressão
+automaticamente. Veja o [fluxo e as capturas](docs/ENVIO_POR_CONTA_RISCO_V0163.md).
+
+A **0.16.2 experimental** redistribui as camadas sem aumentar os limites do
+perfil. Veja o [teste do Benchy e seus limites físicos](docs/ESPACAMENTO_AUTOMATICO_V0162.md).
+
 A **0.16.1 experimental** destaca o aviso de risco, com título maior e texto
 explícito sobre colisões, danos à impressora e supervisão durante toda a impressão.
 Veja o [aviso e as capturas](docs/AVISO_RISCO_V0161.md).

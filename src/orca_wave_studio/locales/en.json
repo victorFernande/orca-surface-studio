@@ -8,7 +8,8 @@
     "language": "Warning language",
     "warning_title": "WARNING — COLLISION AND PRINTER DAMAGE RISK",
     "warning_body": "Non-planar toolpaths can cause print head collisions, damage your printer and ruin the part. Use at your own risk. Check clearances and supervise the entire print. Never leave the printer unattended.",
-    "warning_preview": "Preview only. Printing still requires verification of the transitions and the print head.",
-    "warning_bead": "Preview only. Some beads are below the profile’s minimum layer height. Printing requires validation of deposition and print head clearance."
+    "warning_preview": "Send at your own risk. Read and acknowledge the yellow warning before sending the file.",
+    "warning_bead": "Some beads are below the profile minimum layer height. Recalculate the toolpath before sending.",
+    "warning_send": "Print head clearance, deposition and transitions may not be validated for your printer. By continuing, you accept the risks of this file."
   }
 }

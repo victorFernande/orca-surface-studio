@@ -4,7 +4,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock,patch
+import re
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 from orca_wave_studio.contracts import WaveError,digest
@@ -60,15 +61,20 @@ class SendDialogTests(unittest.TestCase):
         self.assertIn('&lt;img',html)
         self.assertIn('id="send" class="primary" disabled',html)
 
-    def test_preview_only_cannot_be_lifted_by_verification_alone_or_a_false_boolean_string(self):
+    def test_unvalidated_physics_is_advisory_but_technical_errors_still_block(self):
         identity={'file':'part.gcode.3mf','sha256':'a'*64,'plate_index':0}
         for report in ({},{'print_allowed':True,'physical_validation':False},
                        {'print_allowed':'true','physical_validation':True}):
-            self.assertFalse(review(identity,connection(),report,verified=True)['send_allowed'])
+            original=json.dumps(report)
+            state=review(identity,connection(),report,verified=True)
+            self.assertTrue(state['send_allowed'])
+            self.assertTrue(state['risk_confirmation_required'])
+            self.assertEqual(json.dumps(report),original)
         qualified={'print_allowed':True,'physical_validation':True}
         self.assertFalse(review(identity,connection(),qualified,verified=False)['send_allowed'])
         self.assertFalse(review(identity,connection(),qualified,verified=True,same_profile=False)['send_allowed'])
         self.assertFalse(review(identity,connection(),{**qualified,'bead_deposition':{'below_profile_minimum_occurrences':1}},verified=True)['send_allowed'])
+        self.assertFalse(review(identity,connection(),{**qualified,'bead_deposition':{'above_profile_maximum_occurrences':1}},verified=True)['send_allowed'])
 
     def test_unavailable_adapter_is_explicit_and_does_not_fallback_to_octoprint(self):
         c=PrinterConnection('Printer B','active',{'printer_agent':'moonraker'})
@@ -92,23 +98,59 @@ class SendDialogTests(unittest.TestCase):
             p=Path(root)/'part.gcode.3mf';data=b'G90\nG1 X1 Y2 Z.2 E.1\n';build_sliced_package(data,p)
             identity=preview_identity(p);c=connection();s=review(identity,c,{'print_allowed':True,'physical_validation':True},verified=True)
             factory=Mock()
-            with self.assertRaises(WaveError):send_reviewed_file(p,identity,c,connection('http://another.invalid'),s,transport_factory=factory)
+            with self.assertRaises(WaveError):send_reviewed_file(p,identity,c,connection('http://another.invalid'),s,risk_acknowledged=True,transport_factory=factory)
             build_sliced_package(data+b'; changed\n',p)
-            with self.assertRaises(WaveError):send_reviewed_file(p,identity,c,c,s,transport_factory=factory)
+            with self.assertRaises(WaveError):send_reviewed_file(p,identity,c,c,s,risk_acknowledged=True,transport_factory=factory)
             factory.assert_not_called()
 
-    def test_qualified_upload_to_simulator_preserves_hash_and_never_selects_or_prints(self):
+    def test_acknowledged_unvalidated_upload_preserves_hash_and_never_selects_or_prints(self):
         with TemporaryDirectory() as root,OctoPrintSimulator() as sim:
             p=Path(root)/'part.gcode.3mf';data=b'G90\nG1 X1 Y2 Z.2 E.1\n';build_sliced_package(data,p)
             identity=preview_identity(p);c=connection(sim.base_url)
             # Simulator has its own test key; this does not touch a real printer.
             c=PrinterConnection(c.profile,c.source,{**c.settings,'printhost_apikey':sim.api_key})
-            state=review(identity,c,{'print_allowed':True,'physical_validation':True},verified=True)
+            report={'print_allowed':False,'physical_validation':False}
+            state=review(identity,c,report,verified=True)
             self.assertTrue(state['send_allowed']);self.assertEqual(sim.requests,[])
-            send_reviewed_file(p,identity,c,c,state)
+            for ack in (False,None,1,'true'):
+                with self.assertRaisesRegex(WaveError,'Confirme o aviso'):
+                    send_reviewed_file(p,identity,c,c,state,risk_acknowledged=ack)
+            self.assertEqual(sim.requests,[])
+            send_reviewed_file(p,identity,c,c,state,risk_acknowledged=True)
             self.assertEqual(len(sim.captures),1)
             self.assertEqual(sim.captures[0]['gcode'],data)
             self.assertFalse(sim.captures[0]['print']);self.assertFalse(sim.captures[0]['select'])
+            self.assertEqual(report,{'print_allowed':False,'physical_validation':False})
+
+    def test_host_confirmation_is_scoped_to_one_dialog_and_one_attempt(self):
+        from orca_wave_studio import plugin
+        c=connection();identity={'file':'part.gcode.3mf','sha256':'a'*64,'plate_index':0}
+        state=review(identity,c,{'print_allowed':False},verified=True)
+        window=Mock();window.is_open.return_value=True
+        create=Mock(return_value=window);validate=Mock(return_value=True)
+        fake_orca=SimpleNamespace(host=SimpleNamespace(ui=SimpleNamespace(create_window=create)))
+        def thread(*,target,**kwargs):return SimpleNamespace(start=target)
+        with patch.object(plugin,'orca',fake_orca),patch.object(plugin.threading,'Thread',side_effect=thread),\
+             patch('orca_wave_studio.send_dialog.send_reviewed_file') as upload:
+            host=plugin.NativeHost();host.selected_printer_connection=Mock(return_value=c)
+            host.open_send_dialog('unused',identity,c,state,validate)
+            html=create.call_args.args[0];receive=create.call_args.kwargs['on_message']
+            token=json.loads(re.search(r'confirmation_token:("[^"]+")',html).group(1))
+            upload.assert_not_called();validate.assert_not_called()
+            for payload in ({'action':'send_file'},
+                            {'action':'send_file','risk_acknowledged':True,'confirmation_token':'old-window'},
+                            {'action':'send_file','risk_acknowledged':'true','confirmation_token':token}):receive(payload)
+            upload.assert_not_called();validate.assert_not_called()
+            message={'action':'send_file','risk_acknowledged':True,'confirmation_token':token}
+            receive(message);receive(message)
+            upload.assert_called_once();validate.assert_called_once()
+            self.assertIs(upload.call_args.kwargs['risk_acknowledged'],True)
+            # The acknowledgement is not a persistent bypass or a physics certificate.
+            other=plugin.NativeHost();other.selected_printer_connection=Mock(return_value=c)
+            other.open_send_dialog('unused',identity,c,state,validate)
+            create.call_args.kwargs['on_message'](message)
+            upload.assert_called_once()
+            self.assertNotIn('confirmation_token',state)
 
     def test_controller_can_review_current_untracked_benchy_but_cannot_authorize_it(self):
         with TemporaryDirectory() as root:

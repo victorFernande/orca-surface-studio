@@ -8,7 +8,8 @@
     "language": "Sprache der Warnhinweise",
     "warning_title": "WARNUNG — KOLLISIONSGEFAHR UND MÖGLICHE DRUCKERSCHÄDEN",
     "warning_body": "Nichtplanare Druckbahnen können Kollisionen des Druckkopfs verursachen, den Drucker beschädigen und das Bauteil ruinieren. Verwendung auf eigene Gefahr. Prüfen Sie die Freiräume und beaufsichtigen Sie den gesamten Druck. Lassen Sie den Drucker niemals unbeaufsichtigt.",
-    "warning_preview": "Nur Vorschau. Vor dem Drucken müssen die Übergänge und der Druckkopf noch überprüft werden.",
-    "warning_bead": "Nur Vorschau. Einige Extrusionsbahnen liegen unter der Mindestschichthöhe des Profils. Vor dem Drucken müssen Materialauftrag und Druckkopffreiraum überprüft werden."
+    "warning_preview": "Versand auf eigene Gefahr. Lesen und bestätigen Sie die gelbe Warnung, bevor Sie die Datei senden.",
+    "warning_bead": "Einige Bahnen unterschreiten die minimale Schichthöhe des Profils. Berechnen Sie den Werkzeugweg vor dem Senden neu.",
+    "warning_send": "Druckkopffreiraum, Materialablage und Übergänge sind möglicherweise nicht für Ihren Drucker validiert. Wenn Sie fortfahren, übernehmen Sie die Risiken dieser Datei."
   }
 }

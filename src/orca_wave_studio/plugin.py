@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import re
+import secrets
 import tempfile
 import threading
 from typing import Any
@@ -77,28 +78,31 @@ class NativeHost:
         if previous is not None and previous.is_open():
             raise WaveError('A conferência de envio já está aberta. Feche essa janela para conferir novamente.')
         attempted=threading.Event();closed=threading.Event()
+        confirmation_token=secrets.token_urlsafe(24)
         def receive(message):
             payload=json.loads(message) if isinstance(message,str) else message
             if not isinstance(payload,dict) or payload.get('action')!='send_file' or attempted.is_set():return
+            if payload.get('risk_acknowledged') is not True or payload.get('confirmation_token')!=confirmation_token:
+                self._send_window.post({'message':'Confirme o aviso de uso por sua conta e risco nesta janela.'});return
             attempted.set()
             try:
                 fresh=self.selected_printer_connection()
                 # Runs on the UI thread, so this rechecks the actual selection,
-                # current Preview and physical gates before any worker starts.
+                # current Preview and technical checks before any worker starts.
                 if not validate():raise WaveError('O estudo ou o Preview mudou. Confira o envio novamente.')
-                if not review_state['send_allowed']:raise WaveError('Envio bloqueado: este estudo continua somente para Preview.')
+                if not review_state['send_allowed']:raise WaveError('Corrija as verificações de arquivo e conexão antes do envio.')
             except WaveError as exc:
                 self._send_window.post({'message':str(exc)});return
             def work():
                 try:
-                    send_reviewed_file(path,identity,connection,fresh,review_state,cancelled=closed.is_set)
+                    send_reviewed_file(path,identity,connection,fresh,review_state,risk_acknowledged=True,cancelled=closed.is_set)
                     text='Arquivo enviado sem iniciar impressão.'
                 except Exception:
                     text='Não foi possível confirmar o envio. Confira o receptor antes de tentar novamente; não há repetição automática.'
                 if not closed.is_set():self._send_window.post({'message':text})
             threading.Thread(target=work,name='SurfaceStudio-Upload',daemon=True).start()
-        self._send_window=orca.host.ui.create_window(dialog_html(review_state),title='Surface Studio — Enviar para impressora',
-            width=660,height=650,on_message=receive,on_close=closed.set)
+        self._send_window=orca.host.ui.create_window(dialog_html({**review_state,'confirmation_token':confirmation_token}),title='Surface Studio — Enviar para impressora',
+            width=700,height=850,on_message=receive,on_close=closed.set)
 
     def allowed_source_roots(self):
         # gettempdir() probes candidate folders by creating/deleting a random
