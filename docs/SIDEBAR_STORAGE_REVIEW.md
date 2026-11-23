@@ -11,6 +11,9 @@ Three regression tests cover those cases. All 299 Python tests passed locally
 with `-B -W error`; standalone distribution checks passed. A read-only
 Windows/macOS/Linux CI matrix now verifies tests and builds without installing
 or publishing. Publication approval and physical qualification gates remain.
+The first CI matrix exposed temporary-path aliases in permission test fixtures
+on Windows/macOS. Resolve the fixture root before comparing audited paths;
+production permission checks and authorization behavior remain unchanged.
 
 Native Windows OrcaSlicer 2.5.1: page and sidebar recognize the selected roof
 coupon, selection painting and back-navigation work. Retrying the study passed
