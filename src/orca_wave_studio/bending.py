@@ -11,6 +11,7 @@ import copy
 import heapq
 import math
 from collections import defaultdict
+import numpy as np
 
 from .contracts import WaveError
 from .geometry import transform_point
@@ -41,7 +42,15 @@ def roof_patches(mesh,triangles,limit):
 
 def _clip(vertices,faces,world,plane,*,reference_world=None):
     """Split both sides of a linear plane, sharing intersection vertices."""
-    values=[sum(a*b for a,b in zip(plane[:3],p))+plane[3] for p in world]
+    if not faces:return []
+    p=np.asarray(world,dtype=float)
+    values=((p[:,0]*plane[0]+p[:,1]*plane[1])+p[:,2]*plane[2])+plane[3]
+    # Keep face order and the original crossing routine. Only the broad phase
+    # is vectorized: non-crossing faces never need Python polygon construction.
+    points=values[np.asarray(faces,dtype=np.int64)]
+    candidates=np.flatnonzero((points.min(axis=1)<-1e-10)&(points.max(axis=1)>1e-10))
+    if not len(candidates):return list(faces)
+    values=values.tolist()
     intersections={};result=[]
     def crossing(a,b):
         if abs(values[a])<1e-10:return a
@@ -55,9 +64,9 @@ def _clip(vertices,faces,world,plane,*,reference_world=None):
                 reference_world.append(tuple(u+t*(v-u) for u,v in zip(reference_world[a],reference_world[b])))
             values.append(0.);intersections[edge]=index
         return intersections[edge]
-    for tri in faces:
-        if not (min(values[i] for i in tri)<-1e-10 and max(values[i] for i in tri)>1e-10):
-            result.append(tri);continue
+    previous=0
+    for index in candidates:
+        result.extend(faces[previous:index]);previous=index+1;tri=faces[index]
         for side in (-1,1):
             poly=[];a=tri[-1]
             for b in tri:
@@ -67,6 +76,7 @@ def _clip(vertices,faces,world,plane,*,reference_world=None):
                 a=b
             poly=list(dict.fromkeys(poly))
             result.extend((poly[0],poly[j],poly[j+1]) for j in range(1,len(poly)-1))
+    result.extend(faces[previous:])
     return result
 
 

@@ -1,17 +1,42 @@
 """Smooth joint surface coordinates with original-face and crease bounds."""
 from __future__ import annotations
 import copy
-import math
 from dataclasses import replace
-from functools import lru_cache
 import numpy as np
-from .bending import _refine,_clip
+from .bending import _clip
 from .continuous_layers import _creases
 from .contracts import WaveError
 from .geometry import transform_point
 from .mesh_normalization import normalize_snapshot
 from .regional_shell import _local_z_direction
 from .surface_coordinates import SurfaceCoordinates
+from .certified_refinement import refine_mesh
+
+
+def _face_bounds(field,p,tolerance):
+    """Accept a cheap complete global enclosure, tighten only when necessary."""
+    n=np.cross(p[:,1]-p[:,0],p[:,2]-p[:,0]);length=np.linalg.norm(n,axis=1)
+    if np.any(length<1e-20):raise WaveError('SPLINE_REFERENCE: face original degenerada.')
+    projection=abs(n[:,2])/length
+    d=np.roll(p,-1,axis=1)-p
+    curve=sum(h*abs(d[:,:,i]*d[:,:,j])*(1 if i==j else 2) for (i,j),h in field.global_hessian.items())
+    error=projection*(curve.max(axis=1)/6+1e-9)/field.cmin+1e-8
+    inactive=(abs(n[:,2])<=1e-12*length)|(p[:,:,2].max(axis=1)<=field.anchor)
+    error[inactive]=0.
+    tighten=error>tolerance;q=p[tighten]
+    if len(q):error[tighten]=projection[tighten]*field.inverse_phase_errors(q,field.phase_triangle_errors(q))+1e-8
+    return error
+
+
+def _crease_bounds(field,p,tolerance):
+    d=p[:,1]-p[:,0]
+    curve=sum(h*abs(d[:,i]*d[:,j])*(1 if i==j else 2) for (i,j),h in field.global_hessian.items())
+    error=(curve/8+1e-9)/field.cmin+1e-8
+    inactive=np.linalg.norm(d[:,:2],axis=1)<1e-10
+    error[inactive]=0.
+    tighten=error>tolerance;q=p[tighten]
+    if len(q):error[tighten]=field.inverse_phase_errors(q,field.phase_edge_errors(q))+1e-8
+    return error
 
 
 class SplineLayerWarp(SurfaceCoordinates):
@@ -26,40 +51,17 @@ class SplineLayerWarp(SurfaceCoordinates):
         direction=_local_z_direction(instance['matrix'],volume['matrix'])
         vertices=copy.deepcopy(volume['vertices']);faces=[tuple(f) for f in volume['triangles']]
         world=[tuple(transform_point(v,instance['matrix'],volume['matrix'])) for v in vertices]
-        reference=list(world);self.original_world_vertices=tuple(world);creases=_creases(faces,world);calls=0
-        def bound(points,original):
-            nonlocal calls
-            calls+=1
-            if calls%4096==0:
-                if cancelled():raise WaveError('Geração cancelada.')
-                progress(f'Conferindo transições suaves: {calls} faces adicionais…')
-            p=np.asarray(original);n=np.cross(p[1]-p[0],p[2]-p[0]);length=float(np.linalg.norm(n))
-            if length<1e-20:raise WaveError('SPLINE_REFERENCE: face original degenerada.')
-            if abs(n[2])<=1e-12*length:return 0.
-            return abs(n[2])/length*field.inverse_phase_error(p,field.phase_triangle_error(p))+1e-8
-        edge_calls=0
-        @lru_cache(maxsize=300000)
-        def edge(a,b):
-            nonlocal edge_calls
-            edge_calls+=1
-            if edge_calls%2048==0:
-                if cancelled():raise WaveError('Geração cancelada.')
-                progress(f'Conferindo quinas no campo suave: {edge_calls} arestas…')
-            if math.dist(a[:2],b[:2])<1e-10:return 0.
-            return field.inverse_phase_error((a,b),field.phase_edge_error(a,b))+1e-8
+        reference=list(world);self.original_world_vertices=tuple(world);creases=_creases(faces,world)
         def batch(points,triangles,original):
-            p=np.asarray(original)[np.asarray(triangles)];d=np.roll(p,-1,axis=1)-p
-            n=np.cross(p[:,1]-p[:,0],p[:,2]-p[:,0]);length=np.linalg.norm(n,axis=1)
-            if np.any(length<1e-20):raise WaveError('SPLINE_REFERENCE: face original degenerada.')
-            h={key:float(abs(values).max()) for key,values in field.hessian.items()}
-            curvature=sum(h[i,j]*abs(d[:,:,i]*d[:,:,j])*(1 if i==j else 2) for i,j in h)
-            error=abs(n[:,2])/length*curvature.max(axis=1)/(6*field.cmin)+1e-8
-            return np.where((abs(n[:,2])<=1e-12*length)|(p[:,:,2].max(axis=1)<=field.anchor),0.,error)
+            p=np.asarray(original)[np.asarray(triangles)]
+            return _face_bounds(field,p,settings.tolerance_mm)
         progress('Preservando o formato e as quinas com um campo contínuo suave…')
-        faces,error=_refine(vertices,faces,world,bound,settings.tolerance_mm,max_faces=3000000,
-            crease_edges=creases,edge_bound=lambda a,b,ra,rb:edge(*sorted((tuple(ra),tuple(rb)))),
-            reference_world=reference,batch_bound=batch)
-        edge.cache_clear();phase=field.flatten_points(np.asarray(world))
+        def edge_batch(points):
+            return _crease_bounds(field,points,settings.tolerance_mm)
+        faces,error=refine_mesh(vertices,faces,world,settings.tolerance_mm,3000000,
+            reference_world=reference,crease_edges=creases,face_bounds=batch,edge_bounds=edge_batch,
+            cancelled=cancelled,progress=progress)
+        phase=field.flatten_points(np.asarray(world))
         local_phase=[[v+d*(q[2]-p[2]) for v,d in zip(local,direction)] for local,p,q in zip(vertices,world,phase)]
         phase_world=list(map(tuple,phase))
         for k,value in layer_grid.clipping_planes():

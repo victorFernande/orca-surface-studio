@@ -1,6 +1,7 @@
 """C2 monotone phase field with derivative-control certificates."""
 from __future__ import annotations
 import math
+from bisect import bisect_right
 from functools import lru_cache
 import numpy as np
 from scipy.interpolate import NdBSpline,BSpline
@@ -58,6 +59,7 @@ class SplinePhase:
                 values,knots,degrees=derivative(nu);self.hessian[i,j]=values;self.hessian_domains[i,j]=(knots,degrees)
         self.cmin=1+float(self.first[2].min());self.cmax=1+float(self.first[2].max())
         self.gmax=tuple(float(abs(a).max()) for a in self.first[:2])
+        self.global_hessian={key:float(abs(values).max()) for key,values in self.hessian.items()}
         if self.cmin<=0:raise WaveError('SPLINE_FOLD: os controles não preservam a ordem vertical.')
         # Newton can oscillate while technically staying inside the bracket.
         # Keep its fast initial steps, then guarantee bracket contraction by
@@ -74,7 +76,10 @@ class SplinePhase:
         # no rounding, looser tolerance or sampled certificate is introduced.
         domains=[*self.first_domains,*self.hessian_domains.values()]
         self._support_knots=tuple(np.unique(np.concatenate([knots[k] for knots,_ in domains])) for k in range(3))
+        self._support_lists=tuple(knots.tolist() for knots in self._support_knots)
         self._support_coordinates=tuple(np.r_[-np.inf,knots] for knots in self._support_knots)
+        self._first_tables=self._bounds_tables(self.first_domains,self.first)
+        self._hessian_tables=self._bounds_tables(list(self.hessian_domains.values()),list(self.hessian.values()))
         self._hessian_query=lru_cache(maxsize=32768)(self._hessian_for_cells)
         self._derivative_query=lru_cache(maxsize=32768)(self._derivative_for_cells)
         self._map=lru_cache(maxsize=120000)(self._map_point)
@@ -94,13 +99,14 @@ class SplinePhase:
         key=tuple(map(float,p));prepared=self._prepared_points.get(key)
         return prepared if prepared is not None else self._map(key)
 
-    def prepare_points(self,points):
+    def prepare_points(self,points,*,differentials=True):
         self._prepared_points={};self._prepared_differentials={}
         keys=list(dict.fromkeys(tuple(map(float,p)) for p in points))
         if not keys or len(keys)>100000:return
         physical=self.map_points(np.asarray(keys))
-        gx=self.evaluate(physical,(1,0,0));gy=self.evaluate(physical,(0,1,0));gz=1+self.evaluate(physical,(0,0,1))
         self._prepared_points={key:tuple(map(float,p)) for key,p in zip(keys,physical)}
+        if not differentials:return
+        gx=self.evaluate(physical,(1,0,0));gy=self.evaluate(physical,(0,1,0));gz=1+self.evaluate(physical,(0,0,1))
         self._prepared_differentials={key:(float(1/c),(float(-a/c),float(-b/c)))
             for key,a,b,c in zip(keys,gx,gy,gz)}
 
@@ -165,7 +171,115 @@ class SplinePhase:
     def hessian_bounds(self,points):
         return dict(self._hessian_query(self._support_key(points)))
 
+    def _support_keys_many(self,points):
+        p=np.asarray(points,dtype=float)
+        lo=p.min(axis=1);hi=p.max(axis=1)
+        keys=np.empty((len(p),6),dtype=np.int64)
+        for k,knots in enumerate(self._support_knots):
+            keys[:,2*k]=np.searchsorted(knots,lo[:,k],side='right')
+            keys[:,2*k+1]=np.searchsorted(knots,hi[:,k],side='right')
+        return keys
+
+    def hessian_bounds_many(self,points):
+        """The same closed support boxes as scalar queries, grouped without rounding."""
+        keys=self._support_keys_many(points)
+        if not len(keys):return {key:np.empty(0) for key in self.hessian}
+        unique,inverse=np.unique(keys,axis=0,return_inverse=True)
+        values=self._control_bounds_many(unique,list(self.hessian.values()),self._hessian_tables,absolute=True)[:,:,1]
+        return {key:values[inverse,i] for i,key in enumerate(self.hessian)}
+
+    def derivative_bounds_many(self,points):
+        keys=self._support_keys_many(points)
+        if not len(keys):return np.empty(0),np.empty(0),np.empty((0,2))
+        unique,inverse=np.unique(keys,axis=0,return_inverse=True)
+        values=self._control_bounds_many(unique,self.first,self._first_tables,absolute=False)[inverse]
+        return 1+values[:,2,0],1+values[:,2,1],np.maximum(abs(values[:,:2,0]),abs(values[:,:2,1]))
+
+    def _bounds_tables(self,domains,arrays):
+        result=[]
+        for (knots,degrees),array in zip(domains,arrays):
+            left=[];right=[]
+            for k,(t,degree) in enumerate(zip(knots,degrees)):
+                indices=np.searchsorted(t,self._support_coordinates[k],side='right')
+                left.append(np.maximum(0,indices-degree-1));right.append(np.minimum(array.shape[k],indices))
+            result.append((left,right))
+        return result
+
+    def _control_bounds_many(self,keys,arrays,tables,*,absolute):
+        """Reduce exact coefficient slices in bounded batches, never sampled bounds."""
+        result=np.zeros((len(keys),len(arrays),2))
+        for j,(array,(left_table,right_table)) in enumerate(zip(arrays,tables)):
+            left=np.stack([left_table[k][keys[:,2*k]] for k in range(3)],axis=1)
+            right=np.stack([right_table[k][keys[:,2*k+1]] for k in range(3)],axis=1)
+            widths=right-left;shapes,groups=np.unique(widths,axis=0,return_inverse=True)
+            for group,shape in enumerate(shapes):
+                if np.any(shape<=0):continue
+                ids=np.flatnonzero(groups==group);size=int(np.prod(shape))
+                if size>4096:
+                    for index in ids:
+                        region=array[tuple(slice(a,b) for a,b in zip(left[index],right[index]))]
+                        result[index,j,1]=float(abs(region).max()) if absolute else max(0.,float(region.max()))
+                        if not absolute:result[index,j,0]=min(0.,float(region.min()))
+                    continue
+                offsets=np.indices(tuple(shape)).reshape(3,-1)
+                chunk=max(1,262144//size)
+                for start in range(0,len(ids),chunk):
+                    batch=ids[start:start+chunk];origin=left[batch]
+                    block=array[origin[:,0,None]+offsets[0],origin[:,1,None]+offsets[1],origin[:,2,None]+offsets[2]]
+                    result[batch,j,1]=abs(block).max(axis=1) if absolute else np.maximum(0.,block.max(axis=1))
+                    if not absolute:result[batch,j,0]=np.minimum(0.,block.min(axis=1))
+        return result
+
+    def inverse_phase_errors(self,points,errors):
+        p=np.asarray(points,dtype=float);errors=np.asarray(errors,dtype=float)
+        if not len(p):return np.empty(0)
+        lo=p.min(axis=1);hi=p.max(axis=1)
+        lo[:,2]-=errors/self.cmin;hi[:,2]+=errors/self.cmin
+        minimum,_,_=self.derivative_bounds_many(np.stack((lo,hi),axis=1))
+        return errors/minimum
+
+    def phase_triangle_errors(self,points):
+        p=np.asarray(points,dtype=float);result=np.zeros(len(p))
+        if not len(p):return result
+        active=p[:,:,2].max(axis=1)>self.anchor
+        q=p[active]
+        if not len(q):return result
+        h=self.hessian_bounds_many(q);d=np.roll(q,-1,axis=1)-q
+        curve=sum(h[i,j][:,None]*abs(d[:,:,i]*d[:,:,j])*(1 if i==j else 2) for i,j in h)
+        result[active]=curve.max(axis=1)/6+1e-9
+        return result
+
+    def phase_edge_errors(self,points):
+        p=np.asarray(points,dtype=float);result=np.zeros(len(p))
+        if not len(p):return result
+        active=p[:,:,2].max(axis=1)>self.anchor;q=p[active]
+        if not len(q):return result
+        h=self.hessian_bounds_many(q);d=q[:,1]-q[:,0]
+        result[active]=sum(h[i,j]*abs(d[:,i]*d[:,j])*(1 if i==j else 2) for i,j in h)/8+1e-9
+        return result
+
+    def chord_curvature_bounds_many(self,a,b,pa,pb):
+        """Complete implicit-chord curvature; verified endpoint errors are separate."""
+        a=np.asarray(a,dtype=float);b=np.asarray(b,dtype=float)
+        pa=np.asarray(pa,dtype=float);pb=np.asarray(pb,dtype=float)
+        result=np.full(len(a),1e-9)
+        active=np.maximum(pa[:,2],pb[:,2])>self.anchor
+        if not active.any():return result
+        d=b[active]-a[active];p=pa[active];q=pb[active]
+        speed=(abs(d[:,2])+(self.gmax[0]*abs(d[:,0])+self.gmax[1]*abs(d[:,1])))/self.cmin
+        lo=np.minimum(p,q);hi=np.maximum(p,q);lo[:,2]-=speed/2;hi[:,2]+=speed/2
+        minimum,_,gradient=self.derivative_bounds_many(np.stack((lo,hi),axis=1))
+        speed=(abs(d[:,2])+(gradient[:,0]*abs(d[:,0])+gradient[:,1]*abs(d[:,1])))/minimum
+        lo=np.minimum(p,q);hi=np.maximum(p,q);lo[:,2]-=speed/2;hi[:,2]+=speed/2
+        h=self.hessian_bounds_many(np.stack((lo,hi),axis=1));direction=np.column_stack((d[:,:2],speed))
+        result[active]=sum(h[i,j]*abs(direction[:,i]*direction[:,j])*(1 if i==j else 2) for i,j in h)/(8*minimum)+1e-8
+        return result
+
     def _support_key(self,points):
+        if len(points)==2:
+            a,b=points
+            return tuple(index for k,knots in enumerate(self._support_lists)
+                         for index in (bisect_right(knots,min(a[k],b[k])),bisect_right(knots,max(a[k],b[k]))))
         p=np.asarray(points);lo=p.min(axis=0);hi=p.max(axis=0)
         return tuple(int(i) for k,knots in enumerate(self._support_knots)
                      for i in np.searchsorted(knots,[lo[k],hi[k]],side='right'))
@@ -174,17 +288,11 @@ class SplinePhase:
         return np.array([[self._support_coordinates[k][key[2*k+j]] for k in range(3)] for j in range(2)])
 
     def _hessian_for_cells(self,key):
-        points=self._support_points(key)
-        p=np.asarray(points);lo=p.min(axis=0);hi=p.max(axis=0);result={}
+        result={}
         # A degree-p basis i is nonzero only on [t_i,t_(i+p+1)].
         # Include the complete active support over the closed query box.
-        for (i,j),values in self.hessian.items():
-            selector=[]
-            knots,degrees=self.hessian_domains[i,j]
-            for k,(t,degree) in enumerate(zip(knots,degrees)):
-                left=max(0,int(np.searchsorted(t,lo[k],side='right'))-degree-1)
-                right=min(values.shape[k],int(np.searchsorted(t,hi[k],side='right')))
-                selector.append(slice(left,right))
+        for ((i,j),values),(left,right) in zip(self.hessian.items(),self._hessian_tables):
+            selector=[slice(left[k][key[2*k]],right[k][key[2*k+1]]) for k in range(3)]
             region=values[tuple(selector)];result[i,j]=float(abs(region).max()) if region.size else 0.
         return tuple(result.items())
 
@@ -192,14 +300,9 @@ class SplinePhase:
         return self._derivative_query(self._support_key(points))
 
     def _derivative_for_cells(self,key):
-        points=self._support_points(key)
-        p=np.asarray(points);lo=p.min(axis=0);hi=p.max(axis=0);ranges=[]
-        for values,(knots,degrees) in zip(self.first,self.first_domains):
-            selector=[]
-            for k,(t,degree) in enumerate(zip(knots,degrees)):
-                left=max(0,int(np.searchsorted(t,lo[k],side='right'))-degree-1)
-                right=min(values.shape[k],int(np.searchsorted(t,hi[k],side='right')))
-                selector.append(slice(left,right))
+        ranges=[]
+        for values,(left,right) in zip(self.first,self._first_tables):
+            selector=[slice(left[k][key[2*k]],right[k][key[2*k+1]]) for k in range(3)]
             region=values[tuple(selector)]
             ranges.append((min(0.,float(region.min())),max(0.,float(region.max()))) if region.size else (0.,0.))
         return 1+ranges[2][0],1+ranges[2][1],tuple(max(abs(a),abs(b)) for a,b in ranges[:2])

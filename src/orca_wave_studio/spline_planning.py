@@ -152,29 +152,33 @@ def prepare_spline_warp(snapshot,object_id,settings,profile,resolved,*,progress=
     if not 0<minimum<=profile.layer_mm<=maximum:
         raise WaveError('SPLINE_PROFILE: confira a altura e os limites de camada do perfil.')
     progress('Conferindo também o material dentro do sólido e junto à base…')
-    physical=material_samples(mesh,cancelled=cancelled)
     key=phase_cache_key(mesh,profile,minimum,maximum,settings.max_slope_deg,settings.step_mm)
     path=Path(cache_folder)/(key+'.npz') if cache_folder is not None else None
-    field=None;passes=[];cache_hit=False
+    field=None;passes=[];cache_hit=False;candidate=None
     if path is not None and path.is_file():
         try:
             with np.load(path,allow_pickle=False) as cached:
                 if str(cached['geometry_key'].item())!=key:raise ValueError('cache identity')
                 field=SplinePhase([cached[k] for k in ('x','y','z')],cached['coefficients'],anchor)
-                if assess_phase_field(field,regions,profile,minimum,maximum,'cached proposal',anchor,
-                        field.domain[2][1],require_global_profile_bounds=False) is None:
+                candidate=assess_phase_field(field,regions,profile,minimum,maximum,
+                        'cached proposal; independent checks required',anchor,
+                        field.domain[2][1],require_global_profile_bounds=False)
+                if candidate is None:
                     raise ValueError('reference alignment')
                 cache_hit=True
                 progress('Reutilizando o cálculo da peça e conferindo novamente formato e espaçamento…')
         except (OSError,ValueError,KeyError,WaveError):field=None
     if field is None:
+        candidate=None
+        physical=material_samples(mesh,cancelled=cancelled)
         for _ in range(2):
             field,audit=_solve(axes,regions,physical,profile,minimum,maximum,settings.max_slope_deg,anchor,
                 progress=progress,cancelled=cancelled,previous=field)
             passes.append(audit)
     status='cached proposal; independent checks required' if cache_hit else audit['optimizer_status']
-    candidate=assess_phase_field(field,regions,profile,minimum,maximum,status,
-        anchor,field.domain[2][1],require_global_profile_bounds=False)
+    if candidate is None:
+        candidate=assess_phase_field(field,regions,profile,minimum,maximum,status,
+            anchor,field.domain[2][1],require_global_profile_bounds=False)
     if candidate is None:
         raise WaveError('SPLINE_ALIGNMENT: as superfícies ainda não cabem em camadas contínuas; o original foi preservado.')
     if path is not None and not cache_hit:

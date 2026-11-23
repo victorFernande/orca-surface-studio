@@ -28,7 +28,8 @@ class SplinePlanningTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as cache:
             warp=prepare_spline_warp(source,'1',RegionalShellSettings(),profile,
                 {'min_layer_height':.07,'max_layer_height':.28},cache_folder=cache)
-            with patch('orca_wave_studio.spline_planning._solve',side_effect=AssertionError('cache missed')):
+            with patch('orca_wave_studio.spline_planning._solve',side_effect=AssertionError('cache missed')),\
+                 patch('orca_wave_studio.spline_planning.material_samples',side_effect=AssertionError('cached proposal repeats optimizer-only sampling')):
                 repeated=prepare_spline_warp(source,'1',RegionalShellSettings(),profile,
                     {'min_layer_height':.07,'max_layer_height':.28},cache_folder=cache)
             self.assertTrue(repeated.summary['phase_cache']['proposal_reused'])

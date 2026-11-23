@@ -2,6 +2,10 @@
 
 Nome atual do projeto: **Orca Surface Studio** (anteriormente Orca Wave Studio).
 
+A otimização de desempenho em revisão reduz a preparação da malha do Benchy
+de 150,54 para 21,05 segundos no teste isolado. O caminho completo ainda não
+atinge a meta de 30 segundos. Veja as [medições e o escopo dos testes](docs/DESEMPENHO_SUPERFICIES.md).
+
 A **0.16.1 experimental** destaca o aviso de risco, com título maior e texto
 explícito sobre colisões, danos à impressora e supervisão durante toda a impressão.
 Veja o [aviso e as capturas](docs/AVISO_RISCO_V0161.md).
