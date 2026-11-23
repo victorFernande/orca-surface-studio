@@ -2,6 +2,7 @@
 from __future__ import annotations
 import copy
 import math
+from dataclasses import replace
 from functools import lru_cache
 import numpy as np
 from .bending import _refine,_clip
@@ -82,3 +83,73 @@ class SplineLayerWarp(SurfaceCoordinates):
             'reference_certificate_version':reference_audit.get('whole_reference_band_certificate_version'),
             'partial_adaptation':False,'source_mesh_unchanged':True,'xy_preserved':True,'base_unchanged':True,
             'holes_preserved':True,'enforce_height_limits':True,'physical_validation':False,'print_allowed':False}
+
+    def replan_spacing(self,profile,minimum,maximum,failure,*,feedback=None,progress=lambda message:None,cancelled=lambda:False):
+        """Quantize the same phase field at a compatible pitch, then re-slice.
+
+        This adjusts the slicing copy, never an already restored G-code. The
+        same whole-reference certificates must fit the new native slice bands.
+        """
+        from .phase_planning import assess_phase_field
+        from .bead_deposition import BeadMinimumError
+        if cancelled():raise WaveError('Geração cancelada.')
+        before=self.nominal_slice_height_mm
+        ceiling=before*min(.99,.99*failure.limit_mm/failure.height_mm)
+        floor=None;preferred=None
+        if isinstance(failure,BeadMinimumError) and feedback is None:
+            raise WaveError('BEAD_REPLAN: a correção da altura mínima precisa da conferência completa de espaçamento.')
+        if feedback is not None:
+            floor=before*minimum/feedback['minimum_mm']
+            ceiling=before*maximum/feedback['maximum_mm']
+            if isinstance(failure,BeadMinimumError):floor=max(floor,before*failure.limit_mm/failure.height_mm)
+            else:ceiling=min(ceiling,before*failure.limit_mm/failure.height_mm)
+            preferred=(floor+ceiling)/2
+        regions=getattr(self,'_spacing_regions',None)
+        if not regions:raise WaveError('BEAD_REPLAN: faltam as referências completas para redistribuir as camadas.')
+        progress('Conferindo novamente as superfícies para um espaçamento compatível…')
+        candidate=assess_phase_field(self.grid,regions,profile,minimum,maximum,
+            'same phase; emitted bead spacing retry',self.anchor_z,self.grid.domain[2][1],
+            require_global_profile_bounds=False,pitch_ceiling=ceiling,pitch_floor=floor,preferred_pitch=preferred)
+        if candidate is None:
+            raise WaveError('BEAD_REPLAN: não há espaçamento compatível com as superfícies alinhadas dentro do perfil.')
+        _,grid,audit=candidate
+        self.regrid_phase(grid,audit,cancelled=cancelled)
+        record={'failed_height_mm':failure.height_mm,'profile_maximum_mm':maximum,
+                'profile_minimum_mm':minimum,'sampled_feedback':feedback,
+                'previous_pitch_mm':before,'new_pitch_mm':self.nominal_slice_height_mm,
+                'same_phase_field':True,'reference_bands_reverified':True,'new_native_slice_required':True}
+        self.summary.setdefault('automatic_spacing',[]).append(record)
+        progress(f'Redistribuindo as camadas: {before:.5f} → {self.nominal_slice_height_mm:.5f} mm; perfil preservado…')
+        return record
+
+    def regrid_phase(self,grid,audit,*,cancelled=lambda:False):
+        """Pair an affine copy change with its inverse; inherit the mesh bound.
+
+        Splitting at BOTH maps' knots makes the conversion affine on every
+        triangle. Restoring the new copy therefore gives exactly the same
+        preceding phase triangle and its existing source/crease certificate.
+        """
+        if not all(r.get('core_in_one_band') and r.get('certified_reference_area_fraction',0)>=.9
+                   for r in audit['reference_regions']):
+            raise WaveError('BEAD_ALIGNMENT: uma superfície perdeu a faixa certificada.')
+        old=self.layer_grid;obj=self.flattened_snapshot.objects[0];vol=obj['volumes'][0]
+        instance=next(i for i in obj['instances_data'] if i.get('printable',True))
+        vertices=copy.deepcopy(vol['vertices']);faces=[tuple(f) for f in vol['triangles']]
+        world=list(self.flat_world_vertices);references=list(self.reference_world_vertices)
+        for value in grid.physical:
+            if cancelled():raise WaveError('Geração cancelada.')
+            plane=[0.,0.,1.,-old.flatten_point((0,0,value))[2]]
+            faces=_clip(vertices,faces,world,plane,reference_world=references)
+            if len(faces)>3000000:raise WaveError('BEAD_COMPLEXITY: redistribuição supera três milhões de faces.')
+        phase=np.asarray(world,dtype=float);z=phase[:,2]
+        phase[:,2]=np.where((z<=old.flat[0])|(z>=old.flat[-1]),z,np.interp(z,old.flat,old.physical))
+        flat=phase.copy();z=phase[:,2]
+        flat[:,2]=np.where((z<=grid.physical[0])|(z>=grid.physical[-1]),z,np.interp(z,grid.physical,grid.flat))
+        direction=_local_z_direction(instance['matrix'],vol['matrix'])
+        vertices=[[v+d*(q[2]-p[2]) for v,d in zip(local,direction)] for local,p,q in zip(vertices,world,flat)]
+        if cancelled():raise WaveError('Geração cancelada.')
+        vol['vertices']=vertices;vol['triangles']=[list(f) for f in faces]
+        self.layer_grid=grid;self.reference_world_vertices=tuple(references);self.flat_world_vertices=tuple(map(tuple,flat))
+        self.nominal_slice_height_mm=audit['pitch'];self.settings=replace(self.settings,nominal_layer_height_mm=audit['pitch'])
+        self.summary.update(reference_alignment=audit['reference_regions'],flattened_faces=len(faces),flattened_vertices=len(vertices),
+            reference_certificate_version=audit['whole_reference_band_certificate_version'])

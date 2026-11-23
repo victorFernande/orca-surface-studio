@@ -10,6 +10,7 @@ from orca_wave_studio.engine_parser import read
 from orca_wave_studio.contracts import WaveError
 from orca_wave_studio.spacing_plan import cell_vertical_scale_upper,plan_spacing
 from orca_wave_studio.regional_shell import RegionalShellSettings
+from orca_wave_studio.spacing_feedback import sampled_supported_heights
 
 
 class VerticalWarp:
@@ -44,6 +45,22 @@ def code(absolute=False):
 
 
 class BeadDepositionTests(unittest.TestCase):
+    def test_sampled_feedback_uses_logical_pitch_and_excludes_bridge_and_other_object(self):
+        warp=VerticalWarp();seen=[]
+        def batch(points,pitches):
+            seen.extend(points)
+            return np.array([warp.normal_gap(*p,h)for p,h in zip(points,pitches)])
+        warp.normal_gaps=batch
+        result=sampled_supported_heights(code(),warp,{0:'part',1:'control'},'part')
+        self.assertAlmostEqual(result['minimum_mm'],.2)
+        self.assertAlmostEqual(result['maximum_mm'],.4)
+        self.assertTrue(result['sampled']);self.assertTrue(result['final_emitted_audit_required'])
+        self.assertFalse(result['physical_validation'])
+        self.assertTrue(all(p[0]<=2 for p in seen))
+        self.assertFalse(any(abs(p[2]-.8)<1e-8 for p in seen),'the bridge retains its native section')
+        with self.assertRaisesRegex(WaveError,'cancelada'):
+            sampled_supported_heights(code(),warp,{0:'part',1:'control'},'part',cancelled=lambda:True)
+
     def test_spacing_regrid_preserves_whole_affine_cells_hole_and_source_mesh(self):
         from test_bending import roof_with_hole,euler
         from orca_wave_studio.surface import SurfaceMesh,SurfaceSettings

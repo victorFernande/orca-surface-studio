@@ -5,6 +5,19 @@ import math
 from .contracts import WaveError
 
 
+class BeadHeightError(WaveError):
+    """An emitted supported bead exceeds the unchanged printer profile."""
+    def __init__(self,line,height,limit):
+        self.height_mm=float(height);self.limit_mm=float(limit)
+        super().__init__(f'BEAD_HEIGHT: linha {line}, cordão de {height:.6f} mm acima de {limit:g} mm; replaneje o espaçamento.')
+
+
+class BeadMinimumError(WaveError):
+    def __init__(self,line,height,limit):
+        self.height_mm=float(height);self.limit_mm=float(limit)
+        super().__init__(f'BEAD_MINIMUM: linha {line}, cordão de {height:.6f} mm abaixo de {limit:g} mm; replaneje o espaçamento.')
+
+
 def bridge_role(role):
     return 'bridge' in role
 

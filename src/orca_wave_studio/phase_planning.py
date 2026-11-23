@@ -61,7 +61,8 @@ def _references(snapshot,object_id,slope,extension,*,cancelled=lambda:False):
 
 
 
-def assess_phase_field(grid,regions,profile,minimum,maximum,status,anchor,cap,*,require_global_profile_bounds=True):
+def assess_phase_field(grid,regions,profile,minimum,maximum,status,anchor,cap,*,require_global_profile_bounds=True,
+                       pitch_ceiling=None,pitch_floor=None,preferred_pitch=None):
     bounds=grid.bounds
     rows=[];enclosures=[]
     for region in regions:
@@ -80,8 +81,15 @@ def assess_phase_field(grid,regions,profile,minimum,maximum,status,anchor,cap,*,
         errors=np.array([grid.phase_triangle_error(triangle) for triangle in triangles])
         enclosures.append(np.stack((mapped.min(axis=1)-errors,mapped.max(axis=1)+errors),axis=-1))
     choices=[];first=profile.initial_layer_mm
-    for value in np.linspace(max(minimum,profile.layer_mm*.8),min(maximum,profile.layer_mm*1.05),51):
-        pitch=round(float(value),5);old=[anchor];new=[anchor]
+    pitch_low=max(minimum,pitch_floor or minimum) if pitch_ceiling is not None else max(minimum,profile.layer_mm*.8)
+    pitch_high=min(maximum,profile.layer_mm*1.05,pitch_ceiling if pitch_ceiling is not None else math.inf)
+    if pitch_high<pitch_low:return None
+    # Orca emits source XYZ at 0.001 mm. A fractional micron pitch makes
+    # ;Z metadata disagree with the rounded extrusion Z, so that source is
+    # no longer accepted as planar. Keep native quantization, not a looser
+    # parser tolerance. Every candidate still lies inside the profile bounds.
+    for micron in range(math.ceil(pitch_low*1000-1e-9),math.floor(pitch_high*1000+1e-9)+1):
+        pitch=micron/1000;old=[anchor];new=[anchor]
         groups=[]
         for row in sorted(rows,key=lambda r:r['core_phase_interval'][0]):
             left,right=row['core_phase_interval']
@@ -115,7 +123,7 @@ def assess_phase_field(grid,regions,profile,minimum,maximum,status,anchor,cap,*,
                 fraction=float(region['weights'][contained].sum()/region['weights'].sum())
                 coverage.append(fraction);same &= fraction>=.90
             if same and (not require_global_profile_bounds or (lower>=minimum+.001 and upper<=maximum-.001)):
-                score=min(lower-minimum,maximum-upper) if require_global_profile_bounds else -abs(pitch-profile.layer_mm)
+                score=min(lower-minimum,maximum-upper) if require_global_profile_bounds else -abs(pitch-(preferred_pitch or profile.layer_mm))
                 choices.append((score,pitch,new,old,lower,upper,coverage))
     if not choices:return None
     _,pitch,new,old,lower,upper,coverage=max(choices);regrid=LayerGridStage(new,old)

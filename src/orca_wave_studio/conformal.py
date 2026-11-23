@@ -553,9 +553,11 @@ def process_conformal_gcode(source: bytes, warp, print_object_map: dict[int, str
                         bead_report['below_profile_minimum_occurrences']+=min(gaps)<bead_policy['profile_minimum_mm']-2e-5
                         bead_report['above_profile_maximum_occurrences']+=max(gaps)>bead_policy['profile_maximum_mm']+2e-5
                         if bead_policy.get('reject_below_profile_minimum') and min(gaps)<bead_policy['profile_minimum_mm']-2e-5:
-                            raise WaveError(f'BEAD_MINIMUM: linha {i+1}, cordão de {min(gaps):.6f} mm abaixo de {bead_policy["profile_minimum_mm"]:g} mm; replaneje o espaçamento.')
+                            from .bead_deposition import BeadMinimumError
+                            raise BeadMinimumError(i+1,min(gaps),bead_policy['profile_minimum_mm'])
                         if max(gaps)>bead_policy['profile_maximum_mm']+2e-5:
-                            raise WaveError(f'BEAD_HEIGHT: linha {i+1}, cordão de {max(gaps):.6f} mm acima de {bead_policy["profile_maximum_mm"]:g} mm; replaneje o espaçamento.')
+                            from .bead_deposition import BeadHeightError
+                            raise BeadHeightError(i+1,max(gaps),bead_policy['profile_maximum_mm'])
                     else:
                         gaps, scales = zip(*(_gap_and_scale(field, at, native.h) for at in (left, mid, right)))
                         extrusion += base_e * (scales[0] + 4 * scales[1] + scales[2]) / 6

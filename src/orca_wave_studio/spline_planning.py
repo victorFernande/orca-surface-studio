@@ -189,6 +189,7 @@ def prepare_spline_warp(snapshot,object_id,settings,profile,resolved,*,progress=
     settings=replace(settings,nominal_layer_height_mm=reference_audit['pitch'])
     warp=SplineLayerWarp(snapshot,object_id,field,regrid,settings,reference_audit=reference_audit,
         progress=progress,cancelled=cancelled)
+    warp._spacing_regions=regions
     warp.summary['planning_passes']=passes
     warp.summary['phase_cache']={'key':key,'proposal_reused':cache_hit,'qualification_reused':False}
     warp.summary['profile_height_bounds_pass']=False

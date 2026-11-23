@@ -35,6 +35,24 @@ class SplineLayerTests(unittest.TestCase):
                 distance=min(abs(q[0]-1),abs(q[0]-5),abs(q[1]-1),abs(q[1]-5),abs(q[2]),abs(q[2]-4))
                 self.assertLessEqual(distance,budget+1e-7)
         self.assertFalse(warp.summary['partial_adaptation'])
+        old_bound=warp.summary['mesh_normal_and_crease_error_budget_mm']
+        phase=field
+        # Change knot locations as well as the native pitch. Whole triangle
+        # interiors must restore the same preceding phase surface.
+        warp.regrid_phase(LayerGridStage([.5,3.3,8.5],[.5,3.7,8.5]),
+            {'reference_regions':[],'pitch':.19,'whole_reference_band_certificate_version':2})
+        self.assertIs(warp.grid,phase)
+        self.assertEqual(warp.summary['mesh_normal_and_crease_error_budget_mm'],old_bound)
+        self.assertEqual(source.to_dict(),before)
+        self.assertEqual(warp.map_point((2,2,.24)),(2,2,.24))
+        volume=warp.flattened_snapshot.objects[0]['volumes'][0]
+        edges=Counter(tuple(sorted((a,b))) for tri in volume['triangles'] for a,b in zip(tri,(*tri[1:],tri[0])))
+        self.assertTrue(all(count==2 for count in edges.values()))
+        for tri in volume['triangles']:
+            for weights in ((1/3,1/3,1/3),(.1,.2,.7)):
+                p=np.asarray([warp.flat_world_vertices[k] for k in tri]);q=warp.map_point(weights@p)
+                distance=min(abs(q[0]-1),abs(q[0]-5),abs(q[1]-1),abs(q[1]-5),abs(q[2]),abs(q[2]-4))
+                self.assertLessEqual(distance,old_bound+1e-7)
 
 
 if __name__=='__main__':unittest.main()
