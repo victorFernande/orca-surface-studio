@@ -85,6 +85,10 @@ O [resultado numérico](evidence/v0160-phase-benchmark.json) registra as três e
   invalidação e abertura da revisão de envio passaram, sem erro de JavaScript.
 - Os comandos de interface foram inspecionados: somente abertura de Preview
   e revisão de envio; nenhum comando de upload ou início de impressão.
+- A visualização local do Benchy preservou 225.154 faces, sem erro de GPU.
+  Seleção por raio, giro de 90°, buffers reutilizados e troca de projeto passaram.
+  Uma consulta de seleção levou aproximadamente 5,4 ms nesta execução.
+  É um ensaio do componente com o modelo completo; não é fatiamento no Orca.
 - Conferência desta versão no Orca real: pendente de autorização para assumir
   mouse e teclado. As imagens abaixo são do ensaio local do componente.
 - Não foi enviada nem iniciada impressão. A folga física do Benchy permanece

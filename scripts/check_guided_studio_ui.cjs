@@ -139,6 +139,7 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       await page.evaluate(state=>window.orcaWaveReceive({type:'state',state:{...state,sequence:42,
         objects:[],model_preview:null,status:'idle',send_preview_available:true,result:null,revision:'preview-only'}}),state);
       assert.match(await page.locator('#guide-help').innerText(),/G-code aberto no Preview/);
+      assert.match(await page.locator('#empty-msg').innerText(),/trajetória já está no Preview/);
       assert.equal(await page.locator('#guide-send').isVisible(),true);
       await page.locator('#guide-send').click();
       assert.equal(await page.evaluate(()=>window.commands.some(m=>m.action==='send_file')),false);

@@ -203,7 +203,7 @@ function pickWall(ray,point){
 }
 function objects(){
   const list=$('objects');list.replaceChildren();
-  if(!state.objects?.length){list.append(node('p','message','Nenhum objeto disponível nesta mesa.'));return}
+  if(!state.objects?.length){list.append(node('p','message',state.status==='analyzing'?'Carregando os modelos da bandeja…':'Nenhum objeto disponível nesta mesa.'));return}
   for(const obj of state.objects){
     const item=node('div','object'),info=node('button','pick-object');
     const id=String(obj.id);
@@ -589,7 +589,8 @@ function render(){
   $('legend-original').hidden=!n||view==='deformed';$('legend-modified').hidden=!n||view==='original';
   const hasModel=Boolean(viewer.mesh?.flat.length);
   $('empty').hidden=viewer.available&&(n>0||hasModel);
-  $('empty-msg').textContent=!viewer.available?'WebGL 2 indisponível. A trajetória 3D precisa de aceleração gráfica neste visor.':
+  $('empty-msg').textContent=state.send_preview_available&&!active?'A trajetória já está no Preview do Orca. Confira o movimento nessa aba e use Conferir envio aqui no Studio.':
+    !viewer.available?'WebGL 2 indisponível. A trajetória 3D precisa de aceleração gráfica neste visor.':
     (busy?'Analisando a trajetória atual…':(surfaceMode&&!current?'Estude a superfície da peça para visualizar seu percurso.':
     (state.result&&!current?'Configuração alterada. Gere novamente para visualizar.':
     (current?'A trajetória desta visualização não contém pontos.':'Gere uma trajetória para inspecionar o percurso do bico.'))));
@@ -679,7 +680,7 @@ function renderGuide(active,current,busy){
   const beads=current?state.result?.report?.bead_deposition:null;
   guideFinish.textContent=beads?.maximum_supported_height_mm?'Altura efetiva do cordão: '+numberFormat(beads.minimum_supported_height_mm,3)+'–'+numberFormat(beads.maximum_supported_height_mm,3)+' mm. Material calculado automaticamente.':finish&&choices.backend==='continuous_layers'?'Camadas alinhadas às superfícies da peça.':finish?'Acabamento: camadas de '+numberFormat(finish.finishing_layer_mm,3)+' mm nas faixas escolhidas.':'Acabamento ajustado automaticamente ao perfil.';
   guideText.textContent=previewOnly?'Este arquivo já está fatiado. Use Conferir envio para revisar a impressora e as verificações pendentes. Para mudar as áreas, abra o projeto original.':
-    guideStep===1?(active?'Clique no modelo da lista para escolher suas áreas. Se ele já está destacado, use Escolher áreas.':'Adicione um modelo à placa do Orca e clique em Atualizar.'):
+    guideStep===1?(busy?'Carregando a peça da bandeja. Aguarde a lista de modelos aparecer.':active?'Clique no modelo da lista para escolher suas áreas. Se ele já está destacado, use Escolher áreas.':'Adicione um modelo à placa do Orca e clique em Atualizar.'):
     guideStep===2?(choices.selection_mode==='all'?'Peça inteira selecionada. Para limitar o cálculo, escolha Pintar áreas e clique na peça.':'Clique nas áreas que quer suavizar. As marcas mostram o que será calculado. Arraste para girar.'):
     guideStep===3?(busy?'Pode acompanhar o cálculo aqui. O modelo original será preservado.':state.status==='error'?friendlyStudyError(state.message):'O cálculo foi interrompido. Tente novamente ou volte para ajustar as áreas.'):
     state.result?.native_preview?'Resultado aberto no Preview do Orca. Confira o movimento antes do envio.':'Confira o movimento com ▶ e abra o Preview do Orca. Depois use Conferir envio.';
