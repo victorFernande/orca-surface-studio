@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 
 from .branding import ICON_SVG
-from .controller import BUILTIN_PRESETS
+from .language_packs import load_language_packs
 from .placement_ui import MARKUP as PLACEMENT_MARKUP,SCRIPT as PLACEMENT_SCRIPT
 from .model_preview_ui import SCRIPT as MODEL_PREVIEW_SCRIPT
 
@@ -13,12 +13,12 @@ def get_studio_html(initial_state: dict | None = None, *, dock: bool = False) ->
     payload = json.dumps(initial_state or {}, ensure_ascii=False, allow_nan=False)
     # The state is data inside a script element. Its contents must never end the element.
     payload = payload.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
-    factory = json.dumps(BUILTIN_PRESETS, ensure_ascii=False).replace("<", "\\u003c")
+    catalogs = json.dumps(load_language_packs()[0], ensure_ascii=False).replace("<", "\\u003c").replace("&", "\\u0026")
     return (_HTML.replace("__LAYOUT__", "dock" if dock else "page")
             .replace("__BRAND_ICON__", ICON_SVG.replace('<svg ', '<svg class="brandmark" role="img" aria-label="Trajetória subindo a 30 graus" ', 1))
             .replace("__PLACEMENT_MARKUP__",PLACEMENT_MARKUP).replace("__PLACEMENT_SCRIPT__",PLACEMENT_SCRIPT)
             .replace("__MODEL_PREVIEW_SCRIPT__",MODEL_PREVIEW_SCRIPT)
-            .replace("__PRESET_DATA__", factory).replace("__STATE__", payload))
+            .replace("__LANGUAGE_PACKS__", catalogs).replace("__STATE__", payload))
 
 
 _HTML = r"""<!doctype html>
@@ -34,7 +34,7 @@ header{height:60px;flex:none;display:flex;align-items:center;justify-content:spa
 .state{display:flex;align-items:center;gap:8px;font-weight:600}.state .dot{background:var(--text-dim)}.state.ready .dot{background:var(--orca-accent-hover)}.state.error .dot{background:var(--status-crit)}.state.processing .dot,.state.analyzing .dot,.state.slicing_required .dot{background:var(--status-warn)}.message{margin:7px 0;font-size:12px;overflow-wrap:anywhere}.data{margin:8px 0 0;font-size:12px}.data>div{padding:6px 0;border-top:1px solid var(--border-subtle);display:flex;justify-content:space-between;gap:8px}.data dt{color:var(--text-muted)}.data dd{margin:0;text-align:right;overflow-wrap:anywhere}.flow{display:grid;gap:8px}.foot{padding:14px 16px;border-top:1px solid var(--border-subtle);background:var(--bg-panel)}.foot small{display:block;text-align:center;margin-top:6px}.positive{background:var(--orca-accent);color:white;border-color:var(--orca-accent);font-weight:650;padding:10px}.positive:hover:not(:disabled){background:var(--orca-accent-hover);border-color:var(--orca-accent-hover)}.foot .wide+.wide{margin-top:6px}.notice{padding:8px 12px;background:var(--bg-input);color:var(--status-warn);overflow-wrap:anywhere;font-size:12px}.docktabs{display:none}.path{display:block;overflow-wrap:anywhere;user-select:all;color:var(--text-muted);font:10px/1.5 var(--font-mono);margin-top:7px}.docktabs button[aria-selected=true]{border-color:var(--orca-accent-border);color:var(--orca-accent-hover);background:var(--orca-accent-soft)}
 body.compact{height:auto;min-height:100vh}body.compact header{padding:0 10px;height:46px}body.compact .connection{font-size:10px}body.compact .brand{gap:6px}body.compact h1{font-size:15px}body.compact .brandmark{width:27px;height:27px}body.compact .work{display:flex;flex-direction:column}body.compact .viewport{order:-1}body.compact .stage{height:clamp(230px,33vh,360px);flex:auto}body.compact .side{border:0}body.compact .side:not(.shown){display:none}body.compact .docktabs{display:flex;gap:5px;padding:6px 10px;background:var(--bg-panel);border-bottom:1px solid var(--border-subtle)}body.compact .docktabs button{flex:1}body.compact .scroll{overflow:visible}body.compact .section{padding:13px 15px}body.compact .vhead{padding:8px 10px;flex-wrap:wrap}body.compact .vhead h2{font-size:14px}body.compact .transport{padding:8px 10px}body.compact .foot{position:sticky;bottom:0}body.compact .layerrow small{display:none}@media(max-width:580px){.connection{max-width:137px;line-height:1.15}.transport .readout{gap:6px}.vhead{flex-wrap:wrap}.viewtabs{max-width:100%}}@media(max-height:660px) and (min-width:841px){.section{padding:11px 14px}.field{margin-top:8px}header{height:48px}}
 .object{align-items:center}.object .pick-object{display:block;flex:1;min-width:0;text-align:left;padding:2px 4px;background:transparent;border:1px solid transparent}.object .pick-object[aria-pressed=true]{border-left:2px solid var(--orca-accent-hover);border-radius:0;padding-left:7px}.edit-target{display:block;color:var(--orca-accent-hover);font-size:12px;margin:-4px 0 10px;overflow-wrap:anywhere}
-.guide-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:12px 18px;border-bottom:1px solid var(--border-subtle);background:var(--bg-panel)}.guide-steps button{justify-content:flex-start;text-align:left;padding:10px 12px;color:var(--text-muted);background:transparent}.guide-steps b{display:inline-grid;place-items:center;width:25px;height:25px;border:1px solid var(--border-strong);border-radius:50%;flex:none}.guide-steps [aria-current=step]{border-color:var(--orca-accent-border);background:var(--orca-accent-soft);color:var(--text-main)}.guide-steps [aria-current=step] b{background:var(--orca-accent);border-color:var(--orca-accent);color:white}.guide-controls{display:grid;gap:8px}.guide-controls small{text-align:left}.guide-help h2{margin-bottom:9px}.guide-help p{line-height:1.65}.guide-summary strong{display:block;margin-top:7px;overflow-wrap:anywhere}.guide-warning{padding:10px;border-left:3px solid var(--status-warn);background:var(--bg-input);color:var(--text-muted);margin-top:15px}.guided .object small:first-of-type{display:none}.guided .study-modes,.guided .edit-target,.guided .surface-info,.guided #suggest,.guided #analyze,.guided .viewtabs,.guided #generate,.guided #preview,.guided #bench-note,.guided .panel-help,.guided #metadata,.guided #result-path{display:none!important}.guided #wall-selection>h3{display:none}.guided #wall-selection{margin-top:0}.guided[data-guide-step="1"] #area-section,.guided[data-guide-step="1"] #guide-summary,.guided[data-guide-step="2"] #model-section,.guided[data-guide-step="2"] #guide-summary{display:none}.guided[data-guide-step="3"] #model-section,.guided[data-guide-step="3"] #area-section,.guided[data-guide-step="4"] #model-section,.guided[data-guide-step="4"] #area-section{display:none}.guided #guide-back{background:transparent}.guided #guide-next{min-height:42px}.guided #guide-details{margin:0 16px 16px}.guided #guide-details>summary{padding:8px 0}.guided .vhead h2{font-size:16px}.guided[data-study-ready="false"] .transport{display:none}.guided.compact .connection{display:none}.guided.compact .side:not(.shown){display:flex}.guided .docktabs{display:none!important}.guided.compact header{gap:5px}.guided.compact .brand h1{font-size:13px}.guided.compact #guide-toggle{font-size:11px;padding:5px}.guided #profile-card{padding-top:13px;padding-bottom:13px}.guided #guide-help{min-height:180px}@media(max-width:840px){.guide-steps{grid-template-columns:repeat(2,minmax(0,1fr));padding:8px;gap:5px}.guide-steps button{font-size:12px;padding:7px}.guide-steps b{width:22px;height:22px}.guided #guide-help{min-height:0}}
+.guide-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:12px 18px;border-bottom:1px solid var(--border-subtle);background:var(--bg-panel)}.guide-steps button{justify-content:flex-start;text-align:left;padding:10px 12px;color:var(--text-muted);background:transparent}.guide-steps b{display:inline-grid;place-items:center;width:25px;height:25px;border:1px solid var(--border-strong);border-radius:50%;flex:none}.guide-steps [aria-current=step]{border-color:var(--orca-accent-border);background:var(--orca-accent-soft);color:var(--text-main)}.guide-steps [aria-current=step] b{background:var(--orca-accent);border-color:var(--orca-accent);color:white}.guide-controls{display:grid;gap:8px}.guide-controls small{text-align:left}.guide-help h2{margin-bottom:9px}.guide-help p{line-height:1.65}.guide-summary strong{display:block;margin-top:7px;overflow-wrap:anywhere}.guide-warning{padding:10px;border-left:3px solid var(--status-warn);background:var(--bg-input);color:var(--text-muted);margin-top:15px}.guided .object small:first-of-type{display:none}.guided .study-modes,.guided .edit-target,.guided .surface-info,.guided #suggest,.guided #analyze,.guided .viewtabs,.guided #generate,.guided #preview,.guided #bench-note,.guided .panel-help,.guided #metadata,.guided #result-path{display:none!important}.guided #wall-selection>h3{display:none}.guided #wall-selection{margin-top:0}.guided[data-guide-step="1"] #area-section,.guided[data-guide-step="1"] #guide-summary,.guided[data-guide-step="2"] #model-section,.guided[data-guide-step="2"] #guide-summary{display:none}.guided[data-guide-step="3"] #model-section,.guided[data-guide-step="3"] #area-section,.guided[data-guide-step="4"] #model-section,.guided[data-guide-step="4"] #area-section{display:none}.guided #guide-back{background:transparent}.guided #guide-next{min-height:42px}.guided #guide-details{margin:0 16px 16px}.guided #guide-details>summary{padding:8px 0}.guided .vhead h2{font-size:16px}.guided[data-study-ready="false"] .transport{display:none}.guided.compact .connection{display:none}.guided.compact .side:not(.shown){display:flex}.guided .docktabs{display:none!important}.guided.compact header{gap:5px}.guided.compact .brand h1{font-size:13px}.guided #profile-card{padding-top:13px;padding-bottom:13px}.guided #guide-help{min-height:180px}@media(max-width:840px){.guide-steps{grid-template-columns:repeat(2,minmax(0,1fr));padding:8px;gap:5px}.guide-steps button{font-size:12px;padding:7px}.guide-steps b{width:22px;height:22px}.guided #guide-help{min-height:0}}
 /* Orca also injects element defaults, including a native foreground for headings. */
 html[data-theme=dark]{--orca-accent:#00a896;color-scheme:dark}html[data-theme=light]{--orca-accent:#00897b;color-scheme:light}
 body[data-mode]{background:var(--bg-app);color:var(--text-main);font-family:var(--font-sans)}
@@ -45,29 +45,46 @@ body button{color:var(--text-main);background:var(--bg-card);border:1px solid va
 body.compact header:has(#panel-action:not([hidden])){height:auto;min-height:46px;flex-wrap:wrap;padding-top:5px;padding-bottom:5px}
 .study-modes{display:grid;grid-template-columns:1fr 1fr}.study-modes button{min-width:0;font-size:12px}.surface-mode .wave-only,.surface-mode #suggest,.surface-mode #analyze,.surface-mode #prepare-capture,.combined-mode #suggest{display:none!important}.surface-info{color:var(--text-muted);font-size:12px;margin:10px 0}.surface-mode .object:has(input:checked){background:var(--bg-input);border-color:var(--border-subtle)}.surface-mode .object:has(.pick-object[aria-pressed=true]){background:var(--bg-input);border-color:var(--border-subtle)}
 .safety-warning{flex-shrink:0;padding:8px 16px;background:#382b13;color:#ffdd91;border-bottom:1px solid #8a661f;font-size:12px;overflow-wrap:anywhere}#placement-tools .row input{min-width:0;width:72px}#placement-tools label{display:block;margin:7px 0;color:var(--text-muted);font-size:12px}#placement-tools input{display:block;width:100%;padding:6px;background:var(--bg-input);border:1px solid var(--border-strong);border-radius:var(--radius-sm)}#head-map-editor{margin-top:12px}
+.guided.compact .work,.guided.compact .side,.guided.compact .scroll{flex:none}.guided.compact .foot{position:static}#language{max-width:125px}
 </style></head>
-<body data-mode="__LAYOUT__">
-<div class="safety-warning" role="alert" id="safety-warning"><strong>WARNING — Use at your own risk.</strong> Do not print unattended until you are 100% sure the toolpaths are safe for your printer.</div>
+<body class="guided surface-mode" data-mode="__LAYOUT__">
+<div class="safety-warning" role="alert" id="safety-warning"><strong id="warning-title">AVISO — Use por sua conta e risco.</strong> <span id="warning-body">Não imprima sem supervisão até ter 100% de certeza de que as trajetórias são seguras para sua impressora.</span></div>
 <header><div class="brand">__BRAND_ICON__<h1>Orca <b>Surface</b> <span>Studio</span></h1></div><div class="row"><i id="link-dot" class="dot"></i><span id="connection" class="connection"></span><button id="theme" class="iconbtn" aria-label="Alternar tema" title="Alternar tema" data-icon="sun"></button></div></header>
-<nav class="docktabs" aria-label="Painel do Studio"><button id="tab-config" aria-selected="true">Configuração</button><button id="tab-review" aria-selected="false">Diagnóstico e saída</button></nav>
 <main class="work"><aside class="side left shown" id="config"><div class="scroll">
 __PLACEMENT_MARKUP__
-<section class="section"><div class="sectionhead"><h3><i data-icon="box"></i> Objetos da mesa</h3><button class="iconbtn outline" id="refresh" aria-label="Atualizar mesa" title="Atualizar mesa" data-icon="refresh"></button></div><div id="objects" class="objects"></div><button id="analyze" class="wide"><i data-icon="scan"></i>Analisar seleção</button></section>
-<section class="section"><div class="sectionhead"><h3><i data-icon="wave"></i> Parâmetros da trajetória</h3><span class="badge">mm</span></div><fieldset class="fieldset" id="params"><div class="segments study-modes" aria-label="Tipo de trajetória"><button id="mode-xy" aria-pressed="false">Onda XY</button><button id="mode-z" aria-pressed="true">Onda Z</button><button id="mode-surface" aria-pressed="false">Superfície curva</button></div><div id="primary-fields"></div><div class="field twocol wave-only"><label>Início em Z (mm)<input id="start_height_mm" type="number" min="0" step="any"></label><label>Fim em Z (mm)<input id="end_height_mm" type="number" min="0" step="any" placeholder="Até o topo"></label></div><details class="field wave-only"><summary>Ajustes avançados</summary><div id="advanced-fields"></div></details></fieldset><p id="validation" class="message" aria-live="polite" hidden></p><button class="wide outline" id="suggest"><i data-icon="sliders"></i> Aplicar sugestão do objeto</button></section>
-<section class="section wave-only"><div class="sectionhead"><h3><i data-icon="library"></i> Presets</h3></div><label class="smallcap" for="presets">Perfil da onda</label><select id="presets" class="presets"></select><div class="presetops"><button id="save"><i data-icon="plus"></i> Salvar</button><button id="delete"><i data-icon="trash"></i> Excluir</button></div><form id="preset-editor" class="preset-editor" hidden><label for="preset-name">Nome do preset</label><input id="preset-name" maxlength="64" required><div class="row"><button type="submit">Confirmar</button><button type="button" id="cancel-preset">Cancelar</button></div></form></section>
+<section class="section"><div class="sectionhead"><h3><i data-icon="box"></i> Objetos da mesa</h3><button class="iconbtn outline" id="refresh" aria-label="Atualizar mesa" title="Atualizar mesa" data-icon="refresh"></button></div><div id="objects" class="objects"></div></section>
+<section class="section"><div class="sectionhead"><h3><i data-icon="wave"></i> Parâmetros da trajetória</h3><span class="badge">mm</span></div><fieldset class="fieldset" id="params"><div id="primary-fields"></div></fieldset><p id="validation" class="message" aria-live="polite" hidden></p></section>
 </div></aside>
-<section class="viewport" aria-label="Trajetória tridimensional"><div class="vhead"><h2>Trajetória 3D</h2><div class="segments viewtabs" aria-label="Visualização"><button data-view="original">Original</button><button data-view="deformed" aria-pressed="true">Com ondas</button><button data-view="compare">Comparar</button></div></div>
+<section class="viewport" aria-label="Trajetória tridimensional"><div class="vhead"><h2>Trajetória 3D</h2></div>
 <div class="stage"><canvas id="canvas" tabindex="0" aria-label="Trajetória em três dimensões. Arraste para girar ou use as setas. Use mais e menos para aproximar e afastar."></canvas><div class="stageinfo"><span class="smallcap">Vista ortográfica</span><strong id="point-label"></strong></div><div class="vbuttons"><button data-icon="fit" id="fit" class="iconbtn" aria-label="Enquadrar trajetória" title="Enquadrar trajetória"></button><button data-icon="plus" id="zoom-in" class="iconbtn" aria-label="Aproximar" title="Aproximar"></button><button data-icon="minus" id="zoom-out" class="iconbtn" aria-label="Afastar" title="Afastar"></button></div><div class="empty" id="empty"><p id="empty-msg"></p></div><div class="legend" aria-hidden="true"><span id="legend-original"><i class="swatch original"></i><span id="legend-original-label">Original</span></span><span id="legend-modified"><i class="swatch modified"></i><span id="legend-modified-label">Com ondas</span></span></div></div>
 <div class="transport"><div class="row"><button id="play" class="iconbtn" aria-label="Reproduzir percurso" title="Reproduzir percurso" data-icon="play"></button><input class="track" id="scrub" type="range" min="0" max="0" value="0" step="1" aria-label="Posição do bico no percurso"><output id="pct">—</output></div><div class="readout"><span>Bico (mm)</span><output class="xyz" id="xyz">X —   Y —   Z —</output></div><div class="layerrow"><label><span id="layer-label">Camada</span> <select id="layer"></select></label><small>Arraste para orbitar · role para zoom</small></div></div></section>
 <aside class="side right" id="review"><div class="scroll">
 <section class="section"><div class="sectionhead"><h3><i data-icon="pulse"></i> Diagnóstico</h3></div><div class="state" id="status"><i class="dot"></i><span id="status-name"></span></div><p id="message" class="message" aria-live="polite"></p><dl id="metadata" class="data"></dl></section>
-<section class="section wave-only"><div class="sectionhead"><h3><i data-icon="curve"></i> Perfil analítico</h3></div><svg class="chart" viewBox="0 0 240 66" preserveAspectRatio="none" role="img" aria-label="Forma senoidal teórica nos primeiros vinte milímetros"><path class="axis" d="M0 33H240 M60 0v66 M120 0v66 M180 0v66"/><path class="wave" id="analytic-path"/></svg><div class="row spread"><small>0 mm</small><small>20 mm</small></div><dl class="data"><div><dt>Curvatura máx. estimada</dt><dd id="curvature">—</dd></div></dl></section>
 <section class="section"><div class="sectionhead"><h3><i data-icon="layers"></i> Resultado</h3></div><p id="result-note" class="message"></p><dl class="data" id="metrics"></dl><span class="path" id="result-path"></span></section></div>
-<footer class="foot"><div id="action-note" class="notice" hidden></div><button class="wide positive" id="generate"><i data-icon="wave"></i> Gerar G-code com ondas</button><button class="wide" id="preview"><i data-icon="open"></i> Abrir Preview no Orca</button><small id="bench-note">Estudo de bancada · impressão pelo OrcaSlicer</small></footer></aside></main>
+<footer class="foot" id="study-actions"><div id="action-note" class="notice" hidden></div></footer></aside></main>
 <script id="initial-state" type="application/json">__STATE__</script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
+const languagePacks=__LANGUAGE_PACKS__;
+let language='pt';
+function resolveLanguage(value){
+  let code=String(value||'pt').toLowerCase().replaceAll('_','-');
+  while(code){if(Object.hasOwn(languagePacks,code))return code;code=code.includes('-')?code.slice(0,code.lastIndexOf('-')):''}
+  return 'en';
+}
+function warning(key){return languagePacks[language]?.translations[key]||languagePacks.en.translations[key]}
+function renderLanguage(){
+  $('language').value=language;document.documentElement.lang=language;
+  document.documentElement.dir=languagePacks[language].direction;
+  $('warning-title').textContent=warning('warning_title');$('warning-body').textContent=warning('warning_body');
+  $('language').setAttribute('aria-label',warning('language'));$('language').title=warning('language');
+}
+const languageSelect=document.createElement('select');languageSelect.id='language';
+for(const [code,pack] of Object.entries(languagePacks))languageSelect.append(new Option(pack.native_name,code));
+$('theme').before(languageSelect);
+languageSelect.onchange=()=>{language=resolveLanguage(languageSelect.value);render();send('set_language',{language})};
+
 const icons = {
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
   box:'<path d="M3 7l9-5 9 5v10l-9 5-9-5zM3 7l9 5 9-5m-9 5v10"/>',
@@ -86,19 +103,11 @@ const icons = {
 };
 function icon(name){return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">'+icons[name]+'</svg>'}
 document.querySelectorAll('[data-icon]').forEach(e=>{e.innerHTML=icon(e.dataset.icon)});
-const sineMode=node('button','','Vaso senoidal');sineMode.id='mode-combined';sineMode.setAttribute('aria-pressed','true');$('mode-xy').before(sineMode);
-$('mode-z').setAttribute('aria-pressed','false');
-const defaults = {mode:'combined',amplitude_mm:1,wave_count:6,z_ratio:.5,wavelength_mm:10,step_mm:.4,min_segment_mm:.15,
-  tolerance_mm:.02,start_height_mm:1,end_height_mm:null,fade_layers:3,phase_deg:0,
-  twist_deg_per_mm:0,corner_threshold_deg:45,max_z_speed_mm_s:5,max_z_acceleration_mm_s2:50,bench_only:true};
-const builtins=(__PRESET_DATA__).map(p=>({...p,parameters:normalized(p.parameters)}));
-const personalPresets=()=>(state.presets||[]).filter(p=>!builtins.some(b=>b.id===String(p.id)));
 function activeBridge(){return [window.orca,window.chrome?.webview,window.webkit?.messageHandlers?.orca].find(b=>typeof b?.postMessage==='function')}
 let linked=Boolean(activeBridge());
-let state={},parameters={...defaults},selection=new Set(),presetId='sine-vase',pending=null;
-let activeId=null,baseParameters={...defaults};
-const objectParameters=new Map(),objectPresets=new Map();
-let surfaceMode=true,guidedMode=true,guideStep=1,guideModelId=null,guideAwaitStudy=false;
+let state={},selection=new Set(),pending=null,activeId=null;
+const surfaceMode=true,guidedMode=true;
+let guideStep=1,guideModelId=null,guideAwaitStudy=false;
 const surfaceByObject=new Map();
 const surfaceSettings=()=>{
   const value={step_mm:.4,max_slope_deg:30,retain_native_short_edges:true,backend:'continuous_layers',region_id:null,
@@ -123,29 +132,15 @@ function surfaceError(){
 let generation=null,resultIdentity='',resultConfig='',pollTimer=0,hostSequence=-1,receivedHostState=false;
 let stateStamp='',lastPoll=0;
 let view='deformed',sceneTag='',playing=false,frame=0,previousTime=0,progressCarry=0;
-const opened=new Set();
 const numberFormat=(v,n=2)=>Number.isFinite(v)?v.toLocaleString('pt-BR',{maximumFractionDigits:n}):'—';
-const effective=id=>objectParameters.get(id)||baseParameters;
-const selectedParameters=()=>Object.fromEntries([...selection].map(id=>[id,{...effective(id)}]));
 // Native JSON bridges may reorder dictionary keys, including nested click rays.
 // Arrays retain their order: changing a ray or its coordinates still invalidates.
 const stableJSON=value=>JSON.stringify(value,(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)
   ?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);
-const signature=()=>surfaceMode
-  ?stableJSON(['surface',state.revision||'',activeId,surfaceSettings()])
-  :JSON.stringify(['wave',state.revision||'',state.capture?.sha256||'',
-    [...selection].sort().map(id=>[id,...Object.keys(defaults).map(k=>effective(id)[k])])]);
-function normalized(p){
-  return {...defaults,...Object.fromEntries(Object.keys(defaults).filter(k=>p?.[k]!==undefined).map(k=>[k,p[k]])),bench_only:true};
-}
-function storeActive(){
-  if(activeId!==null){objectParameters.set(activeId,{...parameters});objectPresets.set(activeId,presetId)}
-}
+const signature=()=>stableJSON(['surface',state.revision||'',activeId,surfaceSettings()]);
 function activate(id){
-  if(guidedMode&&id!==activeId){guideStep=1;guideModelId=null;guideAwaitStudy=false}
-  activeId=id;parameters={...effective(id)};presetId=objectPresets.get(id)??(
-    builtins.find(p=>Object.keys(defaults).every(k=>p.parameters[k]===parameters[k]))?.id||'');
-  syncParams();
+  if(id!==activeId){guideStep=1;guideModelId=null;guideAwaitStudy=false}
+  activeId=id;
 }
 function node(tag,cls,content){
   const el=document.createElement(tag);
@@ -157,21 +152,9 @@ const docked=document.body.dataset.mode==='dock';
 const panelAction=node('button','outline',docked?'Ocultar painel':'Abrir painel');
 panelAction.id='panel-action';panelAction.hidden=true;$('theme').before(panelAction);
 panelAction.onclick=()=>send(docked?'hide_panel':'open_panel');
-const panelHelp=node('details','panel-help');panelHelp.hidden=true;
-panelHelp.append(node('summary','','Como ocultar a aba do Studio'),
-  node('p','','No gerenciador de plugins, expanda Orca Surface Studio e desmarque a página “Surface Studio”. Mantenha a ação “Orca Wave Studio • Painel” habilitada para reabrir pelo ícone.'));
-$('preview').after(panelHelp);
 function send(action,extra={}){
   if(!linked)return false;
-  try{const bridge=activeBridge(),obj=['surface_study','prepare_conformal','build_surface'].includes(action)
-    ?{action,object_ids:[activeId],settings:action!=='surface_study'?{...surfaceSettings()}:
-      {step_mm:surfaceSettings().step_mm,max_slope_deg:surfaceSettings().max_slope_deg},...extra}
-    :(action==='generate_conformal'?{action,object_ids:[activeId]}:
-      {action,object_ids:[...selection],parameters:{...parameters},...extra});
-    if(action==='generate'){
-      obj.parameters_by_object=selectedParameters();
-      obj.parameters={...effective(selection.has(activeId)?activeId:[...selection][0])};
-    }
+  try{const bridge=activeBridge(),obj={action,...(action==='build_surface'?{object_ids:[activeId],settings:{...surfaceSettings()}}:{}),...extra};
     bridge.postMessage(bridge===window.orca?obj:JSON.stringify(obj));return true}
   catch(e){notice('Falha de comunicação com o OrcaSlicer. '+e.message);return false}
 }
@@ -182,10 +165,6 @@ function record(list,label,value,title=''){
   row.append(term,val);list.append(row);
 }
 function controlsBusy(){return Boolean(pending)||['processing','analyzing'].includes(state.status)}
-function canCapture(){
-  return Boolean(state.capture?.sha256)&&(!state.capture.revision||state.capture.revision===state.revision)
-    &&!['error','slicing_required','processing','analyzing'].includes(state.status);
-}
 function presentResult(){
   const result=state.result,source=result?.report?.source_sha256;
   if(result?.settings?.backend==='continuous_layers'&&
@@ -195,124 +174,7 @@ function presentResult(){
     (!result.revision||result.revision===state.revision)&&
     (result.workflow==='integrated'||result.study_kind==='surface'||!source||source===state.capture?.sha256)&&resultConfig===signature();
 }
-function valid(p=parameters){
-  if(!Object.entries(p).every(([k,v])=>k==='mode'||k==='bench_only'||(k==='end_height_mm'&&v===null)||Number.isFinite(v)))return 'Preencha todos os valores numéricos.';
-  if(!['xy','z','combined'].includes(p.mode)||p.amplitude_mm<0||p.wavelength_mm<1||p.wavelength_mm>50||
-    p.min_segment_mm<.15||p.step_mm>2||p.tolerance_mm<=0||p.tolerance_mm>.02||p.start_height_mm<0||
-    p.fade_layers<1||p.max_z_speed_mm_s<=0||p.max_z_acceleration_mm_s2<=0||
-    p.corner_threshold_deg<0||p.corner_threshold_deg>180)return 'Confira os limites indicados nos campos numéricos.';
-  if(p.min_segment_mm>p.step_mm)return 'O passo precisa ser maior ou igual ao segmento mínimo.';
-  if(p.end_height_mm!==null&&p.end_height_mm<=p.start_height_mm)return 'O fim em Z deve ficar acima da altura inicial.';
-  if(!Number.isInteger(p.fade_layers))return 'A transição precisa usar um número inteiro de camadas.';
-  if(!Number.isInteger(p.wave_count)||p.wave_count<1||p.wave_count>24||p.z_ratio<=0||p.z_ratio>1)return 'Use de 1 a 24 ondas por volta e proporção Z de até 1.';
-  return '';
-}
-function optionList(){return [...builtins,...personalPresets()]}
-function addPresets(){
-  const list=$('presets');list.replaceChildren(new Option('Personalizado',''));
-  const group=(name,items)=>{if(!items.length)return;const el=node('optgroup');el.label=name;
-    items.forEach(p=>el.append(new Option(p.name,String(p.id))));list.append(el)};
-  group('Perfis de bancada',builtins);
-  group('Meus presets',optionList().slice(builtins.length));
-  if(!optionList().some(p=>String(p.id)===presetId))presetId='';
-  list.value=presetId;
-}
-function loadParams(p,id=''){
-  parameters=normalized(p);
-  if(['z','combined'].includes(parameters.mode))parameters.twist_deg_per_mm=0;
-  presetId=id;storeActive();syncParams();render();
-}
-function syncParams(){
-  for(const [k,v] of Object.entries(parameters)){
-    if($(k))$(k).value=v===null?'':String(v);
-    if($('r-'+k))$('r-'+k).value=v===null?'':String(v);
-  }
-  $('presets').value=presetId;
-  ['xy','z','combined'].forEach(m=>$('mode-'+m).setAttribute('aria-pressed',String(!surfaceMode&&parameters.mode===m)));
-  $('mode-surface').setAttribute('aria-pressed',String(surfaceMode));
-  if(surfaceMode)for(const [key,value] of Object.entries(surfaceSettings())){
-    if(!$(key))continue;
-    if($(key).type==='checkbox')$(key).checked=Boolean(value);
-    else $(key).value=value??'';
-    if($('r-'+key))$('r-'+key).value=value??'';
-  }
-  $('twist_deg_per_mm').disabled=['z','combined'].includes(parameters.mode);
-}
-function onParameter(k,input){
-  if(surfaceMode&&(k==='step_mm'||k==='max_slope_deg')){
-    surfaceByObject.set(activeId,{...surfaceSettings(),[k]:input.valueAsNumber});
-    if(input.id!==k)$(k).value=input.value;
-    else if($('r-'+k)&&Number.isFinite(input.valueAsNumber))$('r-'+k).value=input.value;
-    render();return;
-  }
-  parameters[k]=input.value===''&&k==='end_height_mm'?null:input.valueAsNumber;
-  if($('r-'+k)&&Number.isFinite(parameters[k]))$('r-'+k).value=parameters[k];
-  if(input.id!==k)$(k).value=input.value;
-  presetId='';storeActive();$('presets').value='';render();
-}
-function field(parent,k,label,unit,min,max,step,slider=false){
-  const box=node('div','field'),top=node('div','fieldtop'),name=node('label','',label),value=node('div','row');
-  name.htmlFor=k;const input=node('input');input.type='number';input.id=k;
-  if(min!=null)input.min=min;if(max!=null)input.max=max;
-  input.step=slider?'any':step;input.required=true;input.oninput=()=>onParameter(k,input);
-  value.append(input,node('span','unit',unit));top.append(name,value);box.append(top);
-  if(slider){const range=node('input');range.type='range';range.id='r-'+k;range.min=min;range.max=max??1;
-    range.step=step;range.setAttribute('aria-label',label);range.oninput=()=>onParameter(k,range);box.append(range)}
-  parent.append(box);
-}
-const primary=$('primary-fields'),advanced=$('advanced-fields');
-const editTarget=node('span','edit-target');editTarget.id='edit-target';$('params').before(editTarget);
-field(primary,'amplitude_mm','Amplitude','mm',0,null,.01,true);
-field(primary,'wave_count','Ondas por volta','',1,24,1,true);
-field(primary,'wavelength_mm','Comprimento de onda','mm',1,50,.1,true);
-field(primary,'step_mm','Passo de amostragem','mm',.15,2,.01,true);
-field(primary,'max_slope_deg','Limite do estudo digital','°',5,45,1,true);
-const roofBox=node('div','field'),roofLabel=node('label','','Topo de referência'),roofSelect=node('select');
-roofSelect.id='roof-region';roofLabel.htmlFor=roofSelect.id;
-const roofMap=document.createElementNS('http://www.w3.org/2000/svg','svg');
-roofMap.id='roof-map';roofMap.setAttribute('role','group');roofMap.setAttribute('aria-label','Regiões da peça vistas de cima');
-roofMap.style.cssText='width:100%;height:140px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:6px';
-const roofNote=node('small');roofNote.id='roof-region-note';
-roofBox.append(roofLabel,roofSelect,roofMap,roofNote);primary.append(roofBox);
-roofSelect.onchange=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),region_id:roofSelect.value||null});render()};
-let roofMapTag='';
-function roofRegions(active,disabled){
-  roofBox.hidden=!surfaceMode;roofSelect.disabled=disabled;
-  const rejection=state.surface_rejection?.object_id===activeId?state.surface_rejection:null;
-  const catalog=state.conformal?.region_catalog||rejection?.region_catalog||active?.roof_regions,rows=catalog?.regions||[];
-  const chosen=surfaceSettings().region_id||catalog?.automatic_region_id||'';
-  const tag=JSON.stringify([catalog?.revision,activeId,chosen,disabled,Boolean(rejection)]);if(tag===roofMapTag)return;roofMapTag=tag;
-  roofSelect.replaceChildren(new Option('Escolha automática',''));
-  for(const row of rows)roofSelect.append(new Option(row.label,row.id));
-  roofSelect.value=surfaceSettings().region_id||'';roofMap.replaceChildren();
-  roofMap.hidden=!rows.length;
-  const candidate=rows.find(r=>r.id===chosen);
-  roofNote.textContent=catalog?.reason||('Topo, borda e face inferior serão avaliados juntos. '+
-    (candidate?'Inclinação medida: '+numberFormat(candidate.slope_deg)+'°. ':'')+'Capacidade do cabeçote: não verificada.');
-  const points=rows.flatMap(r=>r.map_triangles_xy?.flat()||[]);if(!points.length)return;
-  const xs=points.map(p=>p[0]),ys=points.map(p=>p[1]),xmin=Math.min(...xs),ymin=Math.min(...ys);
-  const w=Math.max(...xs)-xmin||1,h=Math.max(...ys)-ymin||1;
-  roofMap.setAttribute('viewBox',[xmin-1,ymin-1,w+2,h+2].join(' '));
-  for(const row of [...rows].sort((a,b)=>a.z_max_mm-b.z_max_mm)){
-    const path=document.createElementNS(roofMap.namespaceURI,'path');
-    path.setAttribute('d',(row.map_triangles_xy||[]).map(t=>'M'+t.map(p=>p.join(',')).join('L')+'Z').join(''));
-    path.setAttribute('fill',row.id===chosen?(rejection?'#d54a4a':'#00a896'):'#496176');path.setAttribute('stroke','#c9d6e2');
-    path.setAttribute('stroke-width',String(Math.max(w,h)/400));path.setAttribute('aria-label',row.label);
-    path.setAttribute('role','button');path.setAttribute('tabindex',disabled?'-1':'0');
-    const choose=()=>{if(disabled)return;surfaceByObject.set(activeId,{...surfaceSettings(),region_id:row.id});render()};
-    path.onclick=choose;path.onkeydown=e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();choose()}};
-    const title=document.createElementNS(roofMap.namespaceURI,'title');title.textContent=row.label;path.append(title);roofMap.append(path);
-  }
-}
-const nativeCornersBox=node('div','field'),nativeCornersLabel=node('label','row'),nativeCorners=node('input');
-nativeCorners.id='retain_native_short_edges';nativeCorners.type='checkbox';
-nativeCornersLabel.append(nativeCorners,node('span','','Preservar pequenas quinas'));
-nativeCornersBox.append(nativeCornersLabel,node('small','','Mantém os movimentos curtos criados pelo Orca. Somente Preview.'));
-primary.append(nativeCornersBox);
-nativeCorners.onchange=()=>{surfaceByObject.set(activeId,{...surfaceSettings(),retain_native_short_edges:nativeCorners.checked});render()};
-for(const k of ['amplitude_mm','wavelength_mm'])$(k).closest('.field').classList.add('wave-only');
-const surfaceInfo=node('p','surface-info','O estudo segue a superfície superior da peça. Regiões acima da inclinação máxima ficam fora do percurso.');
-primary.before(surfaceInfo);
+const primary=$('primary-fields');
 const wallBox=node('div','field');wallBox.id='wall-selection';
 wallBox.append(node('h3','','Paredes a suavizar'));
 const wallModes=node('div','segments'),wallPaint=node('button','','Escolher na peça'),wallAll=node('button','','Peça inteira');
@@ -339,48 +201,18 @@ function pickWall(ray,point){
   surfaceByObject.set(activeId,{...settings,selection_revision:state.revision,
     wall_selection:[...settings.wall_selection,{...ray,radius_mm:brushRadius}]});notice('');render();
 }
-field(advanced,'min_segment_mm','Segmento mínimo','mm',.15,2,'any');
-field(advanced,'tolerance_mm','Tolerância','mm',.000001,.02,'any');
-field(advanced,'fade_layers','Transição','cam.',1,null,1);
-field(advanced,'phase_deg','Fase inicial','°',null,null,'any');
-field(advanced,'z_ratio','Altura da onda / intensidade','',.01,1,.01,true);
-field(advanced,'twist_deg_per_mm','Torção em XY','°/mm',null,null,'any');
-field(advanced,'corner_threshold_deg','Ângulo de canto','°',0,180,'any');
-field(advanced,'max_z_speed_mm_s','Velocidade máx. Z','mm/s',.000001,null,'any');
-field(advanced,'max_z_acceleration_mm_s2','Aceleração máx. Z','mm/s²',.000001,null,'any');
-['start_height_mm','end_height_mm'].forEach(k=>$(k).oninput=e=>onParameter(k,e.target));
-['xy','z','combined'].forEach(m=>$('mode-'+m).onclick=()=>{
-  surfaceMode=false;
-  loadParams(m==='combined'?{...parameters,mode:m,amplitude_mm:1,wave_count:6,z_ratio:.5,end_height_mm:null}:({...parameters,mode:m}));
-});
-$('mode-surface').onclick=()=>{surfaceMode=true;syncParams();render()};
-function analytic(){
-  const combined=!surfaceMode&&parameters.mode==='combined';
-  const {amplitude_mm:a,phase_deg:phase}=parameters,w=combined?20/parameters.wave_count:parameters.wavelength_mm;
-  const curve=Number.isFinite(a)&&Number.isFinite(w)&&w>=1&&a>=0&&Number.isFinite(phase);
-  const points=[];
-  if(curve)for(let i=0;i<=360;i++){const x=i*240/360,y=33-Math.min(26,26*a/.3)*Math.sin(2*Math.PI*(20*i/360)/w+phase*Math.PI/180);
-    points.push((i?'L':'M')+x.toFixed(2)+' '+y.toFixed(2))}
-  $('analytic-path').setAttribute('d',points.join(''));
-  const captions=$('analytic-path').closest('section').querySelectorAll('.row small');
-  if(captions.length===2){captions[0].textContent=combined?'0°':'0 mm';captions[1].textContent=combined?'360° · uma volta':'20 mm'}
-  $('analytic-path').closest('svg').setAttribute('aria-label',combined?'Ondulação radial teórica ao longo de uma volta':'Forma senoidal teórica nos primeiros vinte milímetros');
-  $('curvature').textContent=combined?'Calculada no percurso gerado':(curve?numberFormat(a*(2*Math.PI/w)**2,4)+' mm⁻¹':'—');
-}
 function objects(){
   const list=$('objects');list.replaceChildren();
   if(!state.objects?.length){list.append(node('p','message','Nenhum objeto disponível nesta mesa.'));return}
   for(const obj of state.objects){
-    const item=node('div','object'),input=node('input'),info=node('button','pick-object');input.type='checkbox';
-    const id=String(obj.id);input.checked=selection.has(id);input.disabled=controlsBusy();input.hidden=surfaceMode;
-    input.setAttribute('aria-label','Incluir '+(obj.name||id)+' na geração');
+    const item=node('div','object'),info=node('button','pick-object');
+    const id=String(obj.id);
     info.disabled=controlsBusy();info.setAttribute('aria-pressed',String(id===activeId));
     info.title='Editar parâmetros de '+(obj.name||id);info.onclick=()=>{activate(id);render()};
-    input.onchange=()=>{input.checked?selection.add(id):selection.delete(id);render()};
     const dims=obj.dimensions_mm||(obj.bounds?.length===2?obj.bounds[1].map((v,i)=>v-obj.bounds[0][i]):[]);
     info.append(node('strong','',obj.name||'Objeto'),node('small','','ID '+id+' · '+(obj.instances??'—')+' cópia(s)'));
     if(dims.length===3)info.append(node('small','',dims.map(n=>numberFormat(n,1)).join(' × ')+' mm'));
-    item.append(input,info);list.append(item);
+    item.append(info);list.append(item);
   }
 }
 const statuses={idle:'Aguardando análise',analyzing:'Analisando mesa',slicing_required:'Fatiamento necessário',
@@ -397,13 +229,9 @@ function diagnostics(current){
     $('status-name').textContent='Estudo da malha';
     $('message').textContent='Escolha a peça pelo nome e estude a superfície diretamente da geometria da mesa.';
   }
-  if(!surfaceMode&&parameters.mode==='combined'&&!pending&&!canCapture()&&['idle','slicing_required'].includes(s)){
-    $('message').textContent='1. Preparar vaso no Orca. 2. Fatiar a placa. 3. Gerar e abrir Preview. A intensidade cresce suavemente até o topo; a base fica preservada.';
-  }
   const meta=$('metadata');meta.replaceChildren();
   if(surfaceMode)record(meta,'Objeto em estudo',activeId||'—');else record(meta,'Objetos selecionados',String(selection.size));
   record(meta,'Revisão da mesa',state.revision?.slice(0,10)||'—',state.revision);
-  if(!surfaceMode)record(meta,'Captura do fatiamento',state.capture?.sha256?.slice(0,10)||'—',state.capture?.sha256);
   const metrics=$('metrics');metrics.replaceChildren();$('result-path').textContent='';
   if(!current){
     $('result-note').textContent=surfaceMode?'Execute o estudo para visualizar os percursos sobre a peça.':
@@ -717,28 +545,14 @@ $('play').onclick=()=>{
 $('scrub').oninput=()=>{stop();cursor()};
 $('layer').onchange=e=>{stop();viewer.layer=e.target.value;viewer.fit();$('scrub').value=0;timeline()};
 $('fit').onclick=()=>viewer.fit();$('zoom-in').onclick=()=>viewer.magnify(1.3);$('zoom-out').onclick=()=>viewer.magnify(1/1.3);
-document.querySelectorAll('[data-view]').forEach(btn=>btn.onclick=()=>{stop();view=btn.dataset.view;setLayers();render()});
 function render(){
-  const busy=controlsBusy(),current=presentResult(),problem=valid();
-  const combined=!surfaceMode&&parameters.mode==='combined';
+  renderLanguage();
+  const busy=controlsBusy(),current=presentResult();
   const active=(state.objects||[]).find(o=>String(o.id)===activeId);
-  const invalidSelected=(state.objects||[]).find(o=>selection.has(String(o.id))&&valid(effective(String(o.id))));
-  const error=surfaceMode?surfaceError():(problem||(invalidSelected?'Confira os parâmetros de '+invalidSelected.name+'.':''));
-  document.body.classList.toggle('surface-mode',surfaceMode);
-  document.body.classList.toggle('combined-mode',combined);
-  $('wave_count').closest('.field').hidden=!combined;
-  $('wavelength_mm').closest('.field').hidden=combined;
-  $('z_ratio').closest('.field').hidden=!combined;
-  $('end_height_mm').closest('label').hidden=combined;
-  $('start_height_mm').closest('label').firstChild.textContent=combined?'Começar ondas (mm)':'Início em Z (mm)';
-  const label=$('amplitude_mm').closest('.field').querySelector('label');label.textContent=combined?'Intensidade das ondas':'Amplitude';
-  $('r-amplitude_mm').max=combined?5:1;
-  const stepBox=$('step_mm').closest('.field'),stepParent=combined?advanced:primary;
-  surfaceAdvanced.hidden=!surfaceMode;
-  const localSurface=surfaceMode&&['native_local','continuous_layers'].includes(surfaceSettings().backend);
-  wallBox.hidden=!localSurface;
+  document.body.classList.add('surface-mode');
+  wallBox.hidden=false;
   const wallOptions=surfaceSettings(),painting=wallOptions.selection_mode==='paint';
-  $('canvas').style.cursor=localSurface&&painting&&!busy&&(!guidedMode||guideStep===2)?'crosshair':'grab';
+  $('canvas').style.cursor=painting&&!busy&&guideStep===2?'crosshair':'grab';
   wallPaint.setAttribute('aria-pressed',String(painting));wallAll.setAttribute('aria-pressed',String(!painting));
   wallPaint.disabled=wallAll.disabled=brushInput.disabled=busy;brushRow.hidden=wallHint.hidden=wallList.hidden=wallClear.hidden=!painting;
   wallAllHint.hidden=painting;wallClear.disabled=busy||!wallOptions.wall_selection?.length;
@@ -750,52 +564,17 @@ function render(){
       const marks=[...(wallMarks.get(activeId)||[])];marks.splice(i,1);wallMarks.set(activeId,marks);
       surfaceByObject.set(activeId,{...wallOptions,wall_selection:rows,selection_revision:rows.length?wallOptions.selection_revision:null});render()};wallList.append(remove);
   });
-  surfaceMethod.value=surfaceSettings().backend;surfaceMethod.disabled=busy;
-  const targetParent=surfaceMode?surfaceAdvanced:stepParent;
-  if(stepBox.parentElement!==targetParent)targetParent.append(stepBox);
-  stepBox.hidden=localSurface;
-  $('max_slope_deg').closest('.field').hidden=!surfaceMode||(localSurface&&!painting);surfaceInfo.hidden=!surfaceMode;
-  const stage=state.conformal?.phase,full=state.result?.study_kind==='conformal';
-  roofRegions(active,busy||Boolean(stage));
-  if(localSurface)roofBox.hidden=true;
-  nativeCornersBox.hidden=!surfaceMode||!linked||localSurface;nativeCorners.disabled=busy||Boolean(stage);
-  const conformalLabel={preparing:'Preparando cópia…',needs_open:'Abrindo cópia…',opening:'Abrindo cópia…',
-    checking:'Verificando malha…',awaiting_slice:'Aguardando Fatiar no Orca',slicing:'Fatiando no Orca…',
-    captured:'Gerar percurso conformal',generating:'Gerando percurso…',ready:'Percurso conformal gerado'};
-  $('generate').innerHTML=icon(surfaceMode?'curve':'wave')+(surfaceMode?
-    ' '+(conformalLabel[stage]||(linked?'Gerar superfície e abrir Preview':'Estudar superfície')):
-    (combined?' Gerar e abrir Preview':' Gerar G-code com ondas'));
-  surfaceInfo.textContent=state.conformal?(state.conformal.settings?.backend==='regional_paired'?
-    'Topo e face inferior são preparados juntos, preservando a base e sem faixa plana na borda. Clique em Fatiar no Orca. Somente estudo digital.':
-    'Estudo anterior: somente topo parcial; bordas planas. Não demonstra o beiral completo.'):
-    (linked?(localSurface?'Clique nas áreas que deseja suavizar. O Orca calcula os contornos compatíveis; paredes verticais e faces inferiores podem continuar com camadas.':
-      'Alinhamento experimental a um teto de referência. As outras regiões não seguem suas próprias curvas.'):
-      'O percurso geométrico isolado é apenas uma visualização do topo; não comprova deposição.');
-  $('surface-only').hidden=!surfaceMode||!linked||Boolean(stage)||localSurface;$('surface-only').disabled=!active||busy||Boolean(error);
-  $('bench-note').textContent=combined?'Vaso senoidal · somente Preview · sem envio à impressora':surfaceMode?((full||stage)?'Estudo conformal · impressão indisponível':'Estudo geométrico · impressão indisponível'):'Estudo de bancada · impressão pelo OrcaSlicer';
-  prep.hidden=surfaceMode||!(combined||state.capture_setup_required);prep.disabled=!linked||busy;
-  prep.textContent=combined?'Preparar vaso no Orca':'Preparar captura no Orca';
-  $('layer-label').textContent=surfaceMode?'Grupo de percurso':'Camada';
-  document.querySelector('.readout span').textContent=surfaceMode?'Ponto (mm)':'Bico (mm)';
-  $('legend-original-label').textContent=surfaceMode?'Referência':'Original';
-  $('legend-modified-label').textContent=surfaceMode?'Superfície':'Com ondas';
-  for(const kind of ['original','deformed'])document.querySelector('[data-view='+kind+']').textContent=$(kind==='original'?'legend-original-label':'legend-modified-label').textContent;
-  editTarget.textContent=active?'Editando '+active.name+' · ID '+activeId:'Escolha uma peça para editar.';
+  const stage=state.conformal?.phase;
+  $('layer-label').textContent='Grupo de percurso';
+  document.querySelector('.readout span').textContent='Ponto (mm)';
+  $('legend-original-label').textContent='Referência';
+  $('legend-modified-label').textContent='Superfície';
   $('link-dot').classList.toggle('live',linked&&!state.demo);
   $('connection').textContent=linked&&!state.demo?'OrcaSlicer conectado':'Demonstração de bancada • não conectado ao Orca';
-  panelAction.hidden=!linked||Boolean(state.demo);panelHelp.hidden=panelAction.hidden||docked;
-  $('validation').hidden=!error;$('validation').textContent=error;
-  $('refresh').disabled=!linked||busy;$('analyze').disabled=!linked||busy||!selection.size;
-  $('params').disabled=busy||!active||Boolean(stage);$('presets').disabled=busy||!active;
-  $('suggest').disabled=busy||!active?.suggestion;
-  $('suggest').title=active?.suggestion?'Aplicar aos parâmetros de '+active.name:'O objeto ativo precisa de uma sugestão disponível';
-  $('save').disabled=!linked||busy||Boolean(problem);
-  $('delete').disabled=!linked||busy||!personalPresets().some(p=>String(p.id)===presetId);
-  $('generate').disabled=!linked||busy||(surfaceMode?(!active||Boolean(error)):(!canCapture()||!selection.size||Boolean(invalidSelected)));
-  if(stage&&stage!=='captured')$('generate').disabled=true;
-  $('preview').disabled=!linked||(surfaceMode&&!full)||!current||busy||!state.result?.package_path;
-  $('preview').title=surfaceMode&&!full?'Percurso da superfície disponível no visor do Studio.':'Abrir trajetória processada no OrcaSlicer';
-  objects();diagnostics(current);analytic();
+  panelAction.hidden=!linked||Boolean(state.demo);
+  $('refresh').disabled=!linked||busy;
+  $('params').disabled=busy||!active||Boolean(stage);
+  objects();diagnostics(current);
   profileCard.textContent=state.printer_profile?.name||'Selecione uma impressora no Orca';
   profileDetails.textContent=state.printer_profile?.issue||
     (state.printer_profile?.nozzle_mm?'Bico '+numberFormat(state.printer_profile.nozzle_mm)+' mm · camada '+numberFormat(state.printer_profile.layer_mm)+' mm · '+state.printer_profile.firmware:'O perfil acompanha a seleção feita no Orca.');
@@ -804,13 +583,6 @@ function render(){
   const tag=[current?state.result.sha256:'model',state.model_preview?.id,activeId,surfaceSettings().placement_degrees||0].join('/');
   if(sceneTag!==tag){stop();sceneTag=tag;viewer.load({...current?state.result:{},model:placementModel(state.model_preview)});$('scrub').value=0;setLayers()}
   else viewer.draw();
-  const modes=document.querySelectorAll('[data-view]');
-  for(const b of modes){
-    b.setAttribute('aria-pressed',String(view===b.dataset.view));
-    const counts=['original','deformed'].map(k=>viewer.streams[k]?.indices.length||0);
-    b.disabled=!viewer.available||!(b.dataset.view==='compare'?counts.every(Boolean):counts[b.dataset.view==='original'?0:1]);
-    if(localSurface&&b.dataset.view!=='deformed')b.disabled=true;
-  }
   const n=viewer.active().length;
   $('legend-original').hidden=!n||view==='deformed';$('legend-modified').hidden=!n||view==='original';
   const hasModel=Boolean(viewer.mesh?.flat.length);
@@ -827,20 +599,8 @@ function render(){
 const profileBox=node('section','section'),profileCard=node('strong'),profileDetails=node('p','muted');
 profileBox.append(node('h3','','Perfil selecionado no Orca'),profileCard,profileDetails);
 document.querySelector('#config .section').after(profileBox);
-const surfaceAdvanced=node('details','field');surfaceAdvanced.append(node('summary','','Ajustes da superfície'));
-const surfaceMethod=node('select');surfaceMethod.id='surface-method';surfaceMethod.setAttribute('aria-label','Método de superfície');
-for(const [id,label] of [['continuous_layers','Camadas contínuas'],['native_local','Contorno local do Orca'],['roof_bending','Alinhar camadas a um teto (experimental)']]){
-  const option=node('option','',label);option.value=id;surfaceMethod.append(option);
-}
-surfaceMethod.onchange=()=>{wallMarks.delete(activeId);surfaceByObject.set(activeId,{...surfaceSettings(),backend:surfaceMethod.value,...(surfaceMethod.value==='continuous_layers'?{selection_mode:'all',wall_selection:[],selection_revision:null}:{})});render()};
-surfaceAdvanced.append(surfaceMethod);
-surfaceAdvanced.append($('max_slope_deg').closest('.field'),roofBox,nativeCornersBox);primary.append(surfaceAdvanced);
 const cancelBuild=node('button','wide outline','Cancelar cálculo');cancelBuild.id='cancel-build';cancelBuild.hidden=true;
-$('generate').after(cancelBuild);cancelBuild.onclick=()=>send('cancel_build');
-const prep=node('button','wide outline','Preparar captura no Orca');prep.id='prepare-capture';prep.hidden=true;
-$('analyze').after(prep);
-const surfaceOnly=node('button','wide outline','Estudar apenas a superfície');surfaceOnly.id='surface-only';surfaceOnly.hidden=true;
-$('generate').after(surfaceOnly);surfaceOnly.onclick=()=>request('surface_study');
+$('study-actions').append(cancelBuild);cancelBuild.onclick=()=>send('cancel_build');
 function request(action,extra={}){
   if(!linked||controlsBusy())return;
   notice('');pending=action;
@@ -848,36 +608,10 @@ function request(action,extra={}){
   render();
   if(!send(action,extra)){pending=null;generation=null;render()}
 }
-$('refresh').onclick=()=>request('refresh');$('analyze').onclick=()=>request('analyze');
-prep.onclick=()=>request(!surfaceMode&&parameters.mode==='combined'?'prepare_vase':'prepare_capture');$('generate').onclick=()=>request(surfaceMode?
-  (state.conformal?.phase==='captured'?'generate_conformal':(state.conformal?'prepare_conformal':'build_surface')):'generate');
-$('preview').onclick=()=>{if(state.result?.study_kind!=='surface'&&presentResult())send('open_preview',{sha256:state.result.sha256})};
-$('suggest').onclick=()=>{
-  const obj=(state.objects||[]).find(o=>String(o.id)===activeId);
-  if(obj?.suggestion)loadParams({...parameters,...obj.suggestion});
-};
-$('presets').onchange=e=>{const preset=optionList().find(p=>String(p.id)===e.target.value);
-  if(preset)loadParams(preset.parameters,String(preset.id));else{presetId='';render()}};
-$('save').onclick=()=>{
-  const p=personalPresets().find(p=>String(p.id)===presetId);
-  $('preset-name').value=p?.name||'';$('preset-editor').hidden=false;$('preset-name').focus();
-};
-$('cancel-preset').onclick=()=>{$('preset-editor').hidden=true};
-$('preset-editor').onsubmit=e=>{
-  e.preventDefault();const name=$('preset-name').value.trim();
-  if(!name){$('preset-name').focus();return}
-  const found=personalPresets().find(p=>p.name===name);
-  const data=found?{id:String(found.id),name}:{name};
-  if(send('save_preset',data))$('preset-editor').hidden=true;
-};
-$('delete').onclick=()=>{const p=personalPresets().find(p=>String(p.id)===presetId);
-  if(p&&window.confirm('Excluir o preset “'+p.name+'”?'))send('delete_preset',{id:String(p.id),name:p.name})};
+$('refresh').onclick=()=>request('refresh');
 $('theme').onclick=()=>{viewer.light=!viewer.light;document.documentElement.dataset.theme=viewer.light?'light':'dark';viewer.draw()};
 function compact(){document.body.classList.toggle('compact',document.body.dataset.mode==='dock'||window.innerWidth<=840)}
 window.addEventListener('resize',compact);compact();
-for(const id of ['config','review'])$('tab-'+id).onclick=()=>{for(const k of ['config','review']){
-  $(k).classList.toggle('shown',id===k);$('tab-'+k).setAttribute('aria-selected',String(id===k));
-}};
 const guideSteps=node('nav','guide-steps');guideSteps.id='guide-steps';guideSteps.setAttribute('aria-label','Passos do estudo');
 const guideLabels=['Selecionar modelo','Selecionar áreas','Estudar movimento','Mandar para a bandeja'];
 const guideStepButtons=guideLabels.map((label,i)=>{
@@ -889,18 +623,6 @@ const guideStepButtons=guideLabels.map((label,i)=>{
 const sendReviewButton=node('button','outline','Enviar para impressora…');sendReviewButton.id='send-review';$('theme').before(sendReviewButton);
 sendReviewButton.setAttribute('aria-label','Conferir envio para impressora');sendReviewButton.title='Abrir a conferência de envio sem iniciar impressão';
 sendReviewButton.onclick=()=>send('open_send_dialog',state.result?.sha256?{sha256:state.result.sha256}:{});
-const guideToggle=node('button','outline','Mais opções');guideToggle.id='guide-toggle';$('theme').before(guideToggle);
-guideToggle.onclick=()=>{
-  guidedMode=!guidedMode;
-  if(guidedMode){
-    surfaceMode=true;guideStep=1;guideModelId=null;guideAwaitStudy=false;
-    const settings=surfaceSettings();
-    if(!['native_local','continuous_layers'].includes(settings.backend)){
-      surfaceByObject.set(activeId,{...settings,backend:'native_local',selection_mode:'paint',wall_selection:[],selection_revision:null});wallMarks.delete(activeId);
-    }
-  }
-  render();
-};
 $('objects').closest('section').id='model-section';$('params').closest('section').id='area-section';profileBox.id='profile-card';
 const guideSummary=node('section','section guide-summary');guideSummary.id='guide-summary';
 guideSummary.append(node('h3','','Seu estudo'));const guideModelName=node('strong'),guideAreaCount=node('p','message'),guideFinish=node('p','message'),guideSpeed=node('small');guideSummary.append(guideModelName,guideAreaCount,guideFinish,guideSpeed);profileBox.after(guideSummary);
@@ -910,7 +632,7 @@ const reviewScroll=document.querySelector('#review>.scroll');reviewScroll.prepen
 const guideDetails=node('details');guideDetails.id='guide-details';guideDetails.append(node('summary','','Detalhes do estudo'));
 guideDetails.append($('status').closest('section'),$('metrics').closest('section'));reviewScroll.append(guideDetails);
 const guideControls=node('div','guide-controls'),guideNext=node('button','wide positive'),guideBack=node('button','wide outline','Voltar'),guideFootNote=node('small');
-guideControls.id='guide-controls';guideNext.id='guide-next';guideBack.id='guide-back';guideFootNote.id='guide-foot-note';guideControls.append(guideNext,guideBack,guideFootNote);$('generate').closest('footer').prepend(guideControls);
+guideControls.id='guide-controls';guideNext.id='guide-next';guideBack.id='guide-back';guideFootNote.id='guide-foot-note';guideControls.append(guideNext,guideBack,guideFootNote);$('study-actions').prepend(guideControls);
 guideBack.onclick=()=>{if(!controlsBusy()){guideStep=Math.max(1,guideStep-1);guideAwaitStudy=false;render()}};
 guideNext.onclick=()=>{
   if(guideNext.disabled)return;
@@ -927,10 +649,8 @@ function renderGuide(active,current,busy){
   guideSteps.hidden=guideControls.hidden=guideHelp.hidden=guideSummary.hidden=!on;
   $('model-section').querySelector('h3').textContent=on?'Modelos na bandeja':'Objetos da mesa';
   $('area-section').querySelector('h3').textContent=on?'Áreas da peça':'Parâmetros da trajetória';
-  guideToggle.textContent=on?'Mais opções':'Voltar ao passo a passo';
   guideDetails.hidden=on?guideStep<3:false;
-  if(!on){$('analyze').hidden=false;return}
-  if(guideAwaitStudy&&current&&!busy){guideStep=4;guideAwaitStudy=false}
+  if(current&&!busy&&(guideAwaitStudy||guideModelId===null)){guideModelId=activeId;guideStep=4;guideAwaitStudy=false}
   if(state.status==='error'&&!pending)guideAwaitStudy=false;
   if(guideStep>1&&guideModelId!==activeId){guideStep=1;guideAwaitStudy=false}
   if(guideStep===4&&!current){guideStep=3;guideAwaitStudy=false}
@@ -950,13 +670,13 @@ function renderGuide(active,current,busy){
     guideStep===3?(busy?'Estudando o movimento…':state.status==='error'?state.message:'Clique em Estudar movimento. O resultado aparece aqui no Studio.'):
     state.result?.native_preview?'Resultado conferido e aberto no Preview do Orca.':'Use ▶ para conferir o movimento. Depois mande o resultado para a bandeja do Orca.';
   guideWarning.hidden=guideStep!==4||Boolean(state.result?.report?.print_allowed);
-  guideWarning.textContent=beads?.below_profile_minimum_occurrences?'Somente Preview. Há cordões abaixo da altura mínima do perfil. A impressão exige validar a deposição e o cabeçote.':'Somente Preview. A impressão ainda depende da verificação das transições e do cabeçote.';
+  guideWarning.textContent=warning(beads?.below_profile_minimum_occurrences?'warning_bead':'warning_preview');
   guideNext.textContent=guideStep===1?'Selecionar áreas':guideStep===2?'Continuar':guideStep===3?(busy?'Estudando movimento…':'Estudar movimento'):'Mandar para a bandeja';
   guideNext.disabled=!linked||busy||!active||(guideStep===2&&Boolean(surfaceError()))||(guideStep===3&&Boolean(surfaceError()))||(guideStep===4&&!current);
   guideBack.hidden=guideStep===1;guideBack.disabled=busy;
   guideFootNote.textContent=guideStep===2?(choices.selection_mode==='all'?'Peça inteira selecionada.':'Selecione uma área ou escolha Peça inteira.'):guideStep===3?'O estudo fica no plugin até você mandar para a bandeja.':guideStep===4?'Abre no Preview do Orca. Não inicia impressão.':'';
   $('action-note').hidden=!$('action-note').textContent;
-  $('validation').hidden=true;surfaceAdvanced.hidden=true;
+  $('validation').hidden=true;
   document.querySelector('.vhead h2').textContent=guideStep<3?'Seu modelo':'Movimento da peça';
 }
 function applyState(next){
@@ -976,35 +696,25 @@ function applyState(next){
   // Avoid rebuilding focused object buttons and preset menus on those replies.
   const stamp=JSON.stringify([next.native,next.demo,next.status,next.message,next.revision,
     next.capture?.capture_id,next.capture?.sha256,next.capture_setup_required,next.objects,
-    next.presets,next.parameters,next.parameters_by_object,next.selected_object_ids,next.conformal,next.model_preview?.id,
-    next.result?.sha256,next.result?.study_kind,next.result?.object_id,next.result?.settings,next.result?.package_path,next.send_preview_available,next.head_map]);
+    next.language,next.selected_object_ids,next.conformal,next.model_preview?.id,
+    next.result?.sha256,next.result?.study_kind,next.result?.object_id,next.result?.settings,next.result?.package_path,
+    next.result?.report?.print_allowed,next.result?.report?.bead_deposition?.below_profile_minimum_occurrences,
+    next.send_preview_available,next.head_map]);
   if(!pending&&stamp===stateStamp){state=next;schedulePoll();return}
   stateStamp=stamp;
   const first=!Object.keys(state).length,priorRev=state.revision;
   const oldIds=new Set((state.objects||[]).map(o=>String(o.id)));
-  state=next;pending=null;linked=Boolean(activeBridge())&&!state.demo;notice('');
+  state=next;language=resolveLanguage(next.language||language);pending=null;linked=Boolean(activeBridge())&&!state.demo;notice('');
   const ids=(state.objects||[]).map(o=>String(o.id));
   selection=new Set([...selection].filter(id=>ids.includes(id)));
   if((first||!oldIds.size)&&Array.isArray(state.selected_object_ids))
     selection=new Set(state.selected_object_ids.map(String).filter(id=>ids.includes(id)));
   else if(!selection.size&&ids.length===1&&!oldIds.has(ids[0]))selection.add(ids[0]);
-  if((first||!oldIds.size)&&state.parameters)baseParameters=normalized(state.parameters);
   const idSet=new Set(ids);
   for(const id of surfaceByObject.keys())if(!idSet.has(id))surfaceByObject.delete(id);
   for(const id of wallMarks.keys())if(!idSet.has(id))wallMarks.delete(id);
-  for(const id of objectParameters.keys())if(!idSet.has(id)){objectParameters.delete(id);objectPresets.delete(id)}
-  let loadedActive=false;
-  for(const id of ids){
-    const overrides=state.parameters_by_object;
-    if(overrides&&Object.hasOwn(overrides,id)&&!objectParameters.has(id)){
-      objectParameters.set(id,normalized({...baseParameters,...overrides[id]}));
-      if(id===activeId)loadedActive=true;
-    }
-  }
   if(!idSet.has(activeId))activate(ids.find(id=>selection.has(id))??ids[0]??null);
-  else if(loadedActive||((first||!oldIds.size)&&activeId!==null))activate(activeId);
   if(state.conformal){
-    surfaceMode=true;
     const ctx=state.conformal,id=ctx.native_id||ctx.original_id;
     if(idSet.has(id)){surfaceByObject.set(id,ctx.settings);activate(id)}
   }
@@ -1025,7 +735,7 @@ function applyState(next){
       if(settings.backend==='native_local'&&settings.selection_mode==='all')settings.backend='continuous_layers';
       if(!['native_local','continuous_layers'].includes(settings.backend))for(const key of ['selection_mode','selection_revision','wall_selection'])delete settings[key];
       if(!resultIdentity&&!generation){
-        surfaceMode=true;surfaceByObject.set(id,settings);
+        surfaceByObject.set(id,settings);
         if(r.report?.wall_selection?.areas)wallMarks.set(id,r.report.wall_selection.areas.map(a=>({center:a.center,radius_mm:a.radius_mm})));
         activate(id);
       }
@@ -1035,11 +745,7 @@ function applyState(next){
     else if(!resultIdentity||(!priorRev&&first)){resultConfig=signature();resultIdentity=identity}
     else if(identity!==resultIdentity){resultConfig='';resultIdentity=identity}
   }
-  addPresets();prep.hidden=!state.capture_setup_required;prep.disabled=!linked||controlsBusy();
   render();
-  if(!state.native&&!surfaceMode&&generation&&state.status==='ready'&&presentResult()&&r.package_path&&!opened.has(r.sha256)){
-    opened.add(r.sha256);send('open_preview',{sha256:r.sha256});
-  }
   if(!['processing','analyzing'].includes(state.status))generation=null;
   schedulePoll();
 }
@@ -1074,7 +780,7 @@ function listen(){
   if(webview!==wiredWebView&&typeof webview?.addEventListener==='function'){wiredWebView=webview;webview.addEventListener('message',e=>receive(e.data))}
 }
 __PLACEMENT_SCRIPT__
-listen();syncParams();applyState(JSON.parse($('initial-state').textContent));
+listen();applyState(JSON.parse($('initial-state').textContent));
 function start(){
   let lastBridge;
   const connect=()=>{

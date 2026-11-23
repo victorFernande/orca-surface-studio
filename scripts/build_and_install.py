@@ -41,6 +41,14 @@ def build() -> tuple[Path,Path]:
     dependencies=project.get("dependencies",[])
     modules={"orca_wave_studio"+("" if p.stem=="__init__" else "."+p.stem):p.read_text(encoding="utf-8")
              for p in sorted(PACKAGE.glob("*.py"))}
+    # Use the same data-only discovery in source, wheels and standalone installs.
+    sys.path.insert(0,str(ROOT/'src'))
+    from orca_wave_studio.language_packs import read_language_pack_files
+    packs,issues=read_language_pack_files(PACKAGE/'locales',strict=True)
+    embedded={code:pack for code,pack in packs.items()}
+    key='orca_wave_studio.language_packs'
+    modules[key]=modules[key].replace('_BUNDLED_LANGUAGE_PACKS = {}',
+                                    '_BUNDLED_LANGUAGE_PACKS = '+repr(embedded),1)
     for name,source in modules.items():
         compile(source,name,"exec")
     payload=base64.b64encode(zlib.compress(json.dumps(modules).encode(),9)).decode()
@@ -89,6 +97,8 @@ from orca_wave_studio.plugin import *
     entries={f"orca_wave_studio/{p.name}":p.read_bytes() for p in sorted(PACKAGE.glob("*.py"))}
     for p in (PACKAGE/"assets").glob("*"):
         if p.is_file(): entries[f"orca_wave_studio/assets/{p.name}"]=p.read_bytes()
+    for p in (PACKAGE/'locales').glob('*.json'):
+        entries[f'orca_wave_studio/locales/{p.name}']=p.read_bytes()
     entries[f"{info}/METADATA"]=metadata.encode()
     entries[f"{info}/WHEEL"]=b"Wheel-Version: 1.0\nGenerator: orca-wave-studio\nRoot-Is-Purelib: true\nTag: py3-none-any\n"
     entries[f"{info}/top_level.txt"]=b"orca_wave_studio\n"

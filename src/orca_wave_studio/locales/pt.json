@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "code": "pt",
+  "native_name": "Português",
+  "direction": "ltr",
+  "order": 0,
+  "translations": {
+    "language": "Idioma dos avisos",
+    "warning_title": "AVISO — Use por sua conta e risco.",
+    "warning_body": "Não imprima sem supervisão até ter 100% de certeza de que as trajetórias são seguras para sua impressora.",
+    "warning_preview": "Somente Preview. A impressão ainda depende da verificação das transições e do cabeçote.",
+    "warning_bead": "Somente Preview. Há cordões abaixo da altura mínima do perfil. A impressão exige validar a deposição e o cabeçote."
+  }
+}

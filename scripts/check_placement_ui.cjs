@@ -24,7 +24,7 @@ const {chromium}=require(process.env.WAVE_PLAYWRIGHT||'playwright');
       },state);
       await page.goto(pathToFileURL(input).href);
       assert.equal(await page.locator('#safety-warning').isVisible(),true);
-      assert.match(await page.locator('#safety-warning').innerText(),/Use at your own risk/);
+      assert.match(await page.locator('#safety-warning').innerText(),/Use por sua conta e risco/);
       await page.locator('#guide-next').click();
       assert.equal(await page.locator('#placement-tools').isVisible(),true);
       const source=await page.evaluate(()=>JSON.stringify(state.model_preview));

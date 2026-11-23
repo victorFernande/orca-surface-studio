@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "code": "fr",
+  "native_name": "Français",
+  "direction": "ltr",
+  "order": 4,
+  "translations": {
+    "language": "Langue des avertissements",
+    "warning_title": "AVERTISSEMENT — Utilisation à vos risques et périls.",
+    "warning_body": "Ne lancez pas d’impression sans surveillance avant d’être certain à 100 % que les trajectoires sont sûres pour votre imprimante.",
+    "warning_preview": "Aperçu uniquement. L’impression nécessite encore la vérification des transitions et de la tête d’impression.",
+    "warning_bead": "Aperçu uniquement. Certains cordons sont inférieurs à la hauteur minimale du profil. L’impression nécessite de vérifier le dépôt et le dégagement de la tête d’impression."
+  }
+}

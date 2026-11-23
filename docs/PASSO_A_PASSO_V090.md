@@ -53,8 +53,9 @@ reutilizar uma seleção de outra revisão da peça.
 
 ## Opções e limites
 
-**Mais opções** abre os controles anteriores, incluindo os modos de ondas.
-Use **Voltar ao passo a passo** para retornar ao fluxo simples.
+Na versão 0.9.0, **Mais opções** abria os controles anteriores, incluindo os
+modos de ondas. Esse menu foi removido na 0.15.3; veja a
+[interface atual e os idiomas dos avisos](INTERFACE_AVISOS_V0153.md).
 
 A seleção atual admite uma peça com uma instância imprimível e um sólido.
 É possível escolher essa peça quando existem outros modelos na bandeja; o

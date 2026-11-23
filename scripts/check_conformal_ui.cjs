@@ -1,3 +1,4 @@
+// Historical conformal-UI fixture only (before 0.15.3). Current UI: check_guided_studio_ui.cjs.
 // Isolated local component test; no Orca process or printer connection.
 const assert=require('node:assert/strict');
 const fs=require('node:fs');

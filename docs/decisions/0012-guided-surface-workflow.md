@@ -7,6 +7,10 @@ study the motion, and send the current result to the native plate Preview.
 Existing controls remain accessible through More options. This is a workflow
 change, not a new contouring or physical qualification algorithm.
 
+Update: the optional legacy UI was superseded in 0.15.3 by
+[ADR-0023](0023-guided-only-localized-warnings.md). The four-step workflow and
+explicit Preview transfer remain current.
+
 `build_surface(open_preview=false)` builds and retains the result without
 scheduling the native open operation. The final button sends `open_preview`
 with the displayed result SHA-256. The controller rejects an obsolete hash;

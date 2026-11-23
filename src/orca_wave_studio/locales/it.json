@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "code": "it",
+  "native_name": "Italiano",
+  "direction": "ltr",
+  "order": 3,
+  "translations": {
+    "language": "Lingua degli avvisi",
+    "warning_title": "ATTENZIONE — Utilizzare a proprio rischio.",
+    "warning_body": "Non stampare senza supervisione finché non si è sicuri al 100% che le traiettorie siano sicure per la propria stampante.",
+    "warning_preview": "Solo anteprima. La stampa richiede ancora la verifica delle transizioni e della testina.",
+    "warning_bead": "Solo anteprima. Alcuni cordoni sono al di sotto dell’altezza minima del profilo. La stampa richiede la verifica della deposizione e dello spazio libero della testina."
+  }
+}
